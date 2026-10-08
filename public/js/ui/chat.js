@@ -14,7 +14,11 @@ export function initChat() {
     const input = $('chat-input');
     const text = input.value.trim();
     if (!text) return;
-    send('chat', { text, channel: tab === 'evil' ? 'evil' : 'near' }).catch(() => {});
+    send('chat', { text, channel: tab === 'evil' ? 'evil' : 'near' })
+      .then((r) => {
+        if (r.channel === 'near' && r.heard === 0) systemLine('🔇 Nobody heard that. Press M (🚀 Rooms) to teleport to someone, then chat.');
+      })
+      .catch(() => {});
     input.value = '';
   });
   $('evil-form').addEventListener('submit', (e) => {
@@ -91,7 +95,7 @@ export function updateChatVisibility(state) {
   const placeholder = {
     lobby: 'Chat with the crew…',
     night: 'Shh… everyone is asleep',
-    roam: 'Only nearby crew can hear you…',
+    roam: 'Only people in your room hear you…',
     meeting: 'Everyone on the bridge hears you…',
     nominations: 'Everyone on the bridge hears you…',
     dawn: 'Everyone on the bridge hears you…',

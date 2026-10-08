@@ -3,10 +3,12 @@ import * as THREE from 'three';
 import { Avatar } from './avatar.js';
 import { buildShip } from './ship.js';
 import { SpaceCanvases, buildBackdrop } from './sky.js';
-import { moveWithCollision, roomAt, seatPosition, TASK_STATIONS, SPAWN, DRAWING_SLOTS } from './layout.js';
+import { moveWithCollision, roomAt, roomById, walkable, seatPosition, TASK_STATIONS, SPAWN, DRAWING_SLOTS } from './layout.js';
 
 const SEATED = ['dawn', 'meeting', 'nominations', 'dusk'];
 const SPEED = 5.5;
+export const NEAR_RADIUS = 7; // same as the server: proximity chat distance
+const TELEPORT_COOLDOWN = 2.5; // seconds
 
 export class World {
   constructor(container, data, { onSendPos, onNearTask, onStep } = {}) {
@@ -69,6 +71,8 @@ export class World {
     this.heartbeat = 0;
     this.nearTask = null;
     this.room = 'bridge';
+    this.beams = [];
+    this.teleportReadyAt = 0;
     this.progress = 0;
     this.night = false;
     this.paused = false; // the reveal cinematic takes over rendering
@@ -315,6 +319,7 @@ export class World {
     this.updateCamera(dt);
     this.updateAmbience(dt, t);
     this.ship.decor.update(t, { night: this.night, progress: this.progress });
+    this.updateBeams(dt);
     this.space.update(t);
     this.backdrop.update(t);
     this.renderer.render(this.scene, this.camera);
@@ -483,6 +488,85 @@ export class World {
 
   rumble(seconds = 1.6) {
     this.shake = seconds;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Teleporting and "who is where"
+  // ---------------------------------------------------------------------------
+
+  // Beam yourself into a room. Returns a reason string if you can't right now.
+  teleport(roomId) {
+    if (!this.canMove()) return 'You can only teleport while exploring the ship.';
+    const room = roomById(roomId);
+    if (!room) return 'Unknown room.';
+    if (this.room === roomId) return null;
+    const now = performance.now() / 1000;
+    if (now < this.teleportReadyAt) return 'The teleporter is recharging…';
+    this.teleportReadyAt = now + TELEPORT_COOLDOWN;
+    const [x0, z0, x1, z1] = room.rect;
+    // the bridge has the big table in the middle, so land at its south side
+    const cx = roomId === 'bridge' ? SPAWN.x : (x0 + x1) / 2;
+    const cz = roomId === 'bridge' ? SPAWN.z : (z0 + z1) / 2;
+    let spot = { x: cx, z: cz };
+    for (let i = 0; i < 20; i++) {
+      const x = cx + (Math.random() - 0.5) * 5;
+      const z = cz + (Math.random() - 0.5) * 3;
+      if (walkable(x, z) && roomAt(x, z) === roomId) {
+        spot = { x, z };
+        break;
+      }
+    }
+    this.addBeam(this.local.x, this.local.z);
+    this.local.x = spot.x;
+    this.local.z = spot.z;
+    this.room = roomId;
+    this.avatars.get(this.myId)?.root.position.set(spot.x, 0, spot.z);
+    this.addBeam(spot.x, spot.z);
+    this.lastSent = '';
+    this.sendTimer = 1; // tell the server straight away
+    return null;
+  }
+
+  addBeam(x, z) {
+    const mat = new THREE.MeshBasicMaterial({ color: 0x6cf0ff, transparent: true, opacity: 0.7, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide });
+    const mesh = new THREE.Mesh(new THREE.CylinderGeometry(0.75, 0.75, 6, 20, 1, true), mat);
+    mesh.position.set(x, 3, z);
+    this.scene.add(mesh);
+    this.beams.push({ mesh, life: 0.9 });
+  }
+
+  updateBeams(dt) {
+    for (const b of this.beams) {
+      b.life -= dt;
+      b.mesh.material.opacity = Math.max(0, b.life) * 0.8;
+      b.mesh.scale.set(1 + (0.9 - b.life) * 0.6, 1, 1 + (0.9 - b.life) * 0.6);
+    }
+    for (const b of this.beams.filter((x) => x.life <= 0)) {
+      this.scene.remove(b.mesh);
+      b.mesh.geometry.dispose();
+      b.mesh.material.dispose();
+    }
+    this.beams = this.beams.filter((b) => b.life > 0);
+  }
+
+  // Where everyone is right now: id -> { room, x, z }
+  whereabouts() {
+    const out = {};
+    for (const [id, a] of this.avatars) {
+      const p = id === this.myId ? this.local : a.target || a.root.position;
+      out[id] = { room: roomAt(p.x, p.z), x: p.x, z: p.z };
+    }
+    return out;
+  }
+
+  // Who would hear you in proximity chat (same rules as the server).
+  hearers() {
+    const all = this.whereabouts();
+    const mine = all[this.myId];
+    if (!mine) return [];
+    return Object.entries(all)
+      .filter(([id, p]) => id !== this.myId && ((p.room === mine.room && p.room !== 'corridor') || Math.hypot(p.x - mine.x, p.z - mine.z) < NEAR_RADIUS))
+      .map(([id]) => id);
   }
 
   // Positions of everyone (for proximity voice volume).

@@ -131,7 +131,7 @@ export function howToPlay() {
     el('h3', {}, '☀️ Day'),
     el('ol', { className: 'tips' },
       el('li', {}, el('b', {}, 'Dawn: '), 'the Captain (or ARIA) tells the story of who died.'),
-      el('li', {}, el('b', {}, 'Explore: '), 'walk the ship, whisper in rooms (proximity chat), do tasks, and look out of the Observation Deck windows for clues.'),
+      el('li', {}, el('b', {}, 'Explore: '), 'walk the ship or press M (🚀 Rooms) to teleport into any room. Only people in the same room hear your chat, so meet someone in a room for a private talk. Do tasks and look out of the Observation Deck windows for clues.'),
       el('li', {}, el('b', {}, 'Emergency meeting: '), 'everyone returns to the bridge to share information.'),
       el('li', {}, el('b', {}, 'Nominations: '), 'each living player may nominate once per day, and each player may be nominated once. The nominator accuses, the nominee defends, then the vote goes clockwise around the table. Raise your hand before the clock hand reaches you!'),
       el('li', {}, el('b', {}, 'Dusk: '), 'the player with the most votes (at least half the living, no tie) is airlocked.'),
