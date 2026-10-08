@@ -59,6 +59,11 @@ async function boot() {
   setupHome();
   setupButtons();
   setupJoystick(world);
+  // Small touch screens: start with the panels folded away so the ship is visible.
+  if (isTouch() && window.innerWidth < 820) {
+    $('chat').classList.add('collapsed');
+    $('ring-panel').classList.add('collapsed');
+  }
 
   // Unlock audio on the first interaction (browser rule).
   const unlock = () => {

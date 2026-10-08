@@ -14,6 +14,14 @@ const INSTRUCTIONS = {
 let chosen = [];
 let lastNight = null;
 
+function nightNote(r, state) {
+  if (!r) return 'Sleep tight.';
+  if (r.type === 'parasite' && !state.you.prompt) return 'The Parasite does not hunt on the first night. Plan your cover story: check your role card (R) for safe bluffs if you have them.';
+  if (r.night?.other && !r.night.first && state.night === 1) return 'You wake from tomorrow night onwards. For now: sleep, plan, and maybe paint.';
+  if (r.night?.first || r.night?.other) return 'If your role learns something, it will appear at dawn (and in your role card, R).';
+  return 'Your role does not wake at night. Sleep tight, or paint something unsettling for the crew to find tomorrow…';
+}
+
 export function renderNight(state) {
   const you = state.you;
   const box = $('night-action');
@@ -39,7 +47,7 @@ export function renderNight(state) {
   if (!prompt) {
     clear(box,
       el('div', { className: 'role-line' }, el('span', { className: 'ico' }, r?.icon || '😴'), el('div', {}, el('h3', {}, r ? r.name : 'Asleep'), el('div', { className: 'hint' }, 'Nothing to choose tonight.'))),
-      el('p', {}, r?.night?.first || r?.night?.other ? 'If your role learns something, it will appear in your role card (R) at dawn.' : 'Sleep tight. Or paint something unsettling for the crew to find tomorrow…'),
+      el('p', {}, nightNote(r, state)),
     );
     return;
   }

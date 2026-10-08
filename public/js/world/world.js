@@ -61,7 +61,7 @@ export class World {
     this.local = { x: SPAWN.x, z: SPAWN.z, r: Math.PI, moving: false };
     this.keys = new Set();
     this.joy = { x: 0, z: 0 };
-    this.phase = 'lobby';
+    this.phase = 'home';
     this.myId = null;
     this.spectator = false;
     this.sendTimer = 0;
@@ -112,9 +112,12 @@ export class World {
       if (!a) {
         a = new Avatar({ look: p.cosmetics, name: p.name, suits: this.data.suits, visors: this.data.visors });
         a.addedTo(this.scene);
-        const start = p.id === this.myId ? this.local : { x: SPAWN.x + (Math.random() - 0.5) * 4, z: SPAWN.z + (Math.random() - 0.5) * 2 };
+        // start standing just behind your own chair at the bridge table
+        const seat = seatPosition(p.seat, Math.max(state.players.length, 5));
+        const start = { x: seat.x * 1.28, z: seat.z * 1.28 };
+        if (p.id === this.myId) Object.assign(this.local, start, { r: seat.facing });
         a.root.position.set(start.x, 0, start.z);
-        a.target = { x: start.x, z: start.z, r: Math.PI, m: 0 };
+        a.target = { x: start.x, z: start.z, r: seat.facing, m: 0 };
         this.avatars.set(p.id, a);
       }
       if (JSON.stringify(a.look) !== JSON.stringify(p.cosmetics)) a.setLook(p.cosmetics);
@@ -157,8 +160,10 @@ export class World {
       }
     }
     if (phase === 'lobby' && prev !== 'lobby') {
-      this.local.x = SPAWN.x;
-      this.local.z = SPAWN.z;
+      const mine = this.avatars.get(this.myId);
+      const seat = seatPosition(mine?.seat ?? 0, Math.max(this.playerCount || 5, 5));
+      this.local.x = seat.x * 1.28;
+      this.local.z = seat.z * 1.28;
       for (const a of this.avatars.values()) {
         a.setGhost(false);
         a.deathState = null;
@@ -409,10 +414,19 @@ export class World {
   }
 
   updateCamera(dt) {
+    // the title screen camera is far away, so push the fog back there
+    const far = this.phase === 'home';
+    this.scene.fog.near = far ? 150 : 40;
+    this.scene.fog.far = far ? 500 : 120;
     let target;
     let offset;
     const z = this.zoom;
-    if (this.phase === 'night') {
+    if (this.phase === 'home') {
+      // title screen: a slow orbit high above the ship, the black hole glowing below
+      const a = this.clock.elapsedTime * 0.04;
+      target = new THREE.Vector3(0, -20, 6);
+      offset = new THREE.Vector3(Math.sin(a) * 70, 85, Math.cos(a) * 70);
+    } else if (this.phase === 'night') {
       target = new THREE.Vector3(0, 0, 4);
       offset = new THREE.Vector3(Math.sin(this.clock.elapsedTime * 0.05) * 30, 70, 55);
     } else if (SEATED.includes(this.phase) || (this.spectator && !this.spectatorPos)) {
@@ -423,7 +437,7 @@ export class World {
       offset = new THREE.Vector3(0, 26 * z, 19 * z);
     } else {
       target = new THREE.Vector3(this.local.x, 0, this.local.z - 0.8);
-      offset = new THREE.Vector3(0, 13.5 * z, 10 * z);
+      offset = new THREE.Vector3(0, 11.5 * z, 8.8 * z);
     }
     const k = 1 - Math.exp(-dt * 4);
     this.camTarget.lerp(target, k);
