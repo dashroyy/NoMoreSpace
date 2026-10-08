@@ -205,8 +205,10 @@ Clues are visual and cryptic. Nobody is told who the clue helps; you have to go 
 
 ## 8. The ship
 - **3D, Among Us-style** top-down view (Three.js), with 12 rooms joined by corridors, collisions, a minimap and the round bridge table with a seat for every player.
-- **Spooky atmosphere:** the black hole grows outside every window and beneath the ship as players die. Lights dim and flicker more the closer it gets. The ambient drone changes with the phase (calm, uneasy, night whispers, a heartbeat during nominations).
-- **Everyone looks the same** (a spacesuit) for the whole game. Customise your **colour**, **hat**, **visor tint** and **pet**.
+- **The black hole creeps closer every night**, and lurches closer whenever someone dies. You can see it grow outside every window, beneath the ship and in the bridge hologram, and the top bar shows how close it is (🕳️ %). Each dawn the ship shudders and everyone is told how close it has come. Lights dim and flicker (and the fairy lights stutter) more the closer it gets. The ambient drone changes with the phase (calm, uneasy, night whispers, a heartbeat during nominations).
+- **Spooky-festive decorations:** twinkling fairy lights along the walls, glowing jack-o'-lanterns with flickering carved faces, cobwebs in the corners, Halloween bunting.
+- **Spaceship details:** pipes, glowing corner pillars, blinking control panels, server racks, holographic data screens, glowing floor strips in the corridors, hazard stripes at every doorway.
+- **Everyone looks the same** for the whole game: a chunky spacesuit with a glass bubble helmet and two glowing eyes inside, a chest control panel, twin oxygen tanks, gloves and boots. Customise your **colour**, **hat**, **visor tint** (the glass) and **pet**.
 - **Sounds:** every effect is synthesised in the browser, with no audio files: airlock whoosh, gavel, vote clock ticks, task chimes, death stings, the dawn chime.
 - **Voice:** optional proximity voice chat (WebRTC). Volume fades with distance while exploring, everyone is at full volume in meetings, and mics are muted at night.
 

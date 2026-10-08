@@ -241,14 +241,21 @@ export function buildRoleModel(roleId, accentHex = '#ffffff') {
       break;
     }
     case 'mimic': {
+      // a stolen spacesuit with something purple bursting out of the helmet
       const g = new THREE.Group();
       const suit = m(accent);
-      for (const s of [-1, 1]) part(g, new THREE.CapsuleGeometry(0.14, 0.22, 4, 8), suit, s * 0.18, 0.22, 0);
-      part(g, new THREE.CapsuleGeometry(0.42, 0.55, 6, 16), suit, 0, 0.78, 0);
-      const blob = part(g, new THREE.SphereGeometry(0.42, 18, 14), m(0x8f2cff, { emissive: 0x4a0f80, emissiveIntensity: 0.6 }), 0, 1.45, 0);
-      part(g, new THREE.TorusGeometry(0.18, 0.04, 6, 16, Math.PI), m(0xffffff), 0, 1.38, 0.38, [0, 0, Math.PI]);
-      for (const s of [-1, 1]) part(g, new THREE.SphereGeometry(0.07, 10, 8), glow(0xffe14f, 2), s * 0.15, 1.55, 0.36);
-      part(g, new THREE.CircleGeometry(0.22, 18), m(0xf5f0e6, { side: THREE.DoubleSide }), 0.55, 0.9, 0.2, [0, -0.6, 0]);
+      for (const s2 of [-1, 1]) {
+        part(g, new THREE.CapsuleGeometry(0.11, 0.26, 4, 8), suit, s2 * 0.15, 0.33, 0);
+        part(g, new THREE.BoxGeometry(0.21, 0.13, 0.3), m(0x2b2f3a), s2 * 0.15, 0.07, 0.04);
+      }
+      part(g, new THREE.CapsuleGeometry(0.29, 0.28, 6, 16), suit, 0, 0.92, 0, null, [1.12, 1, 0.9]);
+      part(g, new THREE.TorusGeometry(0.2, 0.05, 8, 24), m(0x8c96aa, { metalness: 0.7 }), 0, 1.36, 0, [Math.PI / 2, 0, 0]);
+      // shattered helmet: a few glass shards
+      for (let i = 0; i < 5; i++) part(g, new THREE.TetrahedronGeometry(0.09), m(0xbfe8ff, { transparent: true, opacity: 0.5 }), Math.cos(i * 1.3) * 0.3, 1.4 + (i % 2) * 0.1, Math.sin(i * 1.3) * 0.3, [i, i * 2, 0]);
+      const blob = part(g, new THREE.SphereGeometry(0.4, 18, 14), m(0x8f2cff, { emissive: 0x4a0f80, emissiveIntensity: 0.6 }), 0, 1.68, 0);
+      part(g, new THREE.TorusGeometry(0.17, 0.04, 6, 16, Math.PI), m(0xffffff), 0, 1.6, 0.36, [0, 0, Math.PI]);
+      for (const s2 of [-1, 1]) part(g, new THREE.SphereGeometry(0.07, 10, 8), glow(0xffe14f, 2), s2 * 0.15, 1.78, 0.34);
+      part(g, new THREE.CircleGeometry(0.22, 18), m(0xf5f0e6, { side: THREE.DoubleSide }), 0.55, 0.95, 0.2, [0, -0.6, 0]);
       anim.blob = blob;
       root = g;
       break;

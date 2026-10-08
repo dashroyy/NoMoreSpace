@@ -231,10 +231,10 @@ export class World {
   // Black hole, clues, drawings
   // ---------------------------------------------------------------------------
 
+  // How close the black hole is (0 = far away, 1 = swallowing the ship).
+  // It creeps closer every night, and lurches closer whenever someone dies.
   setProgressFromState(state) {
-    const total = Math.max(3, state.playerCount);
-    const dead = state.playerCount - state.aliveCount;
-    const p = state.phase === 'lobby' ? 0 : Math.min(1, dead / Math.max(1, total - 2));
+    const p = blackHoleProgress(state);
     this.progress = p;
     this.space.progress = p;
     this.backdrop.setProgress(p);
@@ -314,6 +314,7 @@ export class World {
     this.updateAvatars(dt, t);
     this.updateCamera(dt);
     this.updateAmbience(dt, t);
+    this.ship.decor.update(t, { night: this.night, progress: this.progress });
     this.space.update(t);
     this.backdrop.update(t);
     this.renderer.render(this.scene, this.camera);
@@ -447,6 +448,13 @@ export class World {
     this.camTarget.lerp(target, k);
     this.camPos.lerp(target.clone().add(offset), k);
     this.camera.position.copy(this.camPos);
+    // the ship shudders when the black hole pulls it closer
+    if (this.shake > 0) {
+      this.shake = Math.max(0, this.shake - dt);
+      const a = this.shake * 0.35;
+      this.camera.position.x += (Math.random() - 0.5) * a;
+      this.camera.position.y += (Math.random() - 0.5) * a;
+    }
     this.camera.lookAt(this.camTarget);
   }
 
@@ -473,10 +481,25 @@ export class World {
     }
   }
 
+  rumble(seconds = 1.6) {
+    this.shake = seconds;
+  }
+
   // Positions of everyone (for proximity voice volume).
   positions() {
     const out = {};
     for (const [id, a] of this.avatars) out[id] = { x: a.root.position.x, z: a.root.position.z };
     return out;
   }
+}
+
+// Shared with the HUD: 0..1 closeness of the black hole.
+export function blackHoleProgress(state) {
+  if (!state || state.phase === 'lobby') return 0;
+  if (state.phase === 'ended' && state.winner === 'infiltrators') return 1;
+  const total = Math.max(3, state.playerCount);
+  const dead = state.playerCount - state.aliveCount;
+  const deathPart = dead / Math.max(1, total - 2);
+  const nightPart = (state.night || 0) / Math.max(2, total - 1); // roughly how many nights a game lasts
+  return Math.min(1, 0.04 + 0.6 * deathPart + 0.36 * nightPart);
 }

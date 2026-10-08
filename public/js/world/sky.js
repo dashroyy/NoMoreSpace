@@ -324,7 +324,7 @@ export function buildBackdrop(scene) {
   return {
     group,
     setProgress(p) {
-      const s = 260 + p * 520;
+      const s = 220 + p * 900;
       hole.scale.set(s, s, 1);
     },
     update(time) {

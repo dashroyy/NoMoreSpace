@@ -4,6 +4,7 @@ import { $, el, clear, formatTime, problem, toast } from '../util.js';
 import { store, send, serverNow, player, isCaptain, suitHex } from '../store.js';
 import { sfx } from '../audio.js';
 import { ROOMS, CORRIDORS } from '../world/layout.js';
+import { blackHoleProgress } from '../world/world.js';
 
 const PHASE_NAMES = {
   lobby: 'Docked', night: 'Night', dawn: 'Dawn', roam: 'Explore', meeting: 'Meeting', nominations: 'Nominations', dusk: 'Dusk', ended: 'Mission over',
@@ -89,7 +90,8 @@ export function renderHud(state) {
   const label = PHASE_NAMES[state.phase] + (['night'].includes(state.phase) ? ` ${state.night}` : ['dawn', 'roam', 'meeting', 'nominations', 'dusk'].includes(state.phase) ? ` · Day ${state.day}` : '');
   $('hud-phase').textContent = label;
   const alive = state.aliveCount;
-  $('hud-horizon').replaceChildren(el('span', {}, '🕳️ '), el('b', {}, `${alive} alive`), ` · ${state.threshold} votes to airlock`);
+  const hole = Math.round(blackHoleProgress(state) * 100);
+  $('hud-horizon').replaceChildren(el('span', { title: 'How close the black hole is. It creeps closer every night and every death.' }, `🕳️ ${hole}% · `), el('b', {}, `${alive} alive`), ` · ${state.threshold} votes to airlock`);
   document.body.classList.toggle('horizon-close', state.phase !== 'lobby' && alive <= 4);
   const pct = Math.min(100, Math.round((state.charge / state.chargeNeeded) * 100));
   $('hud-charge').querySelector('span').style.width = `${pct}%`;
