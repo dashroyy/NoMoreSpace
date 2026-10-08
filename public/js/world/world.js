@@ -435,6 +435,10 @@ export class World {
     } else if (this.spectator) {
       target = new THREE.Vector3(this.spectatorPos.x, 0, this.spectatorPos.z);
       offset = new THREE.Vector3(0, 26 * z, 19 * z);
+    } else if (this.room === 'observation') {
+      // tilt up to look out of the big window, where the clues appear
+      target = new THREE.Vector3(this.local.x * 0.6, 1.5, Math.max(this.local.z - 5.5, -31));
+      offset = new THREE.Vector3(0, 7.5 * z, 9.5 * z);
     } else {
       target = new THREE.Vector3(this.local.x, 0, this.local.z - 0.8);
       offset = new THREE.Vector3(0, 11.5 * z, 8.8 * z);
