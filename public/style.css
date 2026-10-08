@@ -1,0 +1,96 @@
+:root {
+  --bg: #05060f;
+  --panel: rgba(18, 22, 44, 0.85);
+  --text: #e6e9ff;
+  --muted: #8a90b8;
+  --accent: #6cf0ff;
+  --danger: #ff4d6d;
+  --evil: #c77dff;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: var(--bg);
+  color: var(--text);
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+}
+
+/* A cheap starfield: no images, just layered dots. */
+.stars {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background-image:
+    radial-gradient(1px 1px at 20% 30%, #fff, transparent),
+    radial-gradient(1px 1px at 70% 80%, #fff, transparent),
+    radial-gradient(2px 2px at 40% 60%, #9cf, transparent),
+    radial-gradient(1px 1px at 85% 20%, #fff, transparent),
+    radial-gradient(1px 1px at 10% 90%, #fff, transparent);
+  background-size: 300px 300px;
+  animation: drift 120s linear infinite;
+}
+@keyframes drift { to { background-position: -300px 300px; } }
+
+main { max-width: 560px; margin: 0 auto; padding: 24px 16px 64px; }
+
+header { text-align: center; margin-bottom: 24px; }
+h1 { letter-spacing: 0.3em; color: var(--accent); margin: 0; font-size: 2rem; }
+h2 { font-size: 0.9rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; margin-top: 24px; }
+.tagline { color: var(--muted); margin-top: 8px; }
+
+.panel {
+  background: var(--panel);
+  border: 1px solid rgba(108, 240, 255, 0.2);
+  border-radius: 12px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.panel[hidden] { display: none; }
+
+.row { display: flex; gap: 8px; flex-wrap: wrap; }
+.row > input { flex: 1; min-width: 0; }
+
+label { display: flex; flex-direction: column; gap: 6px; color: var(--muted); }
+
+input, button {
+  font: inherit;
+  padding: 10px 14px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text);
+}
+#code { text-transform: uppercase; letter-spacing: 0.3em; }
+button { cursor: pointer; background: var(--accent); color: #001018; border: none; font-weight: 600; }
+button.secondary { background: transparent; color: var(--text); border: 1px solid rgba(255, 255, 255, 0.25); }
+button:disabled { opacity: 0.4; cursor: default; }
+
+.status { display: flex; justify-content: space-between; color: var(--muted); }
+.status strong { color: var(--accent); letter-spacing: 0.2em; }
+
+.role-card { border-left: 4px solid var(--accent); padding: 10px 14px; background: rgba(108, 240, 255, 0.08); border-radius: 6px; }
+.role-card.infiltrator { border-color: var(--evil); background: rgba(199, 125, 255, 0.1); }
+.role-card h3 { margin: 0 0 4px; }
+.role-card p { margin: 0; color: var(--muted); }
+
+.prompt { font-weight: 600; }
+
+.players { list-style: none; padding: 0; margin: 0; display: grid; gap: 8px; }
+.players li {
+  display: flex; justify-content: space-between; align-items: center; gap: 8px;
+  padding: 8px 12px; border-radius: 8px; background: rgba(255, 255, 255, 0.04);
+}
+.players li.dead { opacity: 0.45; text-decoration: line-through; }
+.players li.offline .name::after { content: ' (offline)'; color: var(--muted); font-size: 0.8em; }
+.players button { padding: 6px 10px; font-size: 0.85rem; }
+.tag { font-size: 0.75rem; color: var(--muted); }
+.tag.infiltrator { color: var(--evil); }
+
+.log { list-style: none; padding: 0; margin: 0; color: var(--muted); font-size: 0.9rem; display: grid; gap: 4px; }
+
+.problem { color: var(--danger); text-align: center; min-height: 1.5em; }

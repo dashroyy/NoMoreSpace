@@ -1,0 +1,18 @@
+{
+  "name": "no-more-space",
+  "version": "0.1.0",
+  "private": true,
+  "description": "A space-themed social deduction party game inspired by Blood on the Clocktower, Among Us and The Traitors.",
+  "main": "server/index.js",
+  "scripts": {
+    "start": "node server/index.js",
+    "dev": "node --watch server/index.js",
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "socket.io": "^4.8.1"
+  }
+}

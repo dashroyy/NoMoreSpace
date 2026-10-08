@@ -1,0 +1,19 @@
+# systemd keeps the game running: starts it on boot, restarts it if it crashes.
+# Installed by deploy/setup-server.sh to /etc/systemd/system/nomorespace.service
+[Unit]
+Description=No More Space game server
+After=network.target
+
+[Service]
+User=nomorespace
+WorkingDirectory=/home/nomorespace/app
+ExecStart=/usr/bin/node server/index.js
+Environment=NODE_ENV=production
+Environment=PORT=3000
+# Keep Node's memory well inside a 1 GB server.
+Environment=NODE_OPTIONS=--max-old-space-size=256
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target
