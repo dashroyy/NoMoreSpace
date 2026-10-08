@@ -147,6 +147,35 @@ test('proximity chat while exploring only reaches nearby players', async () => {
   assert.ok(packed[ids[0]]);
 });
 
+test('room chat: corridors only count distance, the sender learns how many heard, teleporting joins a room', async () => {
+  const { host, players, room } = await makeShip(5);
+  await call(host, 'start');
+  room.game.resolveNight(Date.now());
+  room.game.applyDraft(Date.now());
+  room.game.beginRoam(Date.now());
+  // two players at opposite ends of the corridors, two in the galley, one alone in cargo
+  players[0].emit('pos', { x: 14, z: 0, r: 0, m: 0, room: 'corridor' });
+  players[1].emit('pos', { x: 0, z: 35, r: 0, m: 0, room: 'corridor' });
+  players[2].emit('pos', { x: 25, z: 0, r: 0, m: 0, room: 'galley' });
+  players[3].emit('pos', { x: 30, z: 5, r: 0, m: 0, room: 'galley' });
+  players[4].emit('pos', { x: 0, z: 43, r: 0, m: 0, room: 'cargo' });
+  await waitFor(() => Object.keys(room.positions).length === 5);
+  const alone = await call(players[0], 'chat', { text: 'hello corridor?' });
+  assert.equal(alone.heard, 0);
+  assert.equal(alone.channel, 'near');
+  await wait(100);
+  assert.ok(!players[1].chats.some((m) => m.text === 'hello corridor?'));
+  const pair = await call(players[2], 'chat', { text: 'galley gossip' });
+  assert.equal(pair.heard, 1);
+  // "teleport" into the galley: a jump in position is all it takes
+  players[4].emit('pos', { x: 27, z: -3, r: 0, m: 0, room: 'galley' });
+  await waitFor(() => room.positions[latest(players[4]).you.id]?.room === 'galley');
+  await wait(650);
+  const three = await call(players[2], 'chat', { text: 'welcome aboard' });
+  assert.equal(three.heard, 2);
+  await waitFor(() => players[4].chats.some((m) => m.text === 'welcome aboard'));
+});
+
 test('Captain mode: only the Captain controls the game and sees the manifest', async () => {
   const { host: captain, players, room } = await makeShip(0, 'captain').catch(() => ({}));
   if (!captain) return;

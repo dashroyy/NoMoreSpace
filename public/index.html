@@ -120,17 +120,19 @@
           <button id="chat-collapse" class="small ghost" title="Collapse">–</button>
         </div>
         <div id="chat-log" class="chat-log"></div>
+        <div id="chat-who" class="chat-who" hidden></div>
         <form id="chat-form" class="chat-form">
           <input id="chat-input" maxlength="200" placeholder="Say something… (Enter)" autocomplete="off" />
         </form>
       </aside>
 
-      <canvas id="minimap" class="minimap" width="180" height="150"></canvas>
+      <canvas id="minimap" class="minimap" width="180" height="150" title="Click a room to teleport there"></canvas>
 
       <div id="use-prompt" class="use-prompt" hidden></div>
 
       <nav class="actionbar">
         <button id="btn-role" class="action"><span>📜</span>Role card <kbd>R</kbd></button>
+        <button id="btn-rooms" class="action rooms" hidden><span>🚀</span>Rooms <kbd>M</kbd></button>
         <button id="btn-emote" class="action"><span>🎭</span>Emote <kbd>Q</kbd></button>
         <button id="btn-hand" class="action hand" hidden><span>✋</span><b>Raise hand</b></button>
         <button id="btn-done-speaking" class="action" hidden><span>🎤</span>I'm done</button>
@@ -138,6 +140,7 @@
         <button id="btn-use" class="action" hidden><span>🛠️</span>Use <kbd>E</kbd></button>
       </nav>
       <div id="emote-menu" class="emote-menu card" hidden></div>
+      <div id="rooms-menu" class="rooms-menu card" hidden></div>
       <div id="joystick" class="joystick" hidden><div class="knob"></div></div>
     </section>
 

@@ -138,7 +138,7 @@ Players with an ability choose targets on their screen. If they don't choose in 
 | Part | What happens | Default length |
 |---|---|---|
 | **Dawn** | The Captain's (or ARIA's) story of the night appears in a **cloud bubble**; deaths play their **death animations** at the bridge table | ~10 s + 4 s per death |
-| **Explore** | Walk the ship. **Proximity chat** (text and voice): only players in the same room or nearby hear you, which recreates BotC's private conversations. Do **tasks**, look for **clues**, find the **drawings** | 25 s per living player (+90 s on day 1) |
+| **Explore** | Walk the ship. **Proximity chat** (text and voice): only players in the same room (or within a few steps; in corridors only distance counts) hear you, which recreates BotC's private conversations. Press **M** / tap **🚀 Rooms** (or click a room on the map) to **teleport** into any room; the list shows who is in each room, and a line above the chat says exactly who can hear you. Do **tasks**, look for **clues**, find the **drawings** | 25 s per living player (+90 s on day 1) |
 | **Emergency meeting** | Everyone's pulled back to their seats on the bridge. Open discussion | 12 s per living player |
 | **Nominations** | Click a player on the bridge table to nominate them. The **nominator accuses (20 s)**, the **nominee defends (20 s)**, then the **vote clock** sweeps clockwise from the seat after the nominee | 30 s per living player |
 | **Dusk** | The player "on the block" is **airlocked** | ~9 s |

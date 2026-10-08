@@ -10,6 +10,7 @@ import { initLobby, renderLobby, resetLobbyPicks } from './ui/lobby.js';
 import { initDrawing, renderNight } from './ui/night.js';
 import { openTask } from './ui/tasks.js';
 import { initCommand, renderCommand } from './ui/command.js';
+import { initRooms } from './ui/rooms.js';
 import { Reveal } from './ui/reveal.js';
 import { initVoice, toggleVoice, voiceEnabled } from './voice.js';
 
@@ -46,6 +47,7 @@ async function boot() {
   initCommand();
   initVoice(world);
   initLobby({ onLeave: leave });
+  initRooms(world);
   initHud(world, {
     onRoleCard: (tab) => openRoleCard(typeof tab === 'string' ? tab : 'role'),
     onUse: () => {
@@ -196,7 +198,8 @@ function onPhaseChange(state, prev, world, reveal) {
     }
     case 'roam':
       sfx('chime');
-      phaseBanner('🔦 Explore the ship', 'Whisper in private, do tasks, check the windows. Meeting soon.');
+      phaseBanner('🔦 Explore the ship', 'Press M (🚀 Rooms) to teleport. Only people in your room hear you.', 5000);
+      systemLine('🔦 Explore time! Press M or tap 🚀 Rooms to teleport into a room. Only people in the same room can read your chat, so meet up with someone for a private talk.');
       break;
     case 'meeting':
       sfx('alarm');

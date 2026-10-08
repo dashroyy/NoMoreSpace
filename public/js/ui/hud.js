@@ -5,6 +5,7 @@ import { store, send, serverNow, player, isCaptain, suitHex } from '../store.js'
 import { sfx } from '../audio.js';
 import { ROOMS, CORRIDORS } from '../world/layout.js';
 import { blackHoleProgress } from '../world/world.js';
+import { canTeleport, teleportTo } from './rooms.js';
 
 const PHASE_NAMES = {
   lobby: 'Docked', night: 'Night', dawn: 'Dawn', roam: 'Explore', meeting: 'Meeting', nominations: 'Nominations', dusk: 'Dusk', ended: 'Mission over',
@@ -55,6 +56,17 @@ export function initHud(w, { onRoleCard, onUse, onPuppetPick }) {
   buildEmoteMenu();
   setInterval(tick, 250);
   setInterval(drawMinimap, 200);
+  // click a room on the map to teleport there
+  $('minimap').addEventListener('click', (e) => {
+    const c = $('minimap');
+    const b = c.getBoundingClientRect();
+    const px = ((e.clientX - b.left) / b.width) * c.width;
+    const pz = ((e.clientY - b.top) / b.height) * c.height;
+    const x = ((px - 5) / (c.width - 10)) * (BOUNDS.x1 - BOUNDS.x0) + BOUNDS.x0;
+    const z = ((pz - 5) / (c.height - 10)) * (BOUNDS.z1 - BOUNDS.z0) + BOUNDS.z0;
+    const room = ROOMS.find(({ rect: [x0, z0, x1, z1] }) => x >= x0 - 1 && x <= x1 + 1 && z >= z0 - 1 && z <= z1 + 1);
+    if (room && canTeleport()) teleportTo(room.id);
+  });
 }
 
 export const hud = { onPuppetPick: null };
@@ -269,11 +281,28 @@ function drawMinimap() {
       g.fill();
     }
   }
+  // everyone else, as small dots in their suit colour
+  const players = store.state?.players || [];
+  if (['lobby', 'roam'].includes(store.state?.phase)) {
+    for (const [id, p] of Object.entries(world.whereabouts())) {
+      if (id === world.myId) continue;
+      const pl = players.find((x) => x.id === id);
+      g.globalAlpha = pl && !pl.alive ? 0.45 : 1;
+      g.fillStyle = pl ? suitHex(pl) : '#fff';
+      g.beginPath();
+      g.arc(sx(p.x), sz(p.z), 3, 0, Math.PI * 2);
+      g.fill();
+    }
+    g.globalAlpha = 1;
+  }
   if (!isCaptain()) {
+    g.strokeStyle = '#fff';
+    g.lineWidth = 1.5;
     g.fillStyle = '#6cf0ff';
     g.beginPath();
     g.arc(sx(world.local.x), sz(world.local.z), 4, 0, Math.PI * 2);
     g.fill();
+    g.stroke();
   }
   const room = ROOMS.find((r) => r.id === world.room);
   g.fillStyle = '#cfd6ff';

@@ -311,15 +311,18 @@ io.on('connection', (socket) => {
           const pos = room.positions[p.id];
           if (p.id === me) return true;
           if (!mine || !pos) return false;
-          return pos.room === mine.room || Math.hypot(pos.x - mine.x, pos.z - mine.z) < NEAR_RADIUS;
+          // corridors are long, so there only distance counts
+          return (pos.room === mine.room && pos.room !== 'corridor') || Math.hypot(pos.x - mine.x, pos.z - mine.z) < NEAR_RADIUS;
         })
         .map((p) => p.id);
     }
+    const heard = new Set(recipients).size - 1; // everyone except you
     if (g.captain) recipients.push(g.captain.id); // the Captain hears everything
     for (const id of new Set(recipients)) {
       const s = personSocket(room, id);
       if (s) s.emit('chat', message);
     }
+    return { heard, channel: message.channel };
   }, { update: false });
 
   // Movement: stored and relayed ~10 times a second by the loop below.
