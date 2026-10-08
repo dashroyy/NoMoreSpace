@@ -2,7 +2,7 @@
 import { $, el, clear, problem, toast, typeText, isTouch } from './util.js';
 import { socket, store, onState, send, role, player, isCaptain } from './store.js';
 import { unlockAudio, sfx, setAmbient, setSound, soundEnabled } from './audio.js';
-import { World } from './world/world.js';
+import { World, blackHoleProgress } from './world/world.js';
 import { initChat, addChat, updateChatVisibility, clearChat, systemLine } from './ui/chat.js';
 import { initModal, openRoleCard, refreshRoleCard } from './ui/rolecard.js';
 import { initHud, renderHud, setUsePrompt, phaseBanner } from './ui/hud.js';
@@ -174,6 +174,10 @@ function onPhaseChange(state, prev, world, reveal) {
       break;
     case 'dawn': {
       sfx('dawn');
+      // every night the ship drifts closer to the black hole
+      world.rumble(1.8);
+      setTimeout(() => sfx('creak'), 300);
+      setTimeout(() => toast(`🕳️ The ship lurches. The black hole is ${Math.round(blackHoleProgress(state) * 100)}% of the way to swallowing us…`, 'death', 6000), 1800);
       const dawn = state.dawn;
       if (dawn) {
         const names = dawn.deaths.map((d) => player(d.id)?.name).filter(Boolean);

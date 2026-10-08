@@ -100,3 +100,41 @@ export const DRAWING_SLOTS = [
 ];
 
 export const SPAWN = { x: 0, z: 7.5 };
+
+const EPS = 0.01;
+
+// Edges of a rectangle minus the parts where another rectangle joins it.
+export function wallSegments(rect, others) {
+  const [x0, z0, x1, z1] = rect;
+  const edges = [
+    { axis: 'x', fixed: z0, from: x0, to: x1, side: 'north' },
+    { axis: 'x', fixed: z1, from: x0, to: x1, side: 'south' },
+    { axis: 'z', fixed: x0, from: z0, to: z1, side: 'west' },
+    { axis: 'z', fixed: x1, from: z0, to: z1, side: 'east' },
+  ];
+  const out = [];
+  for (const e of edges) {
+    const holes = [];
+    for (const [bx0, bz0, bx1, bz1] of others) {
+      if (e.axis === 'x' && bz0 <= e.fixed + EPS && bz1 >= e.fixed - EPS) {
+        const a = Math.max(e.from, bx0);
+        const b = Math.min(e.to, bx1);
+        if (b - a > EPS) holes.push([a, b]);
+      }
+      if (e.axis === 'z' && bx0 <= e.fixed + EPS && bx1 >= e.fixed - EPS) {
+        const a = Math.max(e.from, bz0);
+        const b = Math.min(e.to, bz1);
+        if (b - a > EPS) holes.push([a, b]);
+      }
+    }
+    holes.sort((a, b) => a[0] - b[0]);
+    let cursor = e.from;
+    for (const [a, b] of holes) {
+      if (a - cursor > EPS) out.push({ ...e, from: cursor, to: a });
+      cursor = Math.max(cursor, b);
+    }
+    if (e.to - cursor > EPS) out.push({ ...e, from: cursor, to: e.to });
+  }
+  return out;
+}
+

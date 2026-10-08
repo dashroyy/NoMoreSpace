@@ -1,10 +1,10 @@
 // Builds the ship: floors, walls with doorways, windows, room props, task
 // consoles, the bridge table and the easels where night drawings appear.
 import * as THREE from 'three';
-import { ROOMS, CORRIDORS, TASK_STATIONS, DRAWING_SLOTS, TABLE_RADIUS, seatPosition } from './layout.js';
+import { ROOMS, CORRIDORS, TASK_STATIONS, DRAWING_SLOTS, TABLE_RADIUS, seatPosition, wallSegments } from './layout.js';
+import { buildDecor } from './decor.js';
 import { makeTextSprite } from './avatar.js';
 
-const EPS = 0.01;
 const WALL_H = 2.4;
 const LOW_WALL_H = 0.9; // south-facing walls are low so they don't hide players from the camera
 
@@ -85,41 +85,6 @@ function floorLabel(text, color) {
   const mesh = new THREE.Mesh(new THREE.PlaneGeometry(8, 1), new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthWrite: false }));
   mesh.rotation.x = -Math.PI / 2;
   return mesh;
-}
-
-// Edges of a rectangle minus the parts where another rectangle joins it.
-function wallSegments(rect, others) {
-  const [x0, z0, x1, z1] = rect;
-  const edges = [
-    { axis: 'x', fixed: z0, from: x0, to: x1, side: 'north' },
-    { axis: 'x', fixed: z1, from: x0, to: x1, side: 'south' },
-    { axis: 'z', fixed: x0, from: z0, to: z1, side: 'west' },
-    { axis: 'z', fixed: x1, from: z0, to: z1, side: 'east' },
-  ];
-  const out = [];
-  for (const e of edges) {
-    const holes = [];
-    for (const [bx0, bz0, bx1, bz1] of others) {
-      if (e.axis === 'x' && bz0 <= e.fixed + EPS && bz1 >= e.fixed - EPS) {
-        const a = Math.max(e.from, bx0);
-        const b = Math.min(e.to, bx1);
-        if (b - a > EPS) holes.push([a, b]);
-      }
-      if (e.axis === 'z' && bx0 <= e.fixed + EPS && bx1 >= e.fixed - EPS) {
-        const a = Math.max(e.from, bz0);
-        const b = Math.min(e.to, bz1);
-        if (b - a > EPS) holes.push([a, b]);
-      }
-    }
-    holes.sort((a, b) => a[0] - b[0]);
-    let cursor = e.from;
-    for (const [a, b] of holes) {
-      if (a - cursor > EPS) out.push({ ...e, from: cursor, to: a });
-      cursor = Math.max(cursor, b);
-    }
-    if (e.to - cursor > EPS) out.push({ ...e, from: cursor, to: e.to });
-  }
-  return out;
 }
 
 export function buildShip(scene, space) {
@@ -267,10 +232,12 @@ export function buildShip(scene, space) {
     return { group: g, art };
   });
 
+  const decor = buildDecor(ship);
   mergeStatic(ship);
 
   return {
     group: ship,
+    decor,
     lights,
     flicker,
     stations,
@@ -410,7 +377,7 @@ function mergeStatic(root) {
   const buckets = new Map();
   const merged = [];
   const walk = (obj) => {
-    if (obj.userData.dynamic || obj.userData.window || obj.userData.pulse) return;
+    if (obj.userData.dynamic || obj.userData.window || obj.userData.pulse || obj.isInstancedMesh) return;
     if (obj.isMesh && !Array.isArray(obj.material) && obj.geometry.index) {
       const key = materialKey(obj.material);
       if (!buckets.has(key)) buckets.set(key, { material: obj.material, meshes: [] });
