@@ -402,3 +402,4 @@ body.phase-night #hud .actionbar { display: none; }
   body.screen-lobby .chat { position: fixed; width: calc(100% - 20px); left: 10px; transform: none; }
   body.is-captain .ring-panel { display: none; }
 }
+body.is-captain .lobby-left { bottom: auto; }
