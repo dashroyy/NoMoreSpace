@@ -43,17 +43,38 @@ This guide assumes you're brand new to this. Work through it top to bottom.
 
 ## Step 1: Run the game on your own computer
 
-1. Install **Node.js** (the LTS version) from <https://nodejs.org>.
-2. Install **Git** from <https://git-scm.com>, or use **GitHub Desktop** if you prefer buttons over typing.
-3. Download your repo and start the game:
+1. Install **Node.js** (the LTS version) from <https://nodejs.org>, and **Git** from <https://git-scm.com> (on Windows, keep all the default options).
+2. **Close and reopen** your terminal after installing, so it can find the new programs.
+3. Open a **terminal**. It's *not* the "Node.js" app in your Start menu: that opens a `>` prompt that only understands JavaScript.
+   - **Windows:** Start menu → type **PowerShell** → open "Windows PowerShell".
+   - **Mac:** Spotlight (⌘ Space) → **Terminal**.
+4. Check both are installed. Each should print a version number:
+   ```
+   node -v
+   npm -v
+   git --version
+   ```
+5. Download your repo and start the game:
    ```bash
+   cd ~/Documents
    git clone https://github.com/dashroyy/nomorespace.git
    cd nomorespace
    npm install      # downloads socket.io into node_modules/
    npm run dev      # starts the game and restarts it when you save a file
    ```
-4. Open <http://localhost:3000>. To test as several players, open a few **private/incognito windows**. Each one counts as a different player. You need 5 players to launch.
-5. `npm test` runs the automated rule checks.
+   The first `git clone` of a private repo opens a GitHub sign-in window. Log in there.
+6. Open <http://localhost:3000>. To test as several players, open a few **private/incognito windows**. Each one counts as a different player. You need 5 players to launch.
+7. Stop the game with **Ctrl+C** in the terminal. `npm test` runs the automated rule checks.
+
+### If a command won't run
+
+| What you see | Fix |
+|---|---|
+| A `>` prompt, and `npm` gives `ReferenceError` or `SyntaxError` | You're in the Node.js app, not a terminal. Type `.exit`, close it, and open PowerShell (step 3). |
+| `'node'` / `'npm'` / `'git'` **is not recognized** | Close **all** terminal windows and open a new one. Still broken? Restart your computer, or reinstall and keep "Add to PATH" ticked. |
+| `npm.ps1 cannot be loaded because running scripts is disabled on this system` | Windows blocks scripts by default. Run this once in PowerShell, answer **Y**, then retry: `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned` |
+| `npm ERR! enoent ... package.json` or `Missing script: "dev"` | You're in the wrong folder, or you downloaded `main` before the game code was merged into it. Run `cd nomorespace`, then `git pull`. |
+| `EADDRINUSE: address already in use :::3000` | The game is already running in another terminal window. Close that one. |
 
 **The everyday Git loop** (save → describe → upload):
 ```bash
@@ -63,6 +84,8 @@ git push
 ```
 
 ## Step 2: Buy a domain on Namecheap
+
+✅ Done: **nomorespace.online**.
 
 1. Search on <https://www.namecheap.com> for something like `nomorespace.xyz`, `.gg`, `.fun`, `.space` (fitting!) or `.club`.
 2. ⚠️ Look at the **renewal** price, not only the first-year price. Some cheap domains cost a lot more in year two.
@@ -74,18 +97,24 @@ You have two options. **Option A is what your friend's "1 GB droplet" means, and
 
 ### Option A: DigitalOcean droplet (recommended, ~$6/month)
 1. Sign up at <https://www.digitalocean.com>. Look for new-account credit offers.
-2. Create → Droplet → **Ubuntu 24.04**, **Basic, Regular, 1 GB / 1 CPU**, a region near your players.
-3. Authentication: choose **SSH key** and follow their instructions (safer than a password).
-4. Copy the droplet's **IP address** (e.g. `203.0.113.10`).
-5. Log in from your terminal and run the setup script:
+2. **Create → Droplets**, then choose:
+   - **Region:** closest to most of your players (e.g. London or Amsterdam for the UK/Europe).
+   - **Image:** Ubuntu **24.04 (LTS)**.
+   - **Size:** Basic → Regular → **$6/mo (1 GB / 1 CPU)**.
+   - **Authentication:** **Password** is simplest to start. Use a long, unique one and save it in a password manager.
+   - **Hostname:** `nomorespace`.
+3. Click **Create Droplet**. When it's ready, copy its **IPv4 address** (e.g. `203.0.113.10`).
+4. Copy the setup script from your computer to the droplet. In your terminal, inside the `nomorespace` folder:
+   ```bash
+   scp deploy/setup-server.sh root@YOUR_IP:
+   ```
+   Type `yes` if it asks whether you trust the server, then enter the droplet password.
+5. Log in to the droplet and run the script:
    ```bash
    ssh root@YOUR_IP
-   curl -O https://raw.githubusercontent.com/dashroyy/nomorespace/main/deploy/setup-server.sh
-   bash setup-server.sh yourdomain.xyz
+   bash setup-server.sh nomorespace.online
    ```
-   > Because the repo is private, that `curl` link won't work. Instead, open `deploy/setup-server.sh` on GitHub, copy its contents, and on the server run `nano setup-server.sh`, paste, save (Ctrl+O, Enter, Ctrl+X), then run `bash setup-server.sh yourdomain.xyz`.
-
-   The script installs Node.js and Caddy, creates the service that keeps the game running, and sets up the firewall. At the end it prints the last steps for GitHub.
+   It takes about 3–5 minutes. It installs Node.js and Caddy, creates the service that keeps the game running, and turns on the firewall. At the end it prints the last steps for GitHub (step 5 below). Type `exit` to leave the server.
 
 ### Option B: Cloudways (if your voucher makes it worthwhile)
 Cloudways runs a DigitalOcean (or other) server for you and gives you a dashboard. It was built mainly for PHP sites like WordPress, but it now has [Node.js support](https://support.cloudways.com/en/collections/19668298-getting-started-with-node-js-on-cloudways).
@@ -101,7 +130,7 @@ Cloudways runs a DigitalOcean (or other) server for you and gives you a dashboar
 3. In Cloudflare → **DNS**, add:
    - `A` record, name `@`, value = your server IP
    - `A` record, name `www`, value = your server IP
-4. **Start with the cloud icon grey ("DNS only")**. Visit `https://yourdomain.xyz` and check it loads with a padlock. That means Caddy got its HTTPS certificate.
+4. **Start with the cloud icon grey ("DNS only")**. Visit `https://nomorespace.online` and check it loads with a padlock. That means Caddy got its HTTPS certificate.
 5. Then switch both records to **orange ("Proxied")**. Now Cloudflare hides your IP and absorbs attacks.
 6. Cloudflare → **SSL/TLS** → set mode to **Full (strict)**.
 7. WebSockets are on by default in Cloudflare (Network → WebSockets). Leave them on.
@@ -135,5 +164,5 @@ From then on, every push or merge to `main` runs the tests, and if they pass, th
 | Red ❌ on a commit on GitHub | Actions tab → click the run → read the failing step |
 | Site doesn't load | On the server: `systemctl status nomorespace` and `journalctl -u nomorespace -n 50` |
 | HTTPS error | `journalctl -u caddy -n 50`; check Cloudflare SSL mode is **Full (strict)** |
-| Is the game alive? | Visit `https://yourdomain.xyz/health` |
+| Is the game alive? | Visit `https://nomorespace.online/health` |
 | Server feels slow | `htop` (install with `apt install htop`), and look at memory |

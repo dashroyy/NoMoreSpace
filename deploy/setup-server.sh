@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # One-time setup for a fresh Ubuntu 24.04 server (e.g. a 1 GB DigitalOcean droplet).
-# Run it as root:   bash setup-server.sh nomorespace.yourdomain.com
+# Run it as root:   bash setup-server.sh nomorespace.online
 # After this, GitHub Actions does every future deploy for you.
 set -euo pipefail
 
