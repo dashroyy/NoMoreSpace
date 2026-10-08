@@ -6,6 +6,7 @@ import { store, send, role, player, serverNow } from '../store.js';
 import { sfx } from '../audio.js';
 
 let tab = 'control';
+let lastPhase = null;
 let dirty = false;
 let puppetTarget = null;
 
@@ -54,7 +55,11 @@ export function renderCommand(state, force = false) {
     return;
   }
   dirty = false;
-  if (state.phase === 'night' && store.prev?.phase !== 'night') tab = 'night';
+  // jump to the Night tab once when night falls (not on every redraw)
+  if (state.phase !== lastPhase) {
+    if (state.phase === 'night') tab = 'night';
+    lastPhase = state.phase;
+  }
   const tabs = [['control', '▶ Control'], ['manifest', '📒 Manifest'], ['night', '🌙 Night'], ['story', '☁️ Story'], ['clues', '🔭 Clues & art'], ['danger', '⚠️ Danger']];
   clear($('command-tabs'), ...tabs.map(([id, label]) => el('button', { className: tab === id ? 'active' : '', onclick: () => { tab = id; renderCommand(store.state, true); } }, label)));
   const view = { control, manifest, night, story, clues, danger }[tab](state);
