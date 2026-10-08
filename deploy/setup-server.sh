@@ -70,13 +70,12 @@ ufw allow OpenSSH && ufw allow 80 && ufw allow 443 && ufw --force enable
 
 cat <<DONE
 
-All set. Last step: let GitHub log in to deploy.
-  1. On YOUR computer:  ssh-keygen -t ed25519 -f nomorespace_deploy -N ""
-  2. Put the PUBLIC key on this server:
-       cat nomorespace_deploy.pub >> /home/$APP_USER/.ssh/authorized_keys   (run here, paste the key)
-       chown $APP_USER:$APP_USER /home/$APP_USER/.ssh/authorized_keys && chmod 600 /home/$APP_USER/.ssh/authorized_keys
+All set. Last step: let GitHub log in to deploy. On YOUR computer (not this server):
+  1. Make a key:   ssh-keygen -t ed25519 -f ~/.ssh/nomorespace_deploy   (press Enter twice, no passphrase)
+  2. Send the PUBLIC key here:
+       cat ~/.ssh/nomorespace_deploy.pub | ssh root@THIS_SERVER_IP "cat >> /home/$APP_USER/.ssh/authorized_keys && chown $APP_USER:$APP_USER /home/$APP_USER/.ssh/authorized_keys && chmod 600 /home/$APP_USER/.ssh/authorized_keys"
   3. In GitHub → Settings → Secrets and variables → Actions, add:
        DEPLOY_HOST = this server's IP     DEPLOY_USER = $APP_USER
-       DEPLOY_PATH = $APP_DIR             DEPLOY_SSH_KEY = contents of nomorespace_deploy (the PRIVATE key)
+       DEPLOY_PATH = $APP_DIR             DEPLOY_SSH_KEY = contents of ~/.ssh/nomorespace_deploy (the PRIVATE key)
   4. GitHub → Actions → Deploy → Run workflow.
 DONE
