@@ -1,0 +1,129 @@
+// Proximity voice chat. Browsers connect directly to each other (WebRTC); the
+// server only passes the connection details along. The closer someone is on
+// the ship, the louder they are. During meetings everyone hears everyone, and
+// at night everyone is asleep (muted).
+import { socket, store } from './store.js';
+import { problem, toast } from './util.js';
+
+const HEAR_RADIUS = 11;
+let localStream = null;
+let enabled = false;
+const peers = new Map(); // id -> { pc, audio }
+const remoteOn = new Set();
+let world = null;
+
+export function initVoice(w) {
+  world = w;
+  socket.on('voice', ({ id, on }) => {
+    if (on) {
+      remoteOn.add(id);
+      if (enabled) socket.emit('rtc', { to: id, data: { hello: true } });
+      if (enabled && store.me < id) call(id);
+    } else {
+      remoteOn.delete(id);
+      close(id);
+    }
+  });
+  socket.on('rtc', async ({ from, data }) => {
+    if (!enabled) return;
+    try {
+      if (data.hello) {
+        remoteOn.add(from);
+        if (store.me < from && !peers.has(from)) call(from);
+        return;
+      }
+      if (data.sdp) {
+        const peer = ensure(from);
+        await peer.pc.setRemoteDescription(data.sdp);
+        if (data.sdp.type === 'offer') {
+          const answer = await peer.pc.createAnswer();
+          await peer.pc.setLocalDescription(answer);
+          socket.emit('rtc', { to: from, data: { sdp: peer.pc.localDescription } });
+        }
+      }
+      if (data.candidate) await ensure(from).pc.addIceCandidate(data.candidate);
+    } catch (err) {
+      console.warn('voice', err);
+    }
+  });
+  setInterval(updateVolumes, 200);
+}
+
+export function voiceEnabled() {
+  return enabled;
+}
+
+export async function toggleVoice() {
+  if (enabled) {
+    enabled = false;
+    socket.emit('voice', { on: false });
+    for (const id of [...peers.keys()]) close(id);
+    localStream?.getTracks().forEach((t) => t.stop());
+    localStream = null;
+    return false;
+  }
+  try {
+    localStream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
+  } catch {
+    problem('Microphone blocked. Allow mic access in your browser to use voice chat.');
+    return false;
+  }
+  enabled = true;
+  socket.emit('voice', { on: true });
+  toast('🎙️ Voice on. People near you on the ship can hear you.');
+  return true;
+}
+
+function ensure(id) {
+  if (peers.has(id)) return peers.get(id);
+  const pc = new RTCPeerConnection({ iceServers: store.data.iceServers });
+  localStream?.getTracks().forEach((t) => pc.addTrack(t, localStream));
+  const audio = new Audio();
+  audio.autoplay = true;
+  pc.onicecandidate = (e) => e.candidate && socket.emit('rtc', { to: id, data: { candidate: e.candidate } });
+  pc.ontrack = (e) => {
+    audio.srcObject = e.streams[0];
+    audio.play().catch(() => {});
+  };
+  pc.onconnectionstatechange = () => {
+    if (['failed', 'closed'].includes(pc.connectionState)) close(id);
+  };
+  const peer = { pc, audio };
+  peers.set(id, peer);
+  return peer;
+}
+
+async function call(id) {
+  const peer = ensure(id);
+  const offer = await peer.pc.createOffer();
+  await peer.pc.setLocalDescription(offer);
+  socket.emit('rtc', { to: id, data: { sdp: peer.pc.localDescription } });
+}
+
+function close(id) {
+  const peer = peers.get(id);
+  if (!peer) return;
+  peer.pc.close();
+  peer.audio.srcObject = null;
+  peers.delete(id);
+}
+
+function updateVolumes() {
+  const state = store.state;
+  if (!state || !enabled) return;
+  const phase = state.phase;
+  const night = phase === 'night';
+  localStream?.getAudioTracks().forEach((t) => (t.enabled = !night || !!state.you?.isCaptain));
+  const pos = world?.positions() || {};
+  const mine = pos[store.me];
+  const captainId = state.you?.isCaptain ? store.me : null;
+  for (const [id, peer] of peers) {
+    let volume = 1;
+    if (night) volume = 0;
+    else if (phase === 'roam' && mine && pos[id] && !captainId) {
+      const d = Math.hypot(pos[id].x - mine.x, pos[id].z - mine.z);
+      volume = Math.max(0, Math.min(1, 1 - (d - 2.5) / (HEAR_RADIUS - 2.5)));
+    } else if (phase === 'roam' && !pos[id]) volume = 1; // the Captain speaks over the intercom
+    peer.audio.volume = volume;
+  }
+}
