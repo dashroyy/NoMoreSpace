@@ -138,7 +138,11 @@ function manifest(s) {
         );
       }),
     ),
-    el('section', {}, el('h3', {}, '🎭 Parasite bluffs'), el('div', { className: 'hint' }, g.bluffs.map((b) => `${role(b).icon} ${role(b).name}`).join(' · ') || 'none')),
+    el('section', {},
+      el('h3', {}, '🎭 Parasite bluffs'),
+      el('div', { className: 'hint' }, g.bluffs.map((b) => `${role(b).icon} ${role(b).name}`).join(' · ') || 'none'),
+      s.playerCount < store.data.evilInfoMin ? el('div', { className: 'hint' }, `With fewer than ${store.data.evilInfoMin} players the Parasite is not told these, just like in Blood on the Clocktower.`) : null,
+    ),
   );
 }
 
