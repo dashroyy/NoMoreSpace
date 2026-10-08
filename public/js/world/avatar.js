@@ -296,6 +296,48 @@ function buildPet(id) {
   return g;
 }
 
+// Merge a group's direct child meshes that share a material into one mesh each.
+function mergeChildren(group, canMerge) {
+  const buckets = new Map();
+  for (const child of [...group.children]) {
+    if (!canMerge(child) || !child.geometry.index) continue;
+    child.updateMatrix();
+    if (!buckets.has(child.material)) buckets.set(child.material, []);
+    buckets.get(child.material).push(child);
+  }
+  for (const [material, meshes] of buckets) {
+    if (meshes.length < 2) continue;
+    let vertices = 0;
+    let indices = 0;
+    for (const mesh of meshes) {
+      vertices += mesh.geometry.attributes.position.count;
+      indices += mesh.geometry.index.count;
+    }
+    const pos = new Float32Array(vertices * 3);
+    const nor = new Float32Array(vertices * 3);
+    const idx = new Uint32Array(indices);
+    let vo = 0;
+    let io = 0;
+    for (const mesh of meshes) {
+      const g = mesh.geometry.clone().applyMatrix4(mesh.matrix);
+      pos.set(g.attributes.position.array, vo * 3);
+      nor.set(g.attributes.normal.array, vo * 3);
+      const src = g.index.array;
+      for (let k = 0; k < src.length; k++) idx[io + k] = src[k] + vo;
+      vo += g.attributes.position.count;
+      io += src.length;
+      g.dispose();
+      group.remove(mesh);
+    }
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    geometry.setAttribute('normal', new THREE.BufferAttribute(nor, 3));
+    geometry.setIndex(new THREE.BufferAttribute(idx, 1));
+    geometry.computeBoundingSphere();
+    group.add(new THREE.Mesh(geometry, material));
+  }
+}
+
 // ---------------------------------------------------------------------------
 // The avatar
 // ---------------------------------------------------------------------------
@@ -434,6 +476,10 @@ export class Avatar {
     this.hatAnchor.position.y = 1.93;
     b.add(this.hatAnchor);
     this.blinkAt = 1 + Math.random() * 4;
+
+    // Performance: merge the parts that never move on their own (same look = one mesh).
+    const moving = new Set([this.legL, this.legR, this.armL, this.armR, this.visor, this.antennaTip, this.hatAnchor, ...this.eyes, ...this.buttons]);
+    mergeChildren(b, (o) => !moving.has(o) && o.isMesh && o.material !== this.glintMat);
   }
 
   setLook(look) {
