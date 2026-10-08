@@ -216,7 +216,20 @@ Clues are visual and cryptic. Nobody is told who the clue helps; you have to go 
 - **Spaceship details:** pipes, glowing corner pillars, blinking control panels, server racks, holographic data screens, glowing floor strips in the corridors, hazard stripes at every doorway.
 - **Everyone looks the same** for the whole game: a chunky spacesuit with a glass bubble helmet and two glowing eyes inside, a chest control panel, twin oxygen tanks, gloves and boots. Customise your **colour**, **hat**, **visor tint** (the glass) and **pet**.
 - **Lighting moods:** the room lights tint with the phase: deep blue at night, warm at dawn, a flashing **red alert** when an emergency meeting is called, a faint red heartbeat during nominations and amber at dusk. Dust motes drift through every room in its light colour, and get more restless as the black hole closes in.
-- **Sounds:** every effect is synthesised in the browser, with no audio files: airlock whoosh, gavel, vote clock ticks, task chimes, death stings, the dawn chime.
+- **Music:** an original score composed live in the browser, so no two games sound the same: a gothic lullaby drifting through space rather than synth bleeps. A music box, a wobbly **theremin**, a ghostly choir, pizzicato strings and ticking clocks, all in D minor, with a different arrangement for each part of the game:
+
+| When | Arrangement |
+|---|---|
+| Title screen & docking bay | A slow music-box waltz; the theremin answers every other phrase |
+| Day | A sly "oom-pah-pah" waltz: pizzicato bass, celesta chords, theremin or celesta tunes |
+| Night | No beat: choir chords, a music box playing to itself, a distant theremin |
+| Nominations & dusk | A ticking clock, a creeping pizzicato ostinato and a heartbeat |
+| The crew escapes | The waltz again in D major, bright and twinkly |
+| No more space | Low choir, a tolling bell and a theremin sinking into the dark |
+
+  Toggle music with 🎵 (top bar, or the title screen) separately from sound effects 🔊.
+- **Sounds:** every effect is synthesised in the browser, with no audio files: bells and celesta for chimes and info, a ship's bell tolling for emergency meetings, wooden clock ticks for votes, the airlock whoosh, the gavel and choir stings for deaths.
+- **Type:** *Unbounded* for titles and buttons, *Bricolage Grotesque* for reading, *Martian Mono* for codes and timers, and the dripping *Rubik Wet Paint* for spooky moments.
 - **Voice:** optional proximity voice chat (WebRTC). Volume fades with distance while exploring, everyone is at full volume in meetings, and mics are muted at night.
 
 ## 9. The epic reveal

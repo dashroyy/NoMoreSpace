@@ -331,7 +331,7 @@ function drawMinimap() {
   }
   const room = ROOMS.find((r) => r.id === world.room);
   g.fillStyle = '#cfd6ff';
-  g.font = '600 10px Inter, sans-serif';
+  g.font = "600 10px 'Bricolage Grotesque', sans-serif";
   g.fillText(room ? room.name : 'Corridor', 6, H - 6);
 }
 

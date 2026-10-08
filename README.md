@@ -38,7 +38,7 @@ public/
   js/world/             the 3D ship (Three.js): layout, ship, avatars, role models, sky
   js/ui/                HUD, chat, role card, night & drawing, tasks, lobby,
                         Captain's Command Station, end-game reveal
-  js/audio.js           synthesised sound effects & ambience (no audio files)
+  js/audio.js           generative music & synthesised sound effects (no audio files)
   js/voice.js           proximity voice chat (WebRTC)
 test/                   engine tests (npm test)
 deploy/                 one-time server setup script + config

@@ -1,7 +1,7 @@
 // Entry point: connects the server, the 3D world and all the UI pieces.
 import { $, el, clear, problem, toast, typeText, isTouch } from './util.js';
 import { socket, store, onState, send, role, player, isCaptain } from './store.js';
-import { unlockAudio, sfx, setAmbient, setSound, soundEnabled } from './audio.js';
+import { unlockAudio, sfx, setAmbient, setSound, soundEnabled, setMusic, musicEnabled } from './audio.js';
 import { World, blackHoleProgress } from './world/world.js';
 import { initChat, addChat, updateChatVisibility, clearChat, systemLine } from './ui/chat.js';
 import { initModal, openRoleCard, refreshRoleCard } from './ui/rolecard.js';
@@ -32,8 +32,15 @@ function saveSeat(seat) {
   } catch {}
 }
 
+// Canvas text (name tags, room labels) can only use fonts that have finished loading.
+function loadFonts() {
+  if (!document.fonts?.load) return Promise.resolve();
+  const fonts = ['700 72px Unbounded', '600 30px "Bricolage Grotesque"', '700 16px "Martian Mono"', '400 40px "Rubik Wet Paint"'];
+  return Promise.race([Promise.all(fonts.map((f) => document.fonts.load(f))), new Promise((r) => setTimeout(r, 2500))]).catch(() => {});
+}
+
 async function boot() {
-  store.data = await fetch('/game-data.json').then((r) => r.json());
+  [store.data] = await Promise.all([fetch('/game-data.json').then((r) => r.json()), loadFonts()]);
   const world = new World($('world'), store.data, {
     onSendPos: (p) => socket.emit('pos', p),
     onNearTask: (taskId) => setUsePrompt(taskId ? store.data.tasks[taskId].name : null),
@@ -71,7 +78,7 @@ async function boot() {
   // Unlock audio on the first interaction (browser rule).
   const unlock = () => {
     unlockAudio();
-    if (store.state) setAmbient(MOODS[store.state.phase] || 'calm');
+    setAmbient(store.state ? MOODS[store.state.phase] || 'calm' : 'calm'); // the title screen gets the lobby waltz
   };
   window.addEventListener('pointerdown', unlock, { once: true });
   window.addEventListener('keydown', unlock, { once: true });
@@ -319,6 +326,27 @@ function leave() {
 }
 
 function setupButtons() {
+  // a soft tap on every button press (night picks and minigames make their own sounds)
+  document.addEventListener('pointerdown', (e) => {
+    const b = e.target.closest?.('button');
+    if (b && !b.disabled && !b.closest('.night-action, .task-area')) sfx('tap');
+  });
+  const syncMusic = () => {
+    const on = musicEnabled();
+    $('btn-music').classList.toggle('off', !on);
+    $('btn-music').title = on ? 'Music on (click to mute)' : 'Music off';
+    $('home-music').textContent = on ? '🎵 Music on' : '🎵 Music off';
+    $('home-music').classList.toggle('off', !on);
+  };
+  syncMusic();
+  for (const id of ['btn-music', 'home-music']) {
+    $(id).addEventListener('click', () => {
+      unlockAudio();
+      setMusic(!musicEnabled());
+      setAmbient(store.state ? MOODS[store.state.phase] || 'calm' : 'calm');
+      syncMusic();
+    });
+  }
   const soundBtn = $('btn-sound');
   const syncSound = () => {
     soundBtn.textContent = soundEnabled() ? '🔊' : '🔇';

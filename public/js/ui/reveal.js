@@ -353,7 +353,7 @@ export class Reveal {
   finale(crewWon) {
     this.finaleMode = crewWon ? 'crew' : 'evil';
     sfx(crewWon ? 'fanfare' : 'doom');
-    setAmbient(crewWon ? 'calm' : 'night');
+    setAmbient(crewWon ? 'victory' : 'doom');
     for (const c of this.cast.values()) if (!c.revealed) this.unmask(c.p.id);
     if (crewWon) for (const c of this.cast.values()) c.avatar.burst(25, null, 4, 2);
   }
