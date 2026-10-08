@@ -403,3 +403,5 @@ body.phase-night #hud .actionbar { display: none; }
   body.is-captain .ring-panel { display: none; }
 }
 body.is-captain .lobby-left { bottom: auto; }
+body.is-captain .story { left: 40%; width: min(440px, 38vw); }
+@media (max-width: 820px) { body.is-captain .story { left: 50%; width: calc(100% - 32px); top: 10%; } }
