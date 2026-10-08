@@ -42,7 +42,7 @@ export class Reveal {
     const frame = () => {
       if (!this.running) return;
       requestAnimationFrame(frame);
-      this.update(Math.min(0.05, this.clock.getDelta()));
+      this.update(this.clock.getDelta());
     };
     requestAnimationFrame(frame);
   }
@@ -112,8 +112,8 @@ export class Reveal {
     const tex = new THREE.CanvasTexture(c);
     tex.colorSpace = THREE.SRGBColorSpace;
     this.holeTex = tex;
-    this.hole = new THREE.Mesh(new THREE.PlaneGeometry(80, 80), new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthWrite: false }));
-    this.hole.position.set(0, 14, -45);
+    this.hole = new THREE.Mesh(new THREE.PlaneGeometry(120, 120), new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthWrite: false }));
+    this.hole.position.set(0, -2, -70);
     scene.add(this.hole);
     this.holeSize = 0.5;
     this.paintHole();
@@ -400,9 +400,10 @@ export class Reveal {
     if (step.focus) {
       const c = this.cast.get(step.focus);
       if (c) {
-        const out = c.pos.clone().setY(0).normalize();
-        this.camWantPos = c.pos.clone().add(new THREE.Vector3(out.x * 5, 3.2, out.z * 5 + 3));
-        this.camWantLook = c.pos.clone().setY(1.2);
+        // everyone faces the middle, so film them from the centre of the stage
+        const inward = c.pos.clone().multiplyScalar(0.4);
+        this.camWantPos = new THREE.Vector3(inward.x, 2.6, inward.z);
+        this.camWantLook = c.pos.clone().setY(1.1);
         this.key.target.position.copy(c.pos);
       }
     } else if (step.overview) {
@@ -414,9 +415,11 @@ export class Reveal {
     if (step.beam) this.beam(...step.beam);
   }
 
-  update(dt) {
+  update(raw) {
     if (!this.scene) return;
-    const sdt = dt * this.speed;
+    // the story keeps real time even on slow computers; animations use a capped step
+    const dt = Math.min(0.05, raw);
+    const sdt = Math.min(0.5, raw) * this.speed;
     this.time += sdt;
     const step = this.steps[this.stepIndex];
     if (step) {
