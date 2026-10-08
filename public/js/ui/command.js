@@ -208,7 +208,7 @@ function describeEvent(e, name) {
 
 function story(s) {
   const puppetList = s.players.map((p) => el('button', { className: puppetTarget === p.id ? 'primary' : '', onclick: () => { puppetTarget = p.id; renderCommand(store.state, true); } }, p.name));
-  const labels = { wave: '👋', dance: '💃', jump: '🦘', spin: '🌀', shrug: '🤷', point: '👉', cry: '😭', laugh: '🤣', faint: '😵 faint', shiver: '🥶 shiver', flail: '🙌 flail', grow: '🔼 grow', shrink: '🔽 shrink', chicken: '🐔 chicken', sneeze: '🤧 sneeze', moonwalk: '🕺 moonwalk', levitate: '🪄 levitate', confetti: '🎉 confetti', zap: '⚡ zap' };
+  const labels = { wave: '👋 wave', dance: '💃 dance', jump: '🦘 jump', spin: '🌀 spin', shrug: '🤷 shrug', point: '👉 point', cry: '😭 cry', laugh: '🤣 laugh', faint: '😵 faint', shiver: '🥶 shiver', flail: '🙌 flail', grow: '🔼 grow', shrink: '🔽 shrink', chicken: '🐔 chicken', sneeze: '🤧 sneeze', moonwalk: '🕺 moonwalk', levitate: '🪄 levitate', confetti: '🎉 confetti', zap: '⚡ zap' };
   const sayBox = el('textarea', { placeholder: 'Tell the story… it appears in a cloud bubble for everyone.' });
   return el('div', {},
     el('section', {},
