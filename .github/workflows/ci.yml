@@ -1,0 +1,20 @@
+# Runs the tests every time code is pushed or a pull request is opened.
+# If a test fails you get a red ❌ on GitHub instead of a broken live site.
+name: Test
+
+on:
+  push:
+  pull_request:
+  workflow_call: # lets deploy.yml reuse these tests
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm test

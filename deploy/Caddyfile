@@ -1,0 +1,7 @@
+# Caddy is the "front door": it handles HTTPS certificates automatically and
+# passes visitors (including the live game connection) on to the game on port 3000.
+# Replace the domain below with yours, then: sudo systemctl reload caddy
+nomorespace.online, www.nomorespace.online {
+	encode gzip
+	reverse_proxy localhost:3000
+}

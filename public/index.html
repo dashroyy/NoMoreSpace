@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>No More Space</title>
+    <meta name="description" content="A space-themed social deduction party game." />
+    <link rel="stylesheet" href="/style.css" />
+  </head>
+  <body>
+    <div class="stars" aria-hidden="true"></div>
+
+    <main>
+      <header>
+        <h1>NO MORE SPACE</h1>
+        <p class="tagline">Someone on this ship is not who they say they are.</p>
+      </header>
+
+      <!-- Screen 1: pick a name and create or join a ship -->
+      <section id="home" class="panel">
+        <label>Your name <input id="name" maxlength="20" autocomplete="nickname" /></label>
+        <button id="create">Create a ship</button>
+        <div class="row">
+          <input id="code" maxlength="4" placeholder="CODE" autocapitalize="characters" />
+          <button id="join">Join</button>
+        </div>
+      </section>
+
+      <!-- Screen 2: everything after you've joined -->
+      <section id="game" class="panel" hidden>
+        <div class="status">
+          <span>Ship <strong id="room-code"></strong></span>
+          <span id="phase"></span>
+        </div>
+
+        <div id="role-card" class="role-card" hidden></div>
+        <div id="prompt" class="prompt"></div>
+
+        <ul id="players" class="players"></ul>
+
+        <div id="controls" class="row"></div>
+
+        <h2>Your private log</h2>
+        <ul id="messages" class="log"></ul>
+
+        <h2>Ship log</h2>
+        <ul id="log" class="log"></ul>
+      </section>
+
+      <p id="problem" class="problem" role="alert"></p>
+    </main>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="/client.js"></script>
+  </body>
+</html>
