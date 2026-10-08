@@ -6,6 +6,10 @@ import { sfx } from '../audio.js';
 import { ROOMS, CORRIDORS } from '../world/layout.js';
 import { blackHoleProgress } from '../world/world.js';
 import { canTeleport, teleportTo } from './rooms.js';
+import { badgeFor } from './notebook.js';
+
+const DAY_PHASES = ['roam', 'meeting', 'nominations'];
+const READY_LABEL = { roam: 'Ready for the meeting', meeting: 'Ready for nominations', nominations: 'No more nominations' };
 
 const PHASE_NAMES = {
   lobby: 'Docked', night: 'Night', dawn: 'Dawn', roam: 'Explore', meeting: 'Meeting', nominations: 'Nominations', dusk: 'Dusk', ended: 'Mission over',
@@ -23,6 +27,10 @@ export function initHud(w, { onRoleCard, onUse, onPuppetPick }) {
   $('ring-toggle').addEventListener('click', () => $('ring-panel').classList.toggle('collapsed'));
   $('btn-hand').addEventListener('click', toggleHand);
   $('btn-done-speaking').addEventListener('click', () => send('done-speaking').catch((e) => problem(e.message)));
+  $('btn-ready').addEventListener('click', () => {
+    const up = !store.state?.you?.ready;
+    send('ready', { on: up }).then(() => sfx(up ? 'lock' : 'click')).catch((e) => problem(e.message));
+  });
   $('btn-shoot').addEventListener('click', () => {
     if (selectMode?.kind === 'shoot') {
       selectMode = null;
@@ -124,7 +132,18 @@ export function renderHud(state) {
     handBtn.querySelector('b').textContent = locked ? (up ? 'Voted YES' : 'Did not vote') : up ? 'Hand UP (click to lower)' : 'Raise hand to vote';
   }
   $('btn-done-speaking').hidden = !nom || !((nom.stage === 'accuse' && nom.nominator === you.id) || (nom.stage === 'defend' && nom.nominee === you.id));
-  $('btn-shoot').hidden = !you.gunner || !['roam', 'meeting', 'nominations'].includes(state.phase);
+  // everyone ready = skip the rest of this part of the day
+  const readyBtn = $('btn-ready');
+  readyBtn.hidden = !you.id || you.isCaptain || !DAY_PHASES.includes(state.phase) || !!nom;
+  if (!readyBtn.hidden) {
+    const count = `${state.ready?.length || 0}/${state.readyNeeded || 0}`;
+    readyBtn.classList.toggle('on', !!you.ready);
+    readyBtn.querySelector('b').textContent = you.ready ? `Ready ✓ ${count}` : `${READY_LABEL[state.phase]} ${count}`;
+    readyBtn.title = state.mode === 'captain' && !state.autoAdvance
+      ? 'Tell the Captain you are happy to move on.'
+      : 'When everyone is ready, the ship moves on without waiting for the timer.';
+  }
+  $('btn-shoot').hidden = !you.gunner || !DAY_PHASES.includes(state.phase);
   $('btn-shoot').classList.toggle('on', selectMode?.kind === 'shoot');
   $('btn-emote').hidden = !!you.isCaptain;
   if (!['roam', 'lobby'].includes(state.phase)) $('btn-use').hidden = true;
@@ -177,7 +196,13 @@ export function renderRing() {
     const isCurrent = nom?.stage === 'vote' && nom.order[nom.index] === p.id;
     if (isCurrent) cls.push('current');
     if (nom?.locked?.[p.id] && nom.hands[p.id]) cls.push('locked-yes');
-    const token = el('div', { className: 'token', style: { background: suitHex(p) } }, p.alive ? '' : '👻', p.ghostVote ? el('span', { className: 'ghostvote', title: 'Has a ghost vote' }) : null);
+    const badge = p.id !== you.id && !you.isCaptain && state.phase !== 'lobby' ? badgeFor(p.id) : null;
+    const token = el('div', { className: 'token', style: { background: suitHex(p) } },
+      p.alive ? '' : '👻',
+      p.ghostVote ? el('span', { className: 'ghostvote', title: 'Has a ghost vote' }) : null,
+      badge ? el('span', { className: `nb-badge ${badge.trust}`, title: badge.title }, badge.text) : null,
+      DAY_PHASES.includes(state.phase) && state.ready?.includes(p.id) && !nom ? el('span', { className: 'ready-tick', title: 'Ready to move on' }, '✓') : null,
+    );
     const seat = el('button', { className: cls.join(' '), style: { left: `${x}px`, top: `${y}px` }, title: `${p.name}${p.alive ? '' : ' (dead)'}${p.nominated ? ' · nominated today' : ''}${p.nominatedSomeone ? ' · has nominated' : ''}` },
       nom && nom.hands[p.id] ? el('span', { className: 'hand' }, '✋') : null,
       token,

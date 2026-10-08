@@ -2,6 +2,8 @@
 // full almanac of roles and a "how to play" guide.
 import { $, el, clear } from '../util.js';
 import { store, role, player, send } from '../store.js';
+import { notebookTab } from './notebook.js';
+import { renderRing } from './hud.js';
 
 let current = 'role';
 
@@ -34,17 +36,35 @@ export function openRoleCard(tab = 'role') {
 }
 
 export function refreshRoleCard() {
-  if (!$('modal').hidden && $('modal-body').querySelector('.rolecard')) render();
+  if ($('modal').hidden || !$('modal-body').querySelector('.rolecard')) return;
+  // don't throw away what someone is typing or picking in the notebook
+  if (document.activeElement?.closest?.('#modal-body') && document.activeElement.matches('input, select, textarea')) return;
+  render();
 }
 
 function render() {
   const tabs = el('div', { className: 'tabs' },
-    ...[['role', '📜 My role'], ['almanac', '📖 All roles'], ['help', '❔ How to play']].map(([id, label]) =>
+    ...[['role', '📜 My role'], ['notebook', '🗒️ Notebook'], ['almanac', '📖 All roles'], ['help', '❔ How to play']].map(([id, label]) =>
       el('button', { className: current === id ? 'active' : '', onclick: () => openRoleCard(id) }, label),
     ),
   );
-  const body = current === 'role' ? myRole() : current === 'almanac' ? almanac() : howToPlay();
+  const onNotebookChange = () => {
+    renderRing();
+    if (current === 'notebook') render();
+  };
+  const body = { role: myRole, notebook: () => notebookTab(onNotebookChange), almanac }[current]?.() || howToPlay();
   openModal(el('div', { className: 'rolecard' }, tabs, body));
+}
+
+// When a role's ability happens, in plain words.
+export function wakeText(r) {
+  const n = r.night;
+  if (n?.onDeath) return '🌙 Wakes only if you die at night.';
+  if (n?.first && n?.other) return n.choose ? '🌙 Wakes every night to choose.' : '🌙 Wakes every night to learn something.';
+  if (n?.first) return '🌙 Wakes on the first night only.';
+  if (n?.other) return n.choose ? '🌙 Wakes every night except the first, to choose.' : '🌙 Wakes every night except the first.';
+  if (r.tags.includes('action')) return '☀️ Used during the day.';
+  return '🛡️ Always on: you never need to wake up.';
 }
 
 function typeBadge(r) {
@@ -70,6 +90,7 @@ function myRole() {
       ),
     ),
     el('div', { className: 'ability' }, r.ability),
+    el('div', { className: 'wake' }, wakeText(r)),
     el('p', { className: 'flavor' }, r.flavor),
     el('h3', {}, '💡 Tips'),
     el('ul', { className: 'tips' }, ...r.tips.map((t) => el('li', {}, t))),
@@ -107,7 +128,7 @@ function almanac() {
           const r = store.data.roles[id];
           return el('div', { className: 'alm', style: { opacity: n && r.minPlayers > n ? 0.45 : 1 } },
             el('div', { className: 'ico' }, r.icon),
-            el('div', {}, el('span', { className: 'min' }, `${r.minPlayers}+ players`), el('b', {}, r.name), el('small', {}, r.ability)),
+            el('div', {}, el('span', { className: 'min' }, `${r.minPlayers}+ players`), el('b', {}, r.name), el('small', {}, r.ability), el('small', { className: 'wake' }, wakeText(r))),
           );
         })),
       );

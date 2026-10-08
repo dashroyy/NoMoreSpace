@@ -380,6 +380,41 @@ export function buildDecor(ship) {
   const bulbMesh = instanced(bulbs, new THREE.SphereGeometry(0.08, 6, 4));
   const ledMesh = instanced(leds, new THREE.BoxGeometry(0.06, 0.06, 0.06));
 
+  // ---------- dust motes drifting through every room, tinted by its light ----------
+  const DUST_PER_ROOM = 36;
+  const dust = [];
+  for (const room of ROOMS) {
+    const [x0, z0, x1, z1] = room.rect;
+    const tint = new THREE.Color(room.light).lerp(new THREE.Color(0xffffff), 0.45);
+    for (let i = 0; i < DUST_PER_ROOM; i++) {
+      dust.push({
+        x: x0 + 0.6 + rnd() * (x1 - x0 - 1.2),
+        y: 0.3 + rnd() * 2.1,
+        z: z0 + 0.6 + rnd() * (z1 - z0 - 1.2),
+        color: tint,
+        speed: 0.15 + rnd() * 0.35,
+        phase: rnd() * 6.28,
+      });
+    }
+  }
+  const dustPos = new Float32Array(dust.length * 3);
+  const dustCol = new Float32Array(dust.length * 3);
+  dust.forEach((d, i) => {
+    dustPos.set([d.x, d.y, d.z], i * 3);
+    dustCol.set([d.color.r, d.color.g, d.color.b], i * 3);
+  });
+  const dustGeo = new THREE.BufferGeometry();
+  dustGeo.setAttribute('position', new THREE.BufferAttribute(dustPos, 3));
+  dustGeo.setAttribute('color', new THREE.BufferAttribute(dustCol, 3));
+  const dustMat = new THREE.PointsMaterial({
+    size: 0.13, map: glowTexture('rgba(255,255,255,1)', 'rgba(255,255,255,0)'), vertexColors: true,
+    transparent: true, opacity: 0.65, depthWrite: false, blending: THREE.AdditiveBlending,
+  });
+  const dustPoints = new THREE.Points(dustGeo, dustMat);
+  dustPoints.userData.dynamic = true;
+  dustPoints.frustumCulled = false;
+  ship.add(dustPoints);
+
   const wireGeo = new THREE.BufferGeometry();
   wireGeo.setAttribute('position', new THREE.Float32BufferAttribute(wire, 3));
   ship.add(new THREE.LineSegments(wireGeo, new THREE.LineBasicMaterial({ color: 0x2a2a33 })));
@@ -391,6 +426,16 @@ export function buildDecor(ship) {
     bulbCount: bulbs.length,
     update(t, { night = false, progress = 0 } = {}) {
       screenTex.offset.y = (t * 0.03) % 1;
+      // dust drifts lazily; the black hole makes it restless
+      const restless = 1 + progress * 2.5;
+      dust.forEach((d, i) => {
+        const a = t * d.speed * restless + d.phase;
+        dustPos[i * 3] = d.x + Math.sin(a) * 0.5;
+        dustPos[i * 3 + 1] = d.y + Math.sin(a * 1.3) * 0.25;
+        dustPos[i * 3 + 2] = d.z + Math.cos(a * 0.8) * 0.5;
+      });
+      dustGeo.attributes.position.needsUpdate = true;
+      dustMat.opacity = night ? 0.3 : 0.65;
       // pumpkins flicker like candles
       const flick = 0.75 + Math.sin(t * 13) * 0.08 + Math.sin(t * 7.3) * 0.08 + Math.random() * 0.09;
       faceMat.color.setScalar(flick);

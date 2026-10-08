@@ -8,7 +8,8 @@ A spooky, slightly silly space spin-off of **Blood on the Clocktower**, played o
 - 👥 **3–15 players**, using BotC's own setup table (plus a quick 3–4 player "Short Haul" mode)
 - 👨‍✈️ Play with a human **Captain** (Storyteller) running a full **Command Station**, or let **ARIA the autopilot** run the game
 - 🚀 **3D ship** with 12 rooms, proximity text & voice chat, 11 task minigames, window clues, night drawings on the walls
-- 🕐 BotC-style days: private chats → emergency meeting → nominations with a clockwise **vote clock** → airlock
+- 🕐 BotC-style days: private chats → emergency meeting → nominations with a clockwise **vote clock** → airlock, with a **Ready** button to skip ahead when everyone's done talking
+- 🗒️ A private **notebook** for tracking claims and suspicions, shown as badges around the bridge table
 - 🎬 An **epic end-game reveal** that unmasks every character model and replays each night
 
 ## Quick start

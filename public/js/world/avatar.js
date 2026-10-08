@@ -29,6 +29,26 @@ const geo = {
   box: new THREE.BoxGeometry(1, 1, 1),
 };
 const SUIT_SCALE = 0.88;
+const SHARED_GEOMETRY = new Set(Object.values(geo));
+
+// Free the graphics memory used by throwaway objects (speech bubbles,
+// particles, death effects). Shared suit shapes are kept.
+export function disposeTree(obj) {
+  obj.traverse((o) => {
+    if (o.geometry && !SHARED_GEOMETRY.has(o.geometry)) o.geometry.dispose();
+    for (const m of [o.material].flat()) {
+      if (!m) continue;
+      m.map?.dispose();
+      m.dispose();
+    }
+  });
+  obj.removeFromParent();
+}
+
+// scratch vectors so the per-frame pet update does not allocate
+const _forward = new THREE.Vector3();
+const _side = new THREE.Vector3();
+const _want = new THREE.Vector3();
 
 function mat(color, extra = {}) {
   return new THREE.MeshStandardMaterial({ color, roughness: 0.55, metalness: 0.05, ...extra });
@@ -380,7 +400,8 @@ export class Avatar {
     this.glintMat.userData.wasTransparent = true;
     this.lampMat = new THREE.MeshStandardMaterial({ color: 0xfff3c4, emissive: 0xfff3c4, emissiveIntensity: 2 });
     this.buttonMats = [0xff3b5c, 0xffc23b, 0x5bff8f].map((c) => new THREE.MeshStandardMaterial({ color: c, emissive: c, emissiveIntensity: 1.6 }));
-    this.materials.push(this.suitMat, this.darkMat, this.trimMat, this.metalMat, this.bootMat, this.visorMat, this.headMat, this.eyeMat, this.glintMat, this.lampMat, ...this.buttonMats);
+    this.suitMaterials = [this.suitMat, this.darkMat, this.trimMat, this.metalMat, this.bootMat, this.visorMat, this.headMat, this.eyeMat, this.glintMat, this.lampMat, ...this.buttonMats];
+    this.materials = [...this.suitMaterials];
 
     // everything is built at full size, then shrunk a touch so the crew fits the rooms
     this.scaler = new THREE.Group();
@@ -490,17 +511,20 @@ export class Avatar {
     const visor = new THREE.Color(this.visors[look.visor] || '#f2b84b');
     this.visorMat.color.copy(visor);
     this.visorMat.emissive.copy(visor).multiplyScalar(0.18);
-    this.hatAnchor.clear();
+    for (const old of [...this.hatAnchor.children]) disposeTree(old);
     const hat = buildHat(look.hat);
     this.hatAnchor.add(hat);
-    hat.traverse((o) => o.isMesh && this.materials.push(o.material));
-    if (this.pet) this.pet.removeFromParent();
+    if (this.pet) disposeTree(this.pet);
     this.pet = buildPet(look.pet);
+    // the ghost effect fades every material, so keep the list in step with the outfit
+    this.materials = [...this.suitMaterials];
+    hat.traverse((o) => o.isMesh && this.materials.push(o.material));
     if (this.pet) {
       this.pet.traverse((o) => o.isMesh && this.materials.push(o.material));
       this.pet.position.copy(this.root.position);
       this.root.parent?.add(this.pet);
     }
+    if (this.ghost) this.setGhost(true);
   }
 
   addedTo(scene) {
@@ -509,12 +533,21 @@ export class Avatar {
   }
 
   dispose() {
+    this.clearExtras();
+    if (this.label) disposeTree(this.label);
+    if (this.bubble) disposeTree(this.bubble);
     this.root.removeFromParent();
     this.pet?.removeFromParent();
   }
 
+  // Remove death effects and particles (and free their memory).
+  clearExtras() {
+    for (const o of [...this.extras.children]) disposeTree(o);
+    this.particles = [];
+  }
+
   setName(name, color = '#ffffff') {
-    if (this.label) this.label.removeFromParent();
+    if (this.label) disposeTree(this.label);
     this.name = name;
     this.label = makeTextSprite(name, { color, size: 30, scale: 0.011 });
     this.label.position.y = 2.25;
@@ -522,7 +555,7 @@ export class Avatar {
   }
 
   say(text) {
-    if (this.bubble) this.bubble.removeFromParent();
+    if (this.bubble) disposeTree(this.bubble);
     this.bubble = makeTextSprite(text, { color: '#14102a', bg: 'rgba(245,242,255,0.95)', size: 30, maxWidth: 420, scale: 0.0105 });
     this.bubble.position.y = 2.7 + this.bubble.scale.y / 2;
     this.bubble.userData.until = performance.now() + 5500;
@@ -712,8 +745,7 @@ export class Avatar {
       if (p >= 1) {
         const done = d.onDone;
         this.deathState = null;
-        this.extras.clear();
-        this.particles = [];
+        this.clearExtras();
         this.body.visible = true;
         b.scale.setScalar(1);
         this.setGhost(true);
@@ -737,13 +769,14 @@ export class Avatar {
       if (o.userData.spin) o.rotation.y += dt * 18;
     });
     if (this.pet) {
-      const forward = new THREE.Vector3(Math.sin(this.root.rotation.y), 0, Math.cos(this.root.rotation.y));
-      const side = new THREE.Vector3(forward.z, 0, -forward.x);
-      const want = this.root.position.clone().addScaledVector(forward, -0.8).addScaledVector(side, 0.55);
-      this.pet.position.lerp(want, Math.min(1, dt * 4));
+      _forward.set(Math.sin(this.root.rotation.y), 0, Math.cos(this.root.rotation.y));
+      _side.set(_forward.z, 0, -_forward.x);
+      _want.copy(this.root.position).addScaledVector(_forward, -0.8).addScaledVector(_side, 0.55);
+      this.pet.position.lerp(_want, Math.min(1, dt * 4));
       this.pet.position.y = (this.pet.userData.hover || 0) + Math.sin(time * 4 + this.walkPhase) * (this.pet.userData.hover ? 0.1 : 0.02);
-      const look = this.root.position.clone().sub(this.pet.position);
-      if (look.lengthSq() > 0.01) this.pet.rotation.y = Math.atan2(look.x, look.z);
+      const lx = this.root.position.x - this.pet.position.x;
+      const lz = this.root.position.z - this.pet.position.z;
+      if (lx * lx + lz * lz > 0.01) this.pet.rotation.y = Math.atan2(lx, lz);
       this.pet.traverse((o) => {
         if (o.userData.spin) o.rotation.y += dt * 30;
         if (o.userData.wag) o.rotation.z = Math.sin(time * 8) * 0.4;
@@ -756,7 +789,7 @@ export class Avatar {
       p.userData.v.y -= dt * 4;
       p.position.addScaledVector(p.userData.v, dt);
       p.material.opacity = Math.max(0, p.userData.life);
-      if (p.userData.life <= 0) p.removeFromParent();
+      if (p.userData.life <= 0) disposeTree(p);
     }
     this.particles = this.particles.filter((p) => p.userData.life > 0);
 
@@ -764,7 +797,7 @@ export class Avatar {
     if (this.bubble && performance.now() > this.bubble.userData.until) {
       this.bubble.material.opacity -= dt * 2;
       if (this.bubble.material.opacity <= 0) {
-        this.bubble.removeFromParent();
+        disposeTree(this.bubble);
         this.bubble = null;
       }
     }
@@ -777,7 +810,7 @@ export class Avatar {
       this.stars.position.y = 1.7;
       this.root.add(this.stars);
       setTimeout(() => {
-        this.stars?.removeFromParent();
+        if (this.stars) disposeTree(this.stars);
         this.stars = null;
       }, 3500);
     }

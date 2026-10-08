@@ -500,3 +500,84 @@ test('setup table matches Blood on the Clocktower for 5-15 players', () => {
   assert.deepStrictEqual(DISTRIBUTION[10], [7, 0, 2, 1]);
   assert.deepStrictEqual(DISTRIBUTION[15], [9, 2, 3, 1]);
 });
+
+test('a dead Service Droid votes freely', () => {
+  const { g, p, role } = setup(['parasite', 'hacker', 'droid', 'comms', 'engineer', 'scanner']);
+  const droid = role('droid');
+  playNight(g, { [role('hacker').id]: [role('comms').id], [droid.id]: [role('comms').id], [role('scanner').id]: [role('comms').id, role('engineer').id] });
+  dawnToNominations(g);
+  g.kill(droid, 'captain');
+  const r = runVote(g, p[0], role('engineer'), [droid]);
+  assert.deepStrictEqual(r.ignored, []);
+  assert.ok(r.voters.includes(droid.id), 'ghost vote counts without the master');
+});
+
+test("the Hacker's glitch ends when the Hacker dies", () => {
+  // at night: killed by the Parasite, so the Engineer acting later gets true info
+  const { g, role } = setup(['parasite', 'hacker', 'engineer', 'comms', 'scanner', 'medic', 'marine']);
+  const hacker = role('hacker');
+  const engineer = role('engineer');
+  playNight(g, { [hacker.id]: [role('comms').id], [role('scanner').id]: [role('comms').id, role('medic').id] });
+  dawnToNominations(g);
+  g.beginDusk(3000);
+  g.beginNight(4000);
+  const d = playNight(g, { [hacker.id]: [engineer.id], [role('parasite').id]: [hacker.id], [role('medic').id]: [role('comms').id], [role('scanner').id]: [role('comms').id, role('medic').id] }, 5000);
+  assert.strictEqual(d.glitch, null);
+  assert.ok(d.messages.find((m) => m.to === engineer.id).truthful, 'Engineer info is true');
+  assert.ok(d.events.some((e) => e.k === 'unglitch'));
+
+  // by day: airlocking the Hacker unglitches their target straight away
+  const second = setup(['parasite', 'hacker', 'engineer', 'comms', 'scanner', 'medic', 'marine']);
+  const h2 = second.role('hacker');
+  playNight(second.g, { [h2.id]: [second.role('comms').id], [second.role('scanner').id]: [second.role('comms').id, second.role('medic').id] });
+  dawnToNominations(second.g);
+  assert.ok(second.g.glitch);
+  runVote(second.g, second.role('comms'), h2, second.g.players);
+  second.g.beginDusk(9000);
+  assert.ok(!h2.alive);
+  assert.strictEqual(second.g.glitch, null);
+});
+
+test('a dead Mimic stops seeing the manifest', () => {
+  const { g, role } = setup(['parasite', 'mimic', 'engineer', 'comms', 'scanner', 'medic', 'marine']);
+  const mimic = role('mimic');
+  assert.ok(g.viewFor(mimic.id).you.manifest);
+  g.kill(mimic, 'captain');
+  assert.strictEqual(g.viewFor(mimic.id).you.manifest, null);
+});
+
+test('when every connected player is ready, the day moves on early', () => {
+  const { g, p, role } = setup(['parasite', 'hacker', 'engineer', 'comms', 'scanner', 'medic', 'marine']);
+  playNight(g, { [role('hacker').id]: [role('comms').id], [role('scanner').id]: [role('comms').id, role('medic').id] });
+  g.applyDraft(2000);
+  g.beginRoam(2000);
+  assert.throws(() => g.setReady('nobody', true), /Only players/);
+  p.slice(0, 6).forEach((x) => g.setReady(x.id, true));
+  assert.strictEqual(g.tick(3000), false, 'one player still exploring');
+  p[6].connected = false; // they dropped out, so they no longer hold the ship up
+  assert.strictEqual(g.tick(3000), true);
+  assert.strictEqual(g.phase, 'meeting');
+  assert.strictEqual(g.ready.size, 0, 'readiness resets each phase');
+
+  g.beginNominations(4000);
+  p.slice(0, 5).forEach((x) => g.setReady(x.id, true));
+  g.nominate(p[0].id, p[1].id, 4000);
+  assert.strictEqual(g.ready.size, 0, 'a nomination is worth talking about');
+  assert.throws(() => {
+    g.beginNight(5000);
+    g.setReady(p[0].id, true);
+  }, /Nothing to hurry/);
+});
+
+test('Captain mode: readiness does not skip ahead unless auto-advance is on', () => {
+  const { g, p, captain, role } = setup(['parasite', 'hacker', 'engineer', 'comms', 'scanner', 'medic', 'marine'], { mode: 'captain' });
+  playNight(g, { [role('hacker').id]: [role('comms').id], [role('scanner').id]: [role('comms').id, role('medic').id] });
+  g.applyDraft(2000);
+  g.beginRoam(2000);
+  p.forEach((x) => g.setReady(x.id, true));
+  assert.strictEqual(g.tick(3000), false);
+  assert.strictEqual(g.viewFor(captain.id).ready.length, 7, 'the Captain sees who is ready');
+  g.setAutoAdvance(captain.id, true);
+  assert.strictEqual(g.tick(3000), true);
+  assert.strictEqual(g.phase, 'meeting');
+});

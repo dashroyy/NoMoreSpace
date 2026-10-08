@@ -69,6 +69,7 @@ class Game {
     this.nominators = new Set();
     this.nominees = new Set();
     this.nomination = null;
+    this.ready = new Set(); // players happy to move on to the next part of the day
     this.block = null;
     this.lastNomination = null;
     this.executedToday = null;
@@ -152,6 +153,7 @@ class Game {
     this.phaseStartedAt = now;
     this.phaseEndsAt = durationMs == null ? null : now + durationMs;
     this.pausedRemaining = null;
+    this.ready.clear();
   }
 
   // How long each part of the day lasts. Tuned so a 10-player game runs about
@@ -598,6 +600,12 @@ class Game {
     }
     const dying = d.deaths.map((x) => x.id);
 
+    // A dead Hacker's glitch stops working at once, so later abilities tonight get true info.
+    if (hacker && d.glitch && dying.includes(hacker.id)) {
+      d.events.push({ k: 'unglitch', a: hacker.id, t: d.glitch.id });
+      d.glitch = null;
+    }
+
     // A Black Box (real or drunk) killed tonight wakes to check someone.
     const bb = dying.map((id) => this.get(id)).find((p) => p.believed === 'blackbox');
     if (bb) d.blackboxPending = bb.id;
@@ -724,6 +732,10 @@ class Game {
     p.alive = false;
     p.ghostVote = true;
     this.ev({ k: 'death', id: p.id, cause });
+    this.ready.delete(p.id);
+
+    // The Hacker's glitch ends when the Hacker dies.
+    if (p.role === 'hacker') this.glitch = null;
 
     // Incubator (Scarlet Woman) takes over if the Parasite dies with 5+ alive.
     if (p.role === 'parasite' && cause !== 'starpass' && aliveBefore >= 5) {
@@ -798,6 +810,7 @@ class Game {
     if (this.nominees.has(bId)) throw new Error(`${b.name} was already nominated today.`);
     this.nominators.add(aId);
     this.nominees.add(bId);
+    this.ready.clear(); // a new accusation is worth talking about
     this.announce(`${a.name} nominates ${b.name}!`, 'nominate');
 
     // Sentinel (Virgin): zaps a Crew nominator, once.
@@ -868,8 +881,8 @@ class Game {
     for (const id of nom.order) {
       const p = this.get(id);
       if (!nom.hands[id] || !this.canVote(p)) continue;
-      // The Service Droid's vote only counts if their master voted too.
-      if (p.role === 'droid' && p.master && !this.isGlitched(p) && !nom.hands[p.master]) {
+      // A living Service Droid's vote only counts if their master voted too (the dead lose their abilities).
+      if (p.role === 'droid' && p.alive && p.master && !this.isGlitched(p) && !nom.hands[p.master]) {
         ignored.push(id);
         continue;
       }
@@ -957,6 +970,25 @@ class Game {
     this.checkWin();
     this.dusk = { id: p.id, cause, anim: 'airlock', story };
     this.setPhase('dusk', this.dur('dusk'), now);
+  }
+
+  // Players can say they are happy to move on, like a Storyteller asking
+  // "any more nominations?". When everyone still connected agrees, the ship
+  // skips the rest of that part of the day (autopilot, or a Captain with auto-advance on).
+  setReady(pid, on) {
+    if (!DAY_PHASES.includes(this.phase)) throw new Error('Nothing to hurry along right now.');
+    if (!this.get(pid)) throw new Error('Only players can do that.');
+    if (on) this.ready.add(pid);
+    else this.ready.delete(pid);
+  }
+
+  readyVoters() {
+    return this.players.filter((p) => p.connected);
+  }
+
+  everyoneReady() {
+    const voters = this.readyVoters();
+    return voters.length > 0 && voters.every((p) => this.ready.has(p.id));
   }
 
   // ---------------------------------------------------------------------------
@@ -1140,16 +1172,16 @@ class Game {
         else this.beginRoam(now);
         return true;
       case 'roam':
-        if (!(auto && due)) return false;
+        if (!(auto && (due || this.everyoneReady()))) return false;
         this.beginMeeting(now);
         return true;
       case 'meeting':
-        if (!(auto && due)) return false;
+        if (!(auto && (due || this.everyoneReady()))) return false;
         this.beginNominations(now);
         return true;
       case 'nominations':
         if (this.nomination) return this.tickNomination(now);
-        if (!(auto && due)) return false;
+        if (!(auto && (due || this.everyoneReady()))) return false;
         this.beginDusk(now);
         return true;
       case 'dusk':
@@ -1231,6 +1263,8 @@ class Game {
         locked: nom.locked,
       },
       block: this.block,
+      ready: [...this.ready],
+      readyNeeded: this.readyVoters().length,
       lastNomination: this.lastNomination,
       log: this.log.slice(-40),
       dawn: this.dawn,
@@ -1272,8 +1306,9 @@ class Game {
       gunner: p.believed === 'gunner' && p.alive && !p.used,
       evilTeam: this.evilTeamFor(p),
       bluffs: p.role === 'parasite' && this.evilInfoShared() ? this.bluffs : null,
-      manifest: p.role === 'mimic' ? this.mimicManifest : null,
-      master: p.role === 'droid' ? p.master : null,
+      manifest: p.role === 'mimic' && p.alive ? this.mimicManifest : null,
+      master: p.role === 'droid' && p.alive ? p.master : null,
+      ready: this.ready.has(pid),
       tasksDone: this.tasksDone[pid] || [],
       drew: this.drawings.some((d) => d.author === pid && d.night === this.night && !d.published),
       hand: this.nomination ? !!this.nomination.hands[pid] : false,

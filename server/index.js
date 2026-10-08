@@ -265,6 +265,7 @@ io.on('connection', (socket) => {
   on('nominate', ({ target }) => game().nominate(me, target));
   on('hand', ({ up }) => game().setHand(me, up));
   on('done-speaking', () => game().doneSpeaking(me, Date.now()));
+  on('ready', ({ on: value }) => game().setReady(me, !!value));
   on('shoot', ({ target }) => game().gunnerShot(me, target));
   on('task', ({ task }) => game().completeTask(me, task));
   on('drawing', ({ data, signed }) => {

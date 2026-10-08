@@ -83,7 +83,10 @@ function control(s) {
       el('button', { onclick: () => act('add-time', { seconds: -30 }) }, '−30 s'),
       el('button', { onclick: () => act('pause') }, s.paused ? '▶ Resume' : '⏸ Pause'),
     ),
-    el('label', { className: 'check' }, el('input', { type: 'checkbox', checked: s.autoAdvance, onchange: (e) => act('auto', { on: e.target.checked }) }), 'Auto-advance when timers run out (ARIA helps)'),
+    el('label', { className: 'check' }, el('input', { type: 'checkbox', checked: s.autoAdvance, onchange: (e) => act('auto', { on: e.target.checked }) }), 'Auto-advance when timers run out or everyone is ready (ARIA helps)'),
+    ['roam', 'meeting', 'nominations'].includes(s.phase) && !s.nomination
+      ? el('div', { className: 'hint' }, `⏭️ Ready to move on: ${s.ready.length}/${s.readyNeeded}${s.ready.length ? ` (${s.ready.map((id) => player(id)?.name).filter(Boolean).join(', ')})` : ''}`)
+      : null,
   ));
   if (s.phase === 'night') parts.push(nightStatus(s));
   parts.push(el('section', {},

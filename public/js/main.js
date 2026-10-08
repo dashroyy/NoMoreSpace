@@ -12,6 +12,7 @@ import { openTask } from './ui/tasks.js';
 import { initCommand, renderCommand } from './ui/command.js';
 import { initRooms } from './ui/rooms.js';
 import { Reveal } from './ui/reveal.js';
+import { clearNotebook } from './ui/notebook.js';
 import { initVoice, toggleVoice, voiceEnabled } from './voice.js';
 
 const SEAT_KEY = 'nms-seat';
@@ -76,10 +77,13 @@ async function boot() {
   window.addEventListener('keydown', unlock, { once: true });
 
   // ---------------- server events ----------------
-  socket.on('connect', () => {
+  const rejoin = () => {
     const seat = loadSeat();
     if (seat?.code && seat?.token) socket.emit('join', seat);
-  });
+  };
+  socket.on('connect', rejoin);
+  // the socket may have connected while the game data was loading
+  if (socket.connected) rejoin();
   socket.on('joined', ({ code, token, id }) => {
     store.me = id;
     const name = $('home-name').value || loadSeat()?.name || '';
@@ -164,6 +168,7 @@ function onPhaseChange(state, prev, world, reveal) {
     hideStory();
     if (prev && prev.phase !== 'lobby') {
       clearChat();
+      clearNotebook(); // a new game, a fresh page
       systemLine('Back in the docking bay. Fresh suits, fresh lies.');
     }
     return;

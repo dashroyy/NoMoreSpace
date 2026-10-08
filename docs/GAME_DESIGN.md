@@ -65,7 +65,9 @@ Each role does exactly what its Trouble Brewing counterpart does. *Night\** mean
 |---|---|---|
 | 🦑 The Parasite | Imp | Each night\*, kill a player. Kill yourself to jump into a Saboteur, who becomes the new Parasite |
 
-Every role card (press **R**) shows the ability, flavour text, **3–4 strategy tips** and everything you've learned so far.
+Every role card (press **R**) shows the ability, when it wakes, flavour text, **3–4 strategy tips** and everything you've learned so far.
+
+The role card also has a private **🗒️ Notebook**, like the scrap of paper BotC players keep: for each player, note the role they claim, whether you trust them (😇 / 😈) and a few words. Your guesses appear as small badges on the bridge table. It's stored only in your browser and is wiped when a new game starts.
 
 ## 3. Player counts & balance
 
@@ -143,6 +145,8 @@ Players with an ability choose targets on their screen. If they don't choose in 
 | **Nominations** | Click a player on the bridge table to nominate them. The **nominator accuses (20 s)**, the **nominee defends (20 s)**, then the **vote clock** sweeps clockwise from the seat after the nominee | 30 s per living player |
 | **Dusk** | The player "on the block" is **airlocked** | ~9 s |
 
+**Ready to move on:** while exploring, in the meeting and during nominations (between votes), everyone has a **⏭️ Ready** button. When every connected player is ready, the ship moves on without waiting for the timer, like a Storyteller asking "any more nominations?". A new nomination resets everyone's readiness. In Captain mode the Command Station shows who is ready, and readiness only skips ahead when auto-advance is on.
+
 ### Nominations & voting (exactly like BotC)
 - Each *living* player may nominate **once per day**; each player may be nominated **once per day**.
 - Raise your hand before the clock hand reaches your seat. When it passes you, your vote is **locked**.
@@ -155,6 +159,8 @@ Players with an ability choose targets on their screen. If they don't choose in 
 - **Stowaway** may register as evil (even as the Parasite) to the Scanner, Engineer, Navigator, Security Chief, Coroner, Black Box and Gunner.
 - **Mimic** may register as good and as a Crew or Drifter role.
 - **Ghost signal:** one good player always pings the Scanner as the Parasite.
+- **Dead players lose their abilities**, as in BotC: a dead Mimic stops seeing the Manifest and a dead Service Droid votes freely with their ghost vote.
+- **The Hacker's glitch ends when the Hacker dies.** If the Parasite kills the Hacker, players who act later that night (Coroner, Engineer, Scanner) get true information; if the Hacker is airlocked, their target works again straight away.
 
 ## 6. The Captain & the Command Station
 Whoever creates the ship chooses one of:
@@ -209,6 +215,7 @@ Clues are visual and cryptic. Nobody is told who the clue helps; you have to go 
 - **Spooky-festive decorations:** twinkling fairy lights along the walls, glowing jack-o'-lanterns with flickering carved faces, cobwebs in the corners, Halloween bunting.
 - **Spaceship details:** pipes, glowing corner pillars, blinking control panels, server racks, holographic data screens, glowing floor strips in the corridors, hazard stripes at every doorway.
 - **Everyone looks the same** for the whole game: a chunky spacesuit with a glass bubble helmet and two glowing eyes inside, a chest control panel, twin oxygen tanks, gloves and boots. Customise your **colour**, **hat**, **visor tint** (the glass) and **pet**.
+- **Lighting moods:** the room lights tint with the phase: deep blue at night, warm at dawn, a flashing **red alert** when an emergency meeting is called, a faint red heartbeat during nominations and amber at dusk. Dust motes drift through every room in its light colour, and get more restless as the black hole closes in.
 - **Sounds:** every effect is synthesised in the browser, with no audio files: airlock whoosh, gavel, vote clock ticks, task chimes, death stings, the dawn chime.
 - **Voice:** optional proximity voice chat (WebRTC). Volume fades with distance while exploring, everyone is at full volume in meetings, and mics are muted at night.
 

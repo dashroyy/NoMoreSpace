@@ -252,6 +252,8 @@ export class Reveal {
         return { dur: 3, focus: e.a, beam: [e.a, e.t, 0xffb547], caption: `📼 ${name(e.a)}'s Black Box flickered: “${e.text}” ${e.truthful ? '✔' : '✘ (false)'}`, enter: () => sfx('blip') };
       case 'become-parasite':
         return { dur: 3, focus: e.a, caption: `🥚 ${name(e.a)} became the new Parasite!`, enter: () => this.transform(e.a) };
+      case 'unglitch':
+        return { dur: 2.4, focus: e.t, caption: `💻 With ${name(e.a)} the Hacker dead, ${name(e.t)}'s systems rebooted.`, enter: () => sfx('blip') };
       default:
         return null;
     }
@@ -269,8 +271,11 @@ export class Reveal {
         const r = R[c?.finalRole || c?.startRole];
         return { dur: 3.6, focus: e.id, caption: `🚪 ${name(e.id)} was airlocked. They were ${r ? `the ${r.name} ${r.icon}` : 'mysterious'}.${e.story ? ` ${e.story}` : ''}`, enter: () => { sfx('airlock'); this.kill(e.id, 'airlock'); } };
       }
-      case 'shot':
-        return { dur: 3, focus: e.a, beam: [e.a, e.t, 0xff7a3a], caption: `🔫 ${name(e.a)} fired at ${name(e.t)}… ${e.hit ? 'and vaporised the Parasite!' : 'nothing happened.'}`, enter: () => { sfx('shot'); if (e.hit) this.kill(e.t, 'shot'); } };
+      case 'shot': {
+        // a Stowaway can register as the Parasite and get hit by mistake
+        const hitWhat = this.cast.get(e.t)?.startRole === 'stowaway' ? 'and vaporised… the Stowaway, who looked just like the Parasite!' : 'and vaporised the Parasite!';
+        return { dur: 3, focus: e.a, beam: [e.a, e.t, 0xff7a3a], caption: `🔫 ${name(e.a)} fired at ${name(e.t)}… ${e.hit ? hitWhat : 'nothing happened.'}`, enter: () => { sfx('shot'); if (e.hit) this.kill(e.t, 'shot'); } };
+      }
       case 'sentinel':
         return { dur: 3, focus: e.a, beam: [e.t, e.a, 0xffe14f], caption: `⚡ ${name(e.a)} nominated the Sentinel ${name(e.t)} and got fried!`, enter: () => { sfx('zap'); this.kill(e.a, 'airlock'); } };
       case 'become-parasite':

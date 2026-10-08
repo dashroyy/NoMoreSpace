@@ -249,16 +249,22 @@ export class SpaceCanvases {
     this.colorOf = () => '#fff';
     this.iconOf = () => '★';
     this.last = -1;
+    this.bigVisible = true; // the world says when the Observation Deck window is on screen
+    this.bigPaintedAt = -1;
   }
 
   update(time) {
     if (time - this.last < 0.2) return;
     this.last = time;
     paintSpace(this.small.getContext('2d'), 512, 256, { t: time, progress: this.progress, holeX: 0.7 });
-    paintSpace(this.big.getContext('2d'), 1440, 180, { t: time, progress: this.progress, clue: this.clue, colorOf: this.colorOf, iconOf: this.iconOf, holeX: 0.62 });
     this.smallTex.needsUpdate = true;
-    this.bigTex.needsUpdate = true;
     for (const tex of this.windowTextures) tex.needsUpdate = true;
+    // the big window is expensive to paint and upload, so do it rarely while nobody is looking
+    if (this.bigVisible || this.bigPaintedAt < 0 || time - this.bigPaintedAt > 2) {
+      this.bigPaintedAt = time;
+      paintSpace(this.big.getContext('2d'), 1440, 180, { t: time, progress: this.progress, clue: this.clue, colorOf: this.colorOf, iconOf: this.iconOf, holeX: 0.62 });
+      this.bigTex.needsUpdate = true;
+    }
   }
 }
 
