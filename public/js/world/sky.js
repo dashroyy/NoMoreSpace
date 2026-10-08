@@ -122,9 +122,15 @@ export function paintBlackHole(ctx, cx, cy, r, t) {
 }
 
 function paintConstellation(ctx, cx, cy, size, emoji, living, t) {
-  const { pts } = emojiShape(emoji);
-  const color = living ? [255, 214, 120] : [140, 170, 220];
-  ctx.strokeStyle = `rgba(${color},${living ? 0.28 : 0.16})`;
+  const { pts, canvas } = emojiShape(emoji);
+  const color = living ? [255, 214, 120] : [150, 185, 235];
+  // a ghostly outline of the role icon, so the shape can be recognised
+  ctx.save();
+  ctx.globalAlpha = living ? 0.22 : 0.14;
+  ctx.filter = living ? 'none' : 'grayscale(1)';
+  ctx.drawImage(canvas, cx - size / 2, cy - size / 2, size, size);
+  ctx.restore();
+  ctx.strokeStyle = `rgba(${color},${living ? 0.5 : 0.35})`;
   ctx.lineWidth = 1;
   ctx.beginPath();
   for (let i = 1; i < pts.length; i++) {
@@ -137,7 +143,7 @@ function paintConstellation(ctx, cx, cy, size, emoji, living, t) {
   }
   ctx.stroke();
   pts.forEach(([x, y], i) => {
-    const a = living ? 0.7 + 0.3 * Math.sin(t * 2 + i) : 0.35 + 0.15 * Math.sin(t + i);
+    const a = living ? 0.75 + 0.25 * Math.sin(t * 2 + i) : 0.55 + 0.2 * Math.sin(t + i);
     ctx.fillStyle = `rgba(${color},${a})`;
     ctx.beginPath();
     ctx.arc(cx + x * size, cy + y * size, living ? 2.2 : 1.6, 0, Math.PI * 2);
@@ -171,7 +177,7 @@ function paintComet(ctx, x, y, color, angle, len) {
 function paintClue(ctx, w, h, clue, t, colorOf, iconOf) {
   const k = clue.kind;
   if (k === 'dead-constellation' || k === 'living-constellation' || k === 'role-comets') {
-    paintConstellation(ctx, w * 0.2, h * 0.38, h * 0.62, iconOf(clue.role), k !== 'dead-constellation', t);
+    paintConstellation(ctx, w * 0.2, h * 0.45, h * 0.8, iconOf(clue.role), k !== 'dead-constellation', t);
   }
   if (k === 'comets' || k === 'role-comets') {
     (clue.players || []).forEach((id, i) => {
@@ -230,9 +236,10 @@ export class SpaceCanvases {
     this.small = document.createElement('canvas');
     this.small.width = 512;
     this.small.height = 256;
+    // the Observation Deck window is about 9x wider than it is tall
     this.big = document.createElement('canvas');
-    this.big.width = 1024;
-    this.big.height = 384;
+    this.big.width = 1440;
+    this.big.height = 180;
     this.smallTex = new THREE.CanvasTexture(this.small);
     this.bigTex = new THREE.CanvasTexture(this.big);
     for (const tex of [this.smallTex, this.bigTex]) tex.colorSpace = THREE.SRGBColorSpace;
@@ -248,7 +255,7 @@ export class SpaceCanvases {
     if (time - this.last < 0.2) return;
     this.last = time;
     paintSpace(this.small.getContext('2d'), 512, 256, { t: time, progress: this.progress, holeX: 0.7 });
-    paintSpace(this.big.getContext('2d'), 1024, 384, { t: time, progress: this.progress, clue: this.clue, colorOf: this.colorOf, iconOf: this.iconOf, holeX: 0.62 });
+    paintSpace(this.big.getContext('2d'), 1440, 180, { t: time, progress: this.progress, clue: this.clue, colorOf: this.colorOf, iconOf: this.iconOf, holeX: 0.62 });
     this.smallTex.needsUpdate = true;
     this.bigTex.needsUpdate = true;
     for (const tex of this.windowTextures) tex.needsUpdate = true;
