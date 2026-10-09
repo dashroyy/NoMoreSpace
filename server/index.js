@@ -14,6 +14,9 @@ const cosmetics = require('./cosmetics');
 const { TASKS } = require('./tasks');
 const qrcode = require('qrcode-generator');
 const records = require('./records');
+const persist = require('./persist');
+const { runBots } = require('./bots');
+const crypto = require('crypto');
 
 const PORT = process.env.PORT != null ? Number(process.env.PORT) : 3000;
 const ROOT = path.join(__dirname, '..');
@@ -111,6 +114,26 @@ const server = http.createServer((req, res) => {
     res.end(JSON.stringify(records.reports(), null, 2));
     return;
   }
+  // A finished game's replay (see records.saveReplay).
+  const replay = url.pathname.match(/^\/replay\/([a-f0-9]{12})\.json$/);
+  if (replay) {
+    const json = records.readReplay(replay[1]);
+    res.writeHead(json ? 200 : 404, { 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=3600' });
+    res.end(json || '{"error":"No replay with that id (replays are kept for the last 500 games)."}');
+    return;
+  }
+  // The deploy script calls this (from the server itself) before restarting, so players get a warning.
+  if (url.pathname === '/internal/restart-warning' && req.method === 'POST') {
+    const local = ['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(req.socket.remoteAddress) && !req.headers['x-forwarded-for'];
+    if (!local) {
+      res.writeHead(403).end('Forbidden');
+      return;
+    }
+    const seconds = Math.max(5, Math.min(60, Number(url.searchParams.get('seconds')) || 20));
+    io.emit('server-restart', { in: seconds });
+    res.writeHead(200).end('warned');
+    return;
+  }
   // A QR code for the lobby, so friends on the same call can join from their phones.
   if (url.pathname === '/qr.svg') {
     const code = String(url.searchParams.get('code') || '').toUpperCase();
@@ -162,6 +185,11 @@ function personSocket(room, personId) {
 
 // Each person gets their own view (secrets stay secret).
 function broadcast(room) {
+  // a finished game is saved as a replay, once, before anyone gets the final state (so they get its link)
+  if (room.game.phase === 'ended' && !room.game.replayId) {
+    room.game.replayId = crypto.randomBytes(6).toString('hex');
+    records.saveReplay(room.game.replayId, { ...room.game.baseView(), log: [], isReplay: true, savedAt: new Date().toISOString() });
+  }
   // a finished game goes into the play stats, once
   if (room.game.winner && room.loggedWin !== room.game.version) {
     room.loggedWin = room.game.version;
@@ -221,15 +249,23 @@ io.on('connection', (socket) => {
     for (const d of r.game.drawings.filter((x) => x.published)) socket.emit('drawing', { id: d.id, data: d.data });
   }
 
-  on('create', ({ name, look, mode }) => {
+  on('create', ({ name, look, mode, practice }) => {
     if (rooms.size >= MAX_ROOMS) throw new Error('The station is full right now. Try again soon.');
-    const g = new Game(newRoomCode(), { mode: mode === 'captain' ? 'captain' : 'autopilot' });
+    const g = new Game(newRoomCode(), { mode: mode === 'captain' && !practice ? 'captain' : 'autopilot' });
     if (process.env.NMS_TEST_PACE) g.pace = Number(process.env.NMS_TEST_PACE); // automated tests only: speeds up every timer
     const r = { code: g.code, game: g, sockets: new Map(), positions: {}, captainLeftAt: null, emptySince: null };
     const person = g.mode === 'captain' ? g.addCaptain(name) : g.addPlayer(name, look);
+    // practice: you and six robots, at a quick pace
+    if (practice) {
+      g.practice = true;
+      g.pace = Math.min(g.pace, 0.7);
+      for (let i = 0; i < 6; i++) g.addBot(person.id);
+    }
     rooms.set(g.code, r);
     seat(r, person);
   });
+  on('add-bot', () => game().addBot(me));
+  on('remove-bots', () => game().removeBots(me));
 
   on('join', ({ code, name, token, look }) => {
     const r = rooms.get(String(code || '').toUpperCase().trim());
@@ -329,6 +365,7 @@ io.on('connection', (socket) => {
   on('done-speaking', () => game().doneSpeaking(me, Date.now()));
   on('ready', ({ on: value }) => game().setReady(me, !!value));
   on('bio', ({ text }) => game().setBio(me, text));
+  on('death-guess', ({ target }) => game().setDeathGuess(me, target));
   // ghosts: a secret bet on the Parasite, and harmless pranks in the room they float in
   on('predict', ({ target }) => game().predict(me, target, Date.now()));
   on('haunt', ({ kind }) => {
@@ -632,20 +669,150 @@ setInterval(() => {
       room.captainLeftAt = null;
       broadcast(room);
     }
-    if (g.tick(now)) broadcast(room);
+    const botsActed = runBots(room, now, botApi(room));
+    if (g.tick(now) || botsActed) broadcast(room);
     if (room.emptySince && now - room.emptySince > 10 * 60_000) rooms.delete(code);
   }
 }, 250).unref();
 
 setInterval(() => {
   for (const room of rooms.values()) {
+    tickBall(room, 0.1);
     if (!room.posDirty) continue;
     room.posDirty = false;
     const packed = {};
     for (const [id, p] of Object.entries(room.positions)) packed[id] = [p.x, p.z, p.r, p.m];
+    if (room.ball) packed['@ball'] = [Math.round(room.ball.x * 100) / 100, Math.round(room.ball.z * 100) / 100, Math.round(room.ball.vx * 10) / 10, Math.round(room.ball.vz * 10) / 10];
     io.to(room.game.code).volatile.emit('pos', packed);
   }
 }, 100).unref();
+
+// ---------------------------------------------------------------------------
+// Robots speak and emote through the same channels as people.
+// ---------------------------------------------------------------------------
+
+function botApi(room) {
+  return {
+    say(p, text, extra = {}) {
+      const g = room.game;
+      if (!['dawn', 'meeting', 'nominations', 'lastwords', 'dusk', 'lobby', 'ended'].includes(g.phase)) return;
+      const message = { from: p.id, name: p.name, text, at: Date.now(), ghost: !p.alive, channel: 'all', ...extra };
+      g.noteChat(p.id);
+      if (extra.lastWords) g.noteLastWords(p.id, text);
+      for (const [socketId] of room.sockets) io.to(socketId).emit('chat', message);
+    },
+    emote(id, emote) {
+      io.to(room.code).emit('emote', { id, emote });
+    },
+  };
+}
+
+// ---------------------------------------------------------------------------
+// The docking-bay ball: a giant rubber space duck that people (and robots)
+// bump around the bridge while they wait for friends. The server moves it so
+// everyone sees the same duck.
+// ---------------------------------------------------------------------------
+
+const BALL_R = 0.7;
+const BRIDGE_HALF = 10 - 0.3 - BALL_R; // the bridge's square walls (public/js/world/layout.js)
+const BRIDGE_DIAG = 20 - 2.4 - (0.3 + BALL_R) * Math.SQRT2; // and its cut corners
+const TABLE_R = 3.2 + BALL_R;
+
+function tickBall(room, dt) {
+  if (room.game.phase !== 'lobby') {
+    room.ball = null;
+    return;
+  }
+  const b = (room.ball ||= { x: 0, z: -6.5, vx: 0, vz: 0 });
+  // kicks from anyone touching it (harder if they are running)
+  for (const pos of Object.values(room.positions)) {
+    const dx = b.x - pos.x;
+    const dz = b.z - pos.z;
+    const d = Math.hypot(dx, dz);
+    if (d > 0.001 && d < 1.15) {
+      const k = pos.m ? 6.5 : 3;
+      b.vx += (dx / d) * k;
+      b.vz += (dz / d) * k;
+      b.x = pos.x + (dx / d) * 1.15;
+      b.z = pos.z + (dz / d) * 1.15;
+    }
+  }
+  const speed = Math.hypot(b.vx, b.vz);
+  if (speed > 11) {
+    b.vx *= 11 / speed;
+    b.vz *= 11 / speed;
+  }
+  b.x += b.vx * dt;
+  b.z += b.vz * dt;
+  b.vx *= 0.95;
+  b.vz *= 0.95;
+  // bounce off the walls
+  if (Math.abs(b.x) > BRIDGE_HALF) {
+    b.x = Math.sign(b.x) * BRIDGE_HALF;
+    b.vx *= -0.8;
+  }
+  if (Math.abs(b.z) > BRIDGE_HALF) {
+    b.z = Math.sign(b.z) * BRIDGE_HALF;
+    b.vz *= -0.8;
+  }
+  const over = Math.abs(b.x) + Math.abs(b.z) - BRIDGE_DIAG;
+  if (over > 0) {
+    const nx = Math.sign(b.x) / Math.SQRT2;
+    const nz = Math.sign(b.z) / Math.SQRT2;
+    b.x -= nx * over * Math.SQRT1_2 * 2;
+    b.z -= nz * over * Math.SQRT1_2 * 2;
+    const vn = b.vx * nx + b.vz * nz;
+    if (vn > 0) {
+      b.vx -= 1.8 * vn * nx;
+      b.vz -= 1.8 * vn * nz;
+    }
+  }
+  // and off the bridge table
+  const d = Math.hypot(b.x, b.z);
+  if (d < TABLE_R) {
+    const nx = d ? b.x / d : 1;
+    const nz = d ? b.z / d : 0;
+    b.x = nx * TABLE_R;
+    b.z = nz * TABLE_R;
+    const vn = b.vx * nx + b.vz * nz;
+    if (vn < 0) {
+      b.vx -= 1.8 * vn * nx;
+      b.vz -= 1.8 * vn * nz;
+    }
+  }
+  if (Math.hypot(b.vx, b.vz) > 0.05) room.posDirty = true;
+  else {
+    b.vx = 0;
+    b.vz = 0;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Restarts: games are saved when the server stops and restored when it
+// starts, so a deploy doesn't end anyone's game (see persist.js).
+// ---------------------------------------------------------------------------
+
+function restoreGames() {
+  const now = Date.now();
+  for (const { code, game: g } of persist.load(now)) {
+    rooms.set(code, { code, game: g, sockets: new Map(), positions: {}, captainLeftAt: g.captain ? now : null, emptySince: now });
+  }
+  if (rooms.size) console.log(`Restored ${rooms.size} game(s) from before the restart.`);
+}
+
+function shutDown(signal) {
+  console.log(`${signal}: saving ${rooms.size} game(s) before stopping.`);
+  io.emit('server-restart', { in: 0 });
+  persist.save(rooms, { sync: true });
+  setTimeout(() => process.exit(0), 300).unref();
+}
+
+if (require.main === module) {
+  restoreGames();
+  process.on('SIGTERM', () => shutDown('SIGTERM'));
+  process.on('SIGINT', () => shutDown('SIGINT'));
+  setInterval(() => persist.save(rooms), 60_000).unref(); // in case of a crash
+}
 
 server.listen(PORT, () => {
   console.log(`No More Space is running at http://localhost:${PORT}`);

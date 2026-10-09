@@ -59,4 +59,4 @@ jobs:
         run: |
           ssh -i ~/.ssh/deploy_key -p "${{ secrets.DEPLOY_PORT || 22 }}" \
             "${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}" \
-            "cd '${{ secrets.DEPLOY_PATH }}' && npm ci --omit=dev && ${{ secrets.DEPLOY_RESTART_CMD || 'sudo systemctl restart nomorespace' }}"
+            "cd '${{ secrets.DEPLOY_PATH }}' && npm ci --omit=dev && (curl -fsS -X POST 'http://127.0.0.1:3000/internal/restart-warning?seconds=20' >/dev/null && sleep 20 || true) && ${{ secrets.DEPLOY_RESTART_CMD || 'sudo systemctl restart nomorespace' }}"

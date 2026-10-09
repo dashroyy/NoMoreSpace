@@ -41,6 +41,35 @@ function readLines(file) {
 }
 
 const saveGame = (summary) => append(STATS_FILE, summary);
+
+// Finished games, saved so anyone can rewatch the end-game reveal from a link.
+const REPLAY_DIR = path.join(DATA_DIR, 'replays');
+const MAX_REPLAYS = 500;
+
+function saveReplay(id, replay) {
+  const file = path.join(REPLAY_DIR, `${id}.json`);
+  fs.promises
+    .mkdir(REPLAY_DIR, { recursive: true })
+    .then(() => fs.promises.writeFile(file, JSON.stringify(replay)))
+    .then(() => fs.promises.readdir(REPLAY_DIR))
+    .then(async (names) => {
+      if (names.length <= MAX_REPLAYS) return;
+      // keep the newest ones
+      const files = await Promise.all(names.map(async (n) => ({ n, t: (await fs.promises.stat(path.join(REPLAY_DIR, n))).mtimeMs })));
+      files.sort((a, b) => a.t - b.t);
+      for (const f of files.slice(0, files.length - MAX_REPLAYS)) await fs.promises.rm(path.join(REPLAY_DIR, f.n), { force: true });
+    })
+    .catch((err) => console.error('Could not save replay:', err.message));
+}
+
+function readReplay(id) {
+  if (!/^[a-f0-9]{12}$/.test(String(id))) return null;
+  try {
+    return fs.readFileSync(path.join(REPLAY_DIR, `${id}.json`), 'utf8');
+  } catch {
+    return null;
+  }
+}
 const saveReport = (report) => append(REPORTS_FILE, report);
 
 // The numbers you need for balancing: who wins, how long games take, how roles do.
@@ -79,4 +108,4 @@ function statsSummary() {
 
 const reports = () => readLines(REPORTS_FILE).slice(-200);
 
-module.exports = { saveGame, saveReport, statsSummary, reports, DATA_DIR };
+module.exports = { saveGame, saveReport, statsSummary, reports, DATA_DIR, saveReplay, readReplay };

@@ -22,6 +22,14 @@ const REACTIONS = ['😱', '🤣', '🙄', '👀', '🫡'];
 const AFK_MS = 90_000; // no input for this long by day = away from keyboard
 const HOST_AWAY_MS = 60_000; // a quiet host in the lobby lets anyone launch
 const MAX_SPECTATORS = 10;
+// Robot crewmates fill empty seats. Each gets a name and a lobby bio.
+const BOTS = [
+  ['Unit-7', 'programmed to be suspicious'], ['Beep', 'running on 3% battery'], ['Sputnik', 'older than the ship'],
+  ['Rivet', 'afraid of magnets'], ['Zap-9', 'a former toaster'], ['Bolt', 'in love with the airlock'],
+  ['Gizmo', 'collecting space dust'], ['Cog', 'certain it is a real boy'], ['Pixel', 'buffering'],
+  ['Servo', 'allergic to water'], ['Orbit', 'dizzy all the time'], ['Widget', 'mostly glue'],
+  ['Quark', 'too small to notice'], ['Nebula', 'full of secrets'],
+];
 const CLUE_MS = 20_000; // a clue drifts past the Observation Deck for this long
 const CLUE_WARN_MS = 20_000; // players who did a task today get this much warning
 const ROOM_NAMES = {
@@ -112,6 +120,10 @@ class Game {
     this.awards = null;
     this.startedAt = null;
     this.predictions = {}; // ghosts' bets on who the Parasite is: pid -> { id, since, day, changedDay }
+    this.deathGuesses = {}; // tonight's "who dies tonight?" guesses: pid -> player id or 'none'
+    this.guessScore = {}; // correct guesses this game
+    this.lastGuess = {}; // pid -> { night, guess, correct } for the dawn toast
+    this.replayId = null;
     this.lastWordsLog = []; // { id, day, text, reactions, laughs } for the share card
     this.afk = new Set(); // players away from the keyboard (count as ready)
     this.activeFloor = 0; // idle time is measured from the start of each day
@@ -400,6 +412,7 @@ class Game {
 
   beginNight(now) {
     this.night += 1;
+    this.deathGuesses = {};
     this.executedYesterday = this.executedToday;
     this.executedToday = null;
     this.glitch = null; // last night's glitch wore off at dusk
@@ -631,6 +644,7 @@ class Game {
 
     // The Parasite strikes.
     const parasite = aliveRole('parasite');
+    d.parasiteId = parasite?.id || null;
     if (parasite && choice(parasite)) {
       const target = this.get(choice(parasite)[0]);
       const kill = (victim, result, extra = {}) => d.events.push({ k: 'kill', a: parasite.id, t: target.id, result, victim: victim?.id, ...extra });
@@ -762,6 +776,7 @@ class Game {
     }
 
     this.chapter.deaths = deaths;
+    this.scoreDeathGuesses(deaths, d.parasiteId);
     this.logEvent({ k: 'dawn', deaths: deaths.map((x) => x.id), day: this.night });
     const story = d.story || st.dawnStory(deaths.map((x) => ({ name: this.name(x.id), bio: this.get(x.id)?.bio })), this.random);
     this.chapter.story = story;
@@ -848,7 +863,8 @@ class Game {
     for (const ch of this.history) for (const e of ch.events || []) if (e.k === 'death') deaths[e.id] = e.cause;
     for (const p of this.players.filter((x) => x.role)) {
       const key = p.name.toLowerCase();
-      const row = (this.season.rows[key] ||= { name: p.name, games: 0, wins: 0, eaten: 0, airlocked: 0, awards: 0, liar: 0, psychic: 0, points: 0 });
+      const row = (this.season.rows[key] ||= { name: p.name, games: 0, wins: 0, eaten: 0, airlocked: 0, awards: 0, liar: 0, psychic: 0, guesses: 0, points: 0 });
+      row.guesses = (row.guesses || 0) + (this.guessScore[p.id] || 0);
       row.name = p.name;
       row.games += 1;
       if (teamOf(p.role) === this.winner) row.wins += 1;
@@ -858,7 +874,7 @@ class Game {
       row.awards += mine.length;
       row.liar += mine.filter((a) => a.title === 'Best Liar').length;
       row.psychic += mine.filter((a) => a.title === 'Psychic').length;
-      row.points = row.wins * 3 + row.awards;
+      row.points = row.wins * 3 + row.awards + row.guesses; // a correct "who dies tonight?" guess is a point
     }
   }
 
@@ -911,6 +927,8 @@ class Game {
     const parasites = this.parasiteIds();
     const psychic = Object.entries(this.predictions).filter(([, b]) => parasites.has(b.id)).sort((a, b) => a[1].since - b[1].since)[0];
     if (psychic) add(this.get(psychic[0]), '👻', 'Psychic', `Called it from beyond the grave: bet on ${this.name(psychic[1].id)} on day ${psychic[1].day || 1}.`);
+    const seer = most(this.guessScore, 2);
+    add(seer, '🔮', 'Clairvoyant', `Guessed who would die (or that nobody would) ${n(this.guessScore, seer)} nights.`);
     const spooky = most(s.haunts, 2);
     add(spooky, '🎃', 'Poltergeist', `Haunted the ship ${n(s.haunts, spooky)} times.`);
     return out;
@@ -1382,7 +1400,7 @@ class Game {
     if (!DAY_PHASES.includes(this.phase)) return false;
     let changed = false;
     for (const p of this.players) {
-      if (!p.connected || this.afk.has(p.id)) continue;
+      if (!p.connected || p.isBot || this.afk.has(p.id)) continue;
       if (now - Math.max(p.lastActive || 0, this.activeFloor) > AFK_MS) {
         this.afk.add(p.id);
         changed = true;
@@ -1453,6 +1471,54 @@ class Game {
     let w = this.lastWordsLog.find((x) => x.day === this.day && x.id === pid);
     if (!w) this.lastWordsLog.push((w = { id: pid, day: this.day, text: '', reactions: 0, laughs: 0 }));
     w.text = (w.text ? `${w.text} … ${text}` : text).slice(0, 160);
+  }
+
+  // ---------------------------------------------------------------------------
+  // "Who dies tonight?": everyone can guess at night (even players with nothing
+  // to choose). Right guesses score a point on the season. The Parasite may
+  // guess too (so nobody can tell who it is), but its guesses never count.
+  // ---------------------------------------------------------------------------
+
+  setDeathGuess(pid, target) {
+    if (this.phase !== 'night' || this.draft) throw new Error('Guesses close at dawn.');
+    if (!this.get(pid)) throw new Error('Only players can guess.');
+    if (target !== 'none' && !this.get(target)?.alive) throw new Error('Pick a living player, or nobody.');
+    this.deathGuesses[pid] = target;
+  }
+
+  scoreDeathGuesses(deaths, parasiteId) {
+    const died = deaths.map((x) => x.id);
+    for (const [pid, guess] of Object.entries(this.deathGuesses)) {
+      const correct = guess === 'none' ? died.length === 0 : died.includes(guess);
+      this.lastGuess[pid] = { night: this.night, guess, correct };
+      if (correct && pid !== parasiteId) this.guessScore[pid] = (this.guessScore[pid] || 0) + 1;
+    }
+    this.deathGuesses = {};
+  }
+
+  // ---------------------------------------------------------------------------
+  // Robot crewmates (their brains live in bots.js)
+  // ---------------------------------------------------------------------------
+
+  addBot(byId) {
+    this.requireController(byId);
+    if (this.phase !== 'lobby') throw new Error('Robots can only board in the docking bay.');
+    if (this.players.length >= MAX_PLAYERS) throw new Error('This ship is full (15 players).');
+    const taken = new Set(this.players.map((p) => p.name.toLowerCase()));
+    const free = BOTS.filter(([n]) => !taken.has(`${n} 🤖`.toLowerCase()));
+    if (!free.length) throw new Error('No more robots in storage.');
+    const [name, bio] = free[Math.floor(this.random() * free.length)];
+    const p = this.addPlayer(`${name} 🤖`, {});
+    p.isBot = true;
+    p.bio = bio;
+    p.lastActive = Date.now();
+    return p;
+  }
+
+  removeBots(byId) {
+    this.requireController(byId);
+    if (this.phase !== 'lobby') throw new Error('Robots can only leave from the docking bay.');
+    for (const p of this.players.filter((x) => x.isBot)) this.removePlayer(p.id);
   }
 
   // ---------------------------------------------------------------------------
@@ -1798,6 +1864,7 @@ class Game {
       connected: p.connected,
       cosmetics: p.cosmetics,
       bio: p.bio || '',
+      bot: !!p.isBot,
       nominated: this.nominees.has(p.id),
       nominatedSomeone: this.nominators.has(p.id),
       role: this.phase === 'ended' ? p.role : undefined,
@@ -1855,6 +1922,8 @@ class Game {
       awards: this.phase === 'ended' ? this.awards : null,
       predictions: this.phase === 'ended' ? Object.entries(this.predictions).map(([id, b]) => ({ id, target: b.id, day: b.day })) : null,
       bestLastWords: this.phase === 'ended' ? this.bestLastWords() : null,
+      replayId: this.phase === 'ended' ? this.replayId : null,
+      practice: !!this.practice,
       systems: this.systemsView(),
       ready: [...this.ready],
       readyNeeded: this.readyVoters().length,
@@ -1910,6 +1979,8 @@ class Game {
       ready: this.ready.has(pid),
       afk: this.afk.has(pid),
       prediction: this.predictions[pid] || null,
+      deathGuess: this.phase === 'night' ? this.deathGuesses[pid] || null : null,
+      lastGuess: this.lastGuess[pid] || null,
       haunts: !p.alive && this.phase !== 'ended' ? { left: this.hauntsLeft(p) } : null,
       tasksDone: this.tasksDone[pid] || [],
       drew: this.drawings.some((d) => d.author === pid && d.night === this.night && !d.published),
