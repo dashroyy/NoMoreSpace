@@ -74,6 +74,9 @@ export function makeTextSprite(text, { color = '#ffffff', size = 34, bg = null, 
   size = Math.round(size * k);
   maxWidth *= k;
   ctx.font = `${size}px VT323, ui-monospace, monospace`;
+  // a little air between letters: VT323 is narrow and gets hard to read when small
+  const spacing = `${Math.round(size * 0.05)}px`;
+  if ('letterSpacing' in ctx) ctx.letterSpacing = spacing;
   // word wrap
   const words = String(text).split(' ');
   const lines = [];
@@ -91,6 +94,7 @@ export function makeTextSprite(text, { color = '#ffffff', size = 34, bg = null, 
   canvas.width = Math.ceil(width);
   canvas.height = Math.ceil(height);
   ctx.font = `${size}px VT323, ui-monospace, monospace`;
+  if ('letterSpacing' in ctx) ctx.letterSpacing = spacing;
   if (bg) {
     ctx.fillStyle = bg;
     const r = Math.min(24, height / 2);
@@ -107,6 +111,11 @@ export function makeTextSprite(text, { color = '#ffffff', size = 34, bg = null, 
   ctx.textAlign = 'center';
   ctx.textBaseline = 'top';
   if (!bg) {
+    // a dark outline so names stay readable over bright floors and lights
+    ctx.strokeStyle = 'rgba(2, 4, 12, 0.92)';
+    ctx.lineWidth = Math.max(3, size * 0.14);
+    ctx.lineJoin = 'round';
+    lines.forEach((l, i) => ctx.strokeText(l, width / 2, padding + i * size * 1.25));
     ctx.shadowColor = 'rgba(0,0,0,0.9)';
     ctx.shadowBlur = 6;
   }
@@ -607,14 +616,14 @@ export class Avatar {
   setName(name, color = '#ffffff') {
     if (this.label) disposeTree(this.label);
     this.name = name;
-    this.label = makeTextSprite(name, { color, size: 30, scale: 0.011 });
+    this.label = makeTextSprite(name, { color, size: 34, scale: 0.0115 });
     this.label.position.y = 2.25;
     this.root.add(this.label);
   }
 
   say(text) {
     if (this.bubble) disposeTree(this.bubble);
-    this.bubble = makeTextSprite(text, { color: '#14102a', bg: 'rgba(245,242,255,0.95)', size: 30, maxWidth: 420, scale: 0.0105 });
+    this.bubble = makeTextSprite(text, { color: '#14102a', bg: 'rgba(245,242,255,0.95)', size: 34, maxWidth: 440, scale: 0.0108 });
     this.bubble.position.y = 2.7 + this.bubble.scale.y / 2;
     this.bubble.userData.until = performance.now() + 5500;
     this.root.add(this.bubble);
@@ -732,20 +741,40 @@ export class Avatar {
     this.armL.rotation.set(0, 0, 0.15);
     this.armR.rotation.set(0, 0, -0.15);
 
-    // walking
-    if (this.moving && !this.ghost) {
-      this.walkPhase += dt * 11;
-      const swing = Math.sin(this.walkPhase) * 0.6;
-      this.legL.rotation.x = swing;
-      this.legR.rotation.x = -swing;
-      this.armL.rotation.x = -swing * 0.6;
-      this.armR.rotation.x = swing * 0.6;
-      b.position.y = Math.abs(Math.sin(this.walkPhase)) * 0.06;
-      if (Math.random() < dt * 0.5) this.stepped = true;
-    } else {
-      this.legL.rotation.x *= 0.8;
-      this.legR.rotation.x *= 0.8;
-      b.position.y = Math.sin(time * 2 + this.walkPhase) * 0.015;
+    // walking: a low-gravity "moon lope" like the Apollo astronauts. Slow,
+    // bounding hops that hang at the top, a lean into each stride, arms held
+    // out for balance, and a puff of dust on every landing.
+    const walking = this.moving && !this.ghost;
+    this.walkBlend = (this.walkBlend || 0) + ((walking ? 1 : 0) - (this.walkBlend || 0)) * Math.min(1, dt * 6);
+    const w = this.walkBlend;
+    if (walking) this.walkPhase += dt * 6.2; // about two hops a second: slower than an Earth walk
+    if (w > 0.01) {
+      const ph = this.walkPhase;
+      const s = Math.sin(ph);
+      const hop = Math.pow(Math.abs(s), 0.6); // flat-topped arc: floaty at the top, quick landing
+      b.position.y = hop * 0.24 * w;
+      b.rotation.x = 0.14 * w; // lean forward into the stride
+      b.rotation.z = Math.sin(ph * 0.5) * 0.05 * w; // gentle side-to-side rock
+      // legs reach forward and back, both tucking a little while airborne
+      this.legL.rotation.x = (s * 0.5 - hop * 0.18) * w;
+      this.legR.rotation.x = (-s * 0.5 - hop * 0.18) * w;
+      // arms out wide for balance, swinging slowly against the legs
+      this.armL.rotation.z = 0.15 + (0.35 + hop * 0.15) * w;
+      this.armR.rotation.z = -0.15 - (0.35 + hop * 0.15) * w;
+      this.armL.rotation.x = -s * 0.35 * w;
+      this.armR.rotation.x = s * 0.35 * w;
+      // touchdown: once per hop, when the sine changes sign
+      const landed = walking && Math.sign(s) !== Math.sign(this.lastStride || s);
+      this.lastStride = s;
+      if (landed) {
+        this.stepped = true;
+        if (this.root.visible) this.burst(3, 0x9aa4b8, 0.5, 0.06); // moon dust
+      }
+    }
+    if (!walking) {
+      this.legL.rotation.x *= 0.85;
+      this.legR.rotation.x *= 0.85;
+      b.position.y = Math.max(b.position.y, 0) + Math.sin(time * 2 + this.walkPhase) * 0.015 * (1 - w);
     }
     if (this.ghost) {
       b.position.y = 0.35 + Math.sin(time * 1.7 + this.walkPhase) * 0.12;
