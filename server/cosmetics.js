@@ -20,9 +20,11 @@ const SUITS = {
   teal: '#127a7a',
 };
 
-const HATS = ['none', 'party', 'antenna', 'crown', 'halo', 'tophat', 'catears', 'chef', 'flower', 'headphones', 'propeller', 'horns', 'bow', 'cone', 'beanie', 'cowboy'];
+const HATS = ['none', 'party', 'antenna', 'crown', 'halo', 'tophat', 'catears', 'chef', 'flower', 'headphones', 'propeller', 'horns', 'bow', 'cone', 'beanie', 'cowboy', 'laurel', 'tentacles', 'jester', 'saucer'];
 const VISORS = { gold: '#f2b84b', sky: '#7cc7ff', mirror: '#c9d3e6', mint: '#7af0c1', rose: '#ff8fb1', void: '#141420' };
-const PETS = ['none', 'cat', 'duck', 'drone', 'alien', 'hamster', 'jelly'];
+const PETS = ['none', 'cat', 'duck', 'drone', 'alien', 'hamster', 'jelly', 'whale'];
+// Earned by playing (tracked in each player's browser): see public/js/progress.js
+const UNLOCKABLE = { hats: ['laurel', 'tentacles', 'jester', 'saucer'], pets: ['whale'] };
 
 function defaults(taken = []) {
   const suit = Object.keys(SUITS).find((s) => !taken.includes(s)) || 'white';
@@ -39,4 +41,4 @@ function clean(input = {}, current = defaults()) {
   };
 }
 
-module.exports = { SUITS, HATS, VISORS, PETS, defaults, clean };
+module.exports = { SUITS, HATS, VISORS, PETS, UNLOCKABLE, defaults, clean };

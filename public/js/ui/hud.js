@@ -7,13 +7,14 @@ import { ROOMS, CORRIDORS } from '../world/layout.js';
 import { blackHoleProgress } from '../world/world.js';
 import { canTeleport, teleportTo } from './rooms.js';
 import { renderVote, openNominate, votesTodayList } from './vote.js';
+import { claimTag, updateClaimButton } from './social.js';
 import { badgeFor } from './notebook.js';
 
 const DAY_PHASES = ['roam', 'meeting', 'nominations'];
 const READY_LABEL = { roam: 'Ready for the meeting', meeting: 'Ready for nominations', nominations: 'No more nominations' };
 
 const PHASE_NAMES = {
-  lobby: 'Docked', night: 'Night', dawn: 'Dawn', roam: 'Explore', meeting: 'Meeting', nominations: 'Nominations', dusk: 'Dusk', ended: 'Mission over',
+  lobby: 'Docked', night: 'Night', dawn: 'Dawn', roam: 'Explore', meeting: 'Meeting', nominations: 'Nominations', lastwords: 'Last words', dusk: 'Dusk', ended: 'Mission over',
 };
 
 let selectMode = null; // { kind: 'shoot' | 'puppet', onPick }
@@ -57,6 +58,8 @@ export function initHud(w, { onRoleCard, onUse, onPuppetPick }) {
     if (k === 'r') onRoleCard();
     if (k === 'e' && !$('btn-use').hidden) onUse();
     if (k === 'q') toggleEmotes();
+    if (k === 'c' && !$('btn-claim').hidden) $('btn-claim').click();
+    if (k === 'l') onRoleCard('log');
     if (k === ' ' && !$('btn-hand').hidden) {
       e.preventDefault();
       toggleHand();
@@ -108,7 +111,7 @@ export function setSelectMode(mode) {
 
 export function renderHud(state) {
   $('hud-code').textContent = state.code;
-  const label = PHASE_NAMES[state.phase] + (['night'].includes(state.phase) ? ` ${state.night}` : ['dawn', 'roam', 'meeting', 'nominations', 'dusk'].includes(state.phase) ? ` · Day ${state.day}` : '');
+  const label = PHASE_NAMES[state.phase] + (['night'].includes(state.phase) ? ` ${state.night}` : ['dawn', 'roam', 'meeting', 'nominations', 'lastwords', 'dusk'].includes(state.phase) ? ` · Day ${state.day}` : '');
   $('hud-phase').textContent = label;
   const alive = state.aliveCount;
   const hole = Math.round(blackHoleProgress(state) * 100);
@@ -123,7 +126,9 @@ export function renderHud(state) {
   const nom = state.nomination;
   // voting happens in the vote panel now (vote.js)
   $('btn-hand').hidden = true;
-  $('btn-done-speaking').hidden = true;
+  // last words: the airlocked player (or the host/Captain) can finish early
+  $('btn-done-speaking').hidden = !(state.phase === 'lastwords' && (state.lastWords?.id === you.id || you.isController));
+  updateClaimButton(state);
   // everyone ready = skip the rest of this part of the day
   const readyBtn = $('btn-ready');
   readyBtn.hidden = !you.id || you.isCaptain || !DAY_PHASES.includes(state.phase) || !!nom;
@@ -201,6 +206,7 @@ export function renderRing() {
       nom && nom.stage !== 'count' && nom.cast?.includes(p.id) ? el('span', { className: 'cast-tick', title: 'Has voted' }, '🗳️') : null,
       token,
       el('span', { className: 'nm' }, p.name),
+      claimTag(state, p.id),
     );
     seat.addEventListener('click', () => clickSeat(p, nominatable));
     children.push(seat);

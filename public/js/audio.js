@@ -550,6 +550,23 @@ function startMusic(name) {
 const now = () => ctx.currentTime;
 
 const SOUNDS = {
+  // the Captain's comedy stingers
+  trombone: () => [[311, 0], [294, 0.45], [277, 0.9], [262, 1.35]].forEach(([f, d], i) => tone({ freq: f, slide: i === 3 ? 220 : f * 0.98, type: 'sawtooth', dur: i === 3 ? 1.3 : 0.42, vol: 0.12, delay: d, filter: { freq: 1400 } })),
+  drumroll: () => {
+    for (let i = 0; i < 28; i++) noise({ dur: 0.06, vol: 0.12 + i * 0.005, freq: 220, q: 0.8, type: 'lowpass', delay: i * 0.07 });
+    noise({ dur: 0.9, vol: 0.35, freq: 5000, q: 0.5, type: 'highpass', delay: 2 });
+    tone({ freq: 70, type: 'sine', dur: 0.4, vol: 0.4, delay: 2 });
+  },
+  airhorn: () => [0, 0.32, 0.64].forEach((d, i) => [440, 554, 659].forEach((f) => tone({ freq: f, type: 'sawtooth', dur: i === 2 ? 0.8 : 0.25, vol: 0.08, delay: d, filter: { freq: 2600 } }))),
+  crickets: () => {
+    for (let k = 0; k < 4; k++) for (let i = 0; i < 3; i++) tone({ freq: 4200, type: 'triangle', dur: 0.04, vol: 0.05, delay: k * 0.7 + i * 0.07 });
+  },
+  kazoo: () => [523, 587, 659, 523, 784].forEach((f, i) => tone({ freq: f, slide: f * 1.02, type: 'sawtooth', dur: 0.22, vol: 0.09, delay: i * 0.22, filter: { type: 'bandpass', freq: 1200 } })),
+  gasp: () => {
+    noise({ dur: 0.5, vol: 0.25, freq: 1600, q: 1.2, slide: 2600 });
+    [392, 330].forEach((f, i) => tone({ freq: f, type: 'sine', dur: 0.6, vol: 0.08, delay: 0.1 + i * 0.05 }));
+  },
+
   // UI: soft wooden taps and little bells rather than computer bleeps
   tap: () => tone({ freq: 1500, dur: 0.035, vol: 0.035, type: 'sine' }),
   click: () => {

@@ -51,7 +51,7 @@ function setTab(name) {
 }
 
 function line(m) {
-  const cls = ['msg', m.ghost ? 'ghost' : '', m.from === store.state?.you?.id ? 'mine' : '', m.name?.startsWith('Captain ') ? 'captain' : '', m.channel === 'evil' ? 'evil' : '', m.channel === 'intercept' ? 'intercept' : '', m.system ? 'system' : ''].join(' ');
+  const cls = ['msg', m.ghost ? 'ghost' : '', m.from === store.state?.you?.id ? 'mine' : '', m.name?.startsWith('Captain ') ? 'captain' : '', m.channel === 'evil' ? 'evil' : '', m.channel === 'intercept' ? 'intercept' : '', m.lastWords ? 'lastwords' : '', m.system ? 'system' : ''].join(' ');
   const tag = { all: '📢', near: '👂', evil: '🦑', intercept: '' }[m.channel] || '';
   return el('div', { className: cls }, m.system ? null : el('span', { className: 'ch' }, tag), m.system ? null : el('b', {}, `${m.name}${m.ghost ? ' 👻' : ''}: `), m.text);
 }
@@ -100,6 +100,7 @@ export function updateChatVisibility(state) {
     nominations: 'Everyone on the bridge hears you…',
     dawn: 'Everyone on the bridge hears you…',
     dusk: 'Everyone on the bridge hears you…',
+    lastwords: 'Everyone is listening…',
     ended: 'GG! Chat with everyone…',
   }[state.phase];
   $('chat-input').placeholder = you?.isCaptain ? 'Captain: speak to everyone…' : placeholder || 'Say something…';

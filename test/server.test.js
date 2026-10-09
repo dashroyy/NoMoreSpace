@@ -4,6 +4,10 @@ const assert = require('node:assert');
 const http = require('http');
 
 process.env.PORT = '0'; // any free port
+const os = require('os');
+const fs = require('fs');
+const path = require('path');
+process.env.NMS_DATA_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'nms-test-')); // stats & bug reports go here
 const { server, rooms, io: ioServer } = require('../server/index');
 const { io } = require('socket.io-client');
 
@@ -222,6 +226,50 @@ test('ship systems over the network: intercepts, spoofs, disguises and lockdowns
   // using a system twice is refused
   const again = await call(mimic, 'system', { target: id(comms) });
   assert.ok(!again.ok);
+});
+
+test('whisper requests beam both players into an empty room; claims, bug reports and stats work', async () => {
+  const { host, players, room } = await makeShip(5);
+  assert.ok((await call(host, 'start')).ok);
+  room.game.resolveNight(Date.now());
+  room.game.applyDraft(Date.now());
+  room.game.beginRoam(Date.now());
+  const [a, b, c] = players;
+  const id = (x) => latest(x).you.id;
+  a.emit('pos', { x: 0, z: 0, r: 0, m: 0, room: 'bridge' });
+  c.emit('pos', { x: 25, z: 0, r: 0, m: 0, room: 'galley' });
+  await waitFor(() => room.positions[id(c)]);
+  // ask, accept, and both get sent to the same empty room
+  const invited = new Promise((r) => b.once('whisper-invite', r));
+  assert.ok((await call(a, 'whisper-ask', { target: id(b) })).ok);
+  const inv = await invited;
+  assert.strictEqual(inv.from, id(a));
+  const goA = new Promise((r) => a.once('whisper-go', r));
+  const goB = new Promise((r) => b.once('whisper-go', r));
+  assert.ok((await call(b, 'whisper-answer', { from: id(a), yes: true })).ok);
+  const [ga, gb] = await Promise.all([goA, goB]);
+  assert.strictEqual(ga.room, gb.room);
+  assert.ok(!['bridge', 'galley', 'corridor'].includes(ga.room), 'an empty room');
+  // answering twice does nothing
+  assert.ok(!(await call(b, 'whisper-answer', { from: id(a), yes: true })).ok);
+  // claims are public
+  assert.ok((await call(c, 'claim', { role: 'medic', text: 'I protected Bea' })).ok);
+  await waitFor(() => latest(a).claims?.[id(c)]?.role === 'medic');
+  assert.ok(latest(a).dayLog.some((e) => e.k === 'claim' && e.id === id(c)));
+  assert.ok(!(await call(c, 'claim', { role: 'not-a-role' })).ok);
+  // bug reports are saved for the owner
+  assert.ok((await call(a, 'bug-report', { text: 'The duck stole my vote', errors: ['TypeError: x'], info: 'test' })).ok);
+  assert.ok(!(await call(a, 'bug-report', { text: 'again!' })).ok, 'rate limited');
+  await waitFor(() => fs.existsSync(path.join(process.env.NMS_DATA_DIR, 'reports.jsonl')) && fs.statSync(path.join(process.env.NMS_DATA_DIR, 'reports.jsonl')).size > 0, 3000);
+  const report = JSON.parse(fs.readFileSync(path.join(process.env.NMS_DATA_DIR, 'reports.jsonl'), 'utf8').trim().split('\n').pop());
+  assert.strictEqual(report.text, 'The duck stole my vote');
+  // a finished game lands in the stats file, and /stats summarises it
+  room.game.finish('crew', 'test');
+  await call(host, 'auto', { on: true });
+  await waitFor(() => fs.existsSync(path.join(process.env.NMS_DATA_DIR, 'stats.jsonl')) && fs.statSync(path.join(process.env.NMS_DATA_DIR, 'stats.jsonl')).size > 0, 3000);
+  const stats = await (await fetch(`${base}/stats`)).json();
+  assert.ok(stats.games >= 1);
+  assert.strictEqual((await fetch(`${base}/reports`)).status, 403, 'reports need the admin token');
 });
 
 test('Captain mode: only the Captain controls the game and sees the manifest', async () => {

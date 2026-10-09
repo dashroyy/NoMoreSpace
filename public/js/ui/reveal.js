@@ -396,6 +396,8 @@ export class Reveal {
           el('span', { className: 'hint' }, c.p.alive ? 'Survived' : '👻 Died'),
         );
       })),
+      awardsBox(s),
+      this.unlocked?.length ? el('div', { className: 'unlocked' }, `🎁 New for your spacesuit: ${this.unlocked.join(', ')}!`) : null,
       el('div', { className: 'row' },
         el('button', { onclick: () => this.start(this.state) }, '🔁 Watch again'),
         isController() ? el('button', { className: 'primary', onclick: () => send('reset').catch(() => {}) }, '🚀 Back to the docking bay (new game)') : el('span', { className: 'hint' }, 'Waiting for the host/Captain to start a new game…'),
@@ -536,4 +538,18 @@ export class Reveal {
 
     this.world.renderer.render(this.scene, this.camera);
   }
+}
+
+// The silly end-of-game awards (worked out by the server from what happened).
+function awardsBox(s) {
+  const list = s.awards || [];
+  if (!list.length) return null;
+  const name = (id) => s.players.find((p) => p.id === id)?.name || '?';
+  return el('div', { className: 'awards' },
+    el('h3', {}, '🏅 Awards'),
+    el('div', { className: 'award-grid' }, ...list.map((a) => el('div', { className: 'award' },
+      el('span', { className: 'ico' }, a.icon),
+      el('div', {}, el('b', {}, a.title), el('div', {}, name(a.id)), el('small', { className: 'hint' }, a.why)),
+    ))),
+  );
 }

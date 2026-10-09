@@ -121,8 +121,9 @@ export const HAT_LABELS = {
   none: 'None', party: '🥳 Party', antenna: '📡 Antenna', crown: '👑 Crown', halo: '😇 Halo', tophat: '🎩 Top hat', catears: '🐱 Cat ears',
   chef: '👨‍🍳 Chef', flower: '🌼 Flower', headphones: '🎧 Headphones', propeller: '🚁 Propeller', horns: '🤘 Horns', bow: '🎀 Bow',
   cone: '🚧 Cone', beanie: '🧢 Beanie', cowboy: '🤠 Cowboy',
+  laurel: '🏆 Laurels', tentacles: '🦑 Tentacles', jester: '🤡 Jester cap', saucer: '🛸 Mini UFO',
 };
-export const PET_LABELS = { none: 'None', cat: '🐈 Cat', duck: '🦆 Duck', drone: '🛸 Drone', alien: '👽 Alien', hamster: '🐹 Hamster', jelly: '🪼 Jelly' };
+export const PET_LABELS = { none: 'None', cat: '🐈 Cat', duck: '🦆 Duck', drone: '🛸 Drone', alien: '👽 Alien', hamster: '🐹 Hamster', jelly: '🪼 Jelly', whale: '🐋 Space whale' };
 
 function buildHat(id) {
   const g = new THREE.Group();
@@ -234,6 +235,43 @@ function buildHat(id) {
       add(new THREE.SphereGeometry(0.08, 8, 6), 0xf2f2f2, 0, 0.2, 0);
       break;
     }
+    // ---- unlockable hats ----
+    case 'laurel': {
+      for (let i = 0; i < 14; i++) {
+        const a = (i / 14) * Math.PI * 2;
+        if (Math.abs(Math.sin(a)) > 0.95 && Math.cos(a) > 0) continue; // a gap at the front
+        const leaf = add(new THREE.SphereGeometry(0.07, 8, 6), 0xd9b23a, Math.cos(a) * 0.24, 0.04 + (i % 2) * 0.03, Math.sin(a) * 0.24, { metalness: 0.7, roughness: 0.3 });
+        leaf.scale.set(0.55, 0.35, 1.2);
+        leaf.rotation.y = -a;
+      }
+      break;
+    }
+    case 'tentacles': {
+      for (let i = 0; i < 5; i++) {
+        const a = (i / 5) * Math.PI * 2;
+        const t = add(new THREE.ConeGeometry(0.05, 0.42, 7), 0x8f2cff, Math.cos(a) * 0.14, 0.18, Math.sin(a) * 0.14, { emissive: 0x4a0f80, emissiveIntensity: 0.7 });
+        t.rotation.set(Math.sin(a) * 0.5, 0, -Math.cos(a) * 0.5);
+        t.userData.bob = true;
+      }
+      break;
+    }
+    case 'jester': {
+      add(new THREE.CylinderGeometry(0.24, 0.24, 0.08, 16), 0xffd23f, 0, 0.02, 0);
+      for (const s2 of [-1, 1]) {
+        const c = add(new THREE.ConeGeometry(0.1, 0.42, 10), s2 < 0 ? 0xff2a2a : 0x2ad1ff, s2 * 0.17, 0.2, 0);
+        c.rotation.z = s2 * -0.9;
+        add(new THREE.SphereGeometry(0.055, 8, 6), 0xffd23f, s2 * 0.36, 0.33, 0, { metalness: 0.8, roughness: 0.2 });
+      }
+      break;
+    }
+    case 'saucer': {
+      const disc = add(new THREE.SphereGeometry(0.26, 18, 8), 0x9aa4b8, 0, 0.32, 0, { metalness: 0.8, roughness: 0.25 });
+      disc.scale.y = 0.28;
+      disc.userData.bob = true;
+      const dome = add(new THREE.SphereGeometry(0.1, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2), 0x9bff6b, 0, 0.36, 0, { transparent: true, opacity: 0.6, emissive: 0x3aff6b, emissiveIntensity: 0.6 });
+      dome.userData.bob = true;
+      break;
+    }
     case 'cowboy': {
       const brim = add(new THREE.CylinderGeometry(0.45, 0.45, 0.03, 24), 0x8b5a2b, 0, 0, 0);
       brim.scale.z = 0.8;
@@ -308,6 +346,20 @@ function buildPet(id) {
         t.userData.wag = true;
       }
       g.userData.hover = 0.9;
+      break;
+    }
+    case 'whale': {
+      const body = add(new THREE.SphereGeometry(0.2, 14, 10), 0x4f7bd6, 0, 0.1, 0);
+      body.scale.set(0.9, 0.75, 1.5);
+      add(new THREE.SphereGeometry(0.15, 12, 8), 0xdfe8ff, 0, 0.03, 0.06).scale.set(0.8, 0.5, 1.3);
+      for (const s2 of [-1, 1]) add(new THREE.SphereGeometry(0.025, 6, 5), 0x111111, s2 * 0.13, 0.15, 0.2);
+      const tail = add(new THREE.ConeGeometry(0.12, 0.2, 4), 0x4f7bd6, 0, 0.12, -0.36);
+      tail.rotation.x = -Math.PI / 2;
+      tail.scale.set(1.6, 1, 0.3);
+      tail.userData.wag = true;
+      const spout = add(new THREE.SphereGeometry(0.04, 6, 5), 0x9fdcff, 0, 0.32, 0.05, { transparent: true, opacity: 0.7 });
+      spout.userData.wag = true;
+      g.userData.hover = 1;
       break;
     }
     default:
@@ -647,6 +699,17 @@ export class Avatar {
       extras.add(duck);
       this.burst(20, 0xffd93b, 2);
     }
+    if (anim === 'rocket') {
+      const flame = mesh(new THREE.ConeGeometry(0.28, 1.1, 12, 1, true), new THREE.MeshBasicMaterial({ color: 0xff8a1a, transparent: true, opacity: 0.85, side: THREE.DoubleSide, depthWrite: false }), 0, -0.3, -0.35);
+      flame.rotation.x = Math.PI;
+      flame.userData.flame = true;
+      extras.add(flame);
+    }
+    if (anim === 'disco') {
+      const ball = mesh(new THREE.IcosahedronGeometry(0.35, 1), mat(0xdddddd, { metalness: 1, roughness: 0.15, flatShading: true }), 0, 3.4, 0);
+      ball.userData.discoBall = true;
+      extras.add(ball);
+    }
     if (anim === 'shot') {
       this.burst(24, 0xff7a3a, 3);
       this.burst(10, 0xffffff, 4);
@@ -739,6 +802,42 @@ export class Avatar {
         case 'floataway': b.position.y = p * 6; this.armR.rotation.z = -2.6 + Math.sin(d.t * 10) * 0.4; s = 1 - p * 0.3; break;
         case 'fainted': b.rotation.x = -Math.min(1, d.t * 3) * 1.5; this.dizzy(time); break;
         case 'shot': b.rotation.x = -Math.min(1, d.t * 4) * 1.5; b.position.z = -Math.min(1, d.t * 4) * 0.8; break;
+        case 'balloon': {
+          // puff up, float, then POP
+          b.scale.set(1 + p * 1.4, 1 + p * 0.9, 1 + p * 1.4);
+          ownScale = true;
+          b.position.y = p * p * 3;
+          if (p > 0.92 && !d.popped) {
+            d.popped = true;
+            this.burst(40, this.suitMat.color.getHex(), 4, 2);
+            this.body.visible = false;
+          }
+          break;
+        }
+        case 'disco': {
+          b.rotation.y = d.t * 9;
+          b.position.y = Math.abs(Math.sin(d.t * 10)) * 0.4;
+          this.suitMat.color.setHSL((d.t * 2) % 1, 0.9, 0.55);
+          this.extras.children.forEach((o) => o.userData.discoBall && (o.rotation.y = d.t * 4));
+          if (p > 0.9 && !d.popped) {
+            d.popped = true;
+            this.burst(50, null, 3);
+          }
+          s = p > 0.9 ? Math.max(0.001, 1 - (p - 0.9) * 10) : 1;
+          break;
+        }
+        case 'tiny': s = Math.max(0.03, 1 - p * 1.05); b.position.x = Math.sin(d.t * 18) * 0.15 * p; break;
+        case 'rocket': {
+          const lift = Math.max(0, p - 0.25) / 0.75;
+          b.position.y = lift * lift * 16;
+          b.position.x = Math.sin(d.t * 30) * (p < 0.25 ? 0.06 : 0);
+          this.extras.children.forEach((o) => {
+            if (!o.userData.flame) return;
+            o.position.y = b.position.y - 0.3;
+            o.scale.setScalar(0.6 + Math.random() * 0.6);
+          });
+          break;
+        }
         default: b.rotation.x = -Math.min(1, d.t * 3) * 1.5; break;
       }
       if (!ownScale) b.scale.setScalar(s);

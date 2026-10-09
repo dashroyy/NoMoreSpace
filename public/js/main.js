@@ -14,6 +14,9 @@ import { initRooms } from './ui/rooms.js';
 import { ROOMS } from './world/layout.js';
 import { initSystems } from './ui/systems.js';
 import { initVote } from './ui/vote.js';
+import { initSocial } from './ui/social.js';
+import { initConnection, openBugReport } from './ui/report.js';
+import { recordGame } from './progress.js';
 import { Reveal } from './ui/reveal.js';
 import { clearNotebook } from './ui/notebook.js';
 import { initVoice, toggleVoice, voiceEnabled } from './voice.js';
@@ -70,6 +73,12 @@ async function boot() {
   initVoice(world);
   initLobby({ onLeave: leave });
   initRooms(world);
+  initSocial(world);
+  initConnection();
+  $('home-bug').addEventListener('click', (e) => {
+    e.preventDefault();
+    openBugReport();
+  });
   initSystems(world);
   initVote();
   initHud(world, {
@@ -125,7 +134,10 @@ async function boot() {
   socket.on('chat', (m) => {
     addChat(m);
     if (m.channel !== 'evil') world.say(m.from, m.text);
+    // last words get the big cloud bubble
+    if (m.lastWords) showStory(`“${m.text}”`, [], 9000, `🎤 ${m.name}'s last words`);
   });
+  socket.on('stinger', ({ name }) => sfx(name));
   socket.on('emote', ({ id, emote, byCaptain }) => {
     world.emote(id, emote);
     if (byCaptain) sfx(emote === 'zap' ? 'zap' : 'pop');
@@ -150,6 +162,8 @@ async function boot() {
     refreshRoleCard();
     world.setDoneTasks(state.you?.tasksDone || []);
     world.setHallucination(state.you?.fx || null, state.phase, (m) => addChat(m));
+    world.setShipEvent(state.shipEvent);
+    world.setSpotlight(state.phase === 'lastwords' ? state.lastWords?.id : null);
 
     // clue in the windows
     if (JSON.stringify(state.clue) !== JSON.stringify(prev?.clue)) {
@@ -234,6 +248,13 @@ function onPhaseChange(state, prev, world, reveal) {
       phaseBanner('🔦 Explore the ship', 'Press M (🚀 Rooms) to teleport. Only people in your room hear you.', 5000);
       systemLine('🔦 Explore time! Press M or tap 🚀 Rooms to teleport into a room. Only people in the same room can read your chat, so meet up with someone for a private talk.');
       break;
+    case 'lastwords': {
+      sfx('drumroll');
+      const who = player(state.lastWords?.id);
+      phaseBanner(`🎤 Last words: ${who?.name || '…'}`, '15 seconds in the spotlight, then the airlock.', 5000);
+      if (state.lastWords?.id === state.you?.id) toast('🎤 You have 15 seconds for your last words. Type in the chat: everyone will see it in a big bubble.', 'evil', 9000);
+      break;
+    }
     case 'meeting':
       sfx('alarm');
       phaseBanner('🚨 Emergency meeting', 'Everyone to the bridge. Share what you know.');
@@ -254,11 +275,15 @@ function onPhaseChange(state, prev, world, reveal) {
       phaseBanner('🌇 Dusk', dusk?.id ? `${player(dusk.id)?.name} is airlocked` : 'Nobody is airlocked');
       break;
     }
-    case 'ended':
+    case 'ended': {
       hideStory();
       $('night').hidden = true;
+      // progress for unlockable hats and pets
+      reveal.unlocked = recordGame(state);
+      if (reveal.unlocked.length) setTimeout(() => toast(`🎁 Unlocked for your spacesuit: ${reveal.unlocked.join(', ')}!`, 'info', 10000), 3000);
       setTimeout(() => store.state?.phase === 'ended' && reveal.start(store.state), first ? 200 : 2500);
       break;
+    }
     default:
       break;
   }
@@ -266,6 +291,20 @@ function onPhaseChange(state, prev, world, reveal) {
 
 // Toasts and sounds for things that happen within a phase.
 function announceChanges(state, prev, world) {
+  // the Captain's ship events
+  const ev = state.shipEvent;
+  if (ev && ev.until !== prev.shipEvent?.until) {
+    const show = {
+      zerog: ['🪐 ZERO GRAVITY!', 'The artificial gravity has failed. Wheee!', 'whoosh'],
+      disco: ['🪩 DISCO MODE', 'The Captain found the party lights.', 'fanfare'],
+      alarm: ['🚨 RED ALERT', 'Something is very wrong. (Probably.)', 'alarm'],
+      confetti: ['🎉 CONFETTI!', 'Somebody pressed the party button.', 'pop'],
+    }[ev.kind];
+    if (show) {
+      phaseBanner(show[0], show[1], 3500);
+      sfx(show[2]);
+    }
+  }
   // ship systems everyone notices
   const sys = state.systems || {};
   const was = prev.systems || {};
@@ -316,10 +355,10 @@ function announceChanges(state, prev, world) {
 // Story cloud bubble
 // ---------------------------------------------------------------------------
 
-function showStory(text, chips = [], ms = 8000) {
+function showStory(text, chips = [], ms = 8000, author = null) {
   if (!text) return;
   const state = store.state;
-  $('story-author').textContent = state?.mode === 'captain' && state.captain ? `☁️ Captain ${state.captain.name} says` : '☁️ ARIA, ship AI, reports';
+  $('story-author').textContent = author || (state?.mode === 'captain' && state.captain ? `☁️ Captain ${state.captain.name} says` : '☁️ ARIA, ship AI, reports');
   typeText($('story-text'), text, 18);
   clear($('story-deaths'), ...chips.map((c) => el('span', {}, c)));
   $('story').hidden = false;

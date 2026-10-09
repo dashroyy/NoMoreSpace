@@ -7,13 +7,14 @@ import { Flyby } from './flyby.js';
 import { Hallucinations } from './hallucinate.js';
 import { moveWithCollision, roomAt, roomById, walkable, seatPosition, TASK_STATIONS, SPAWN, DRAWING_SLOTS } from './layout.js';
 
-const SEATED = ['dawn', 'meeting', 'nominations', 'dusk'];
+const SEATED = ['dawn', 'meeting', 'nominations', 'lastwords', 'dusk'];
 // The ship's lighting mood for each phase: a colour to tint the room lights toward, and how much.
 const MOODS = {
   night: { color: 0x2c3cff, amount: 0.45 },
   dawn: { color: 0xffc890, amount: 0.3 },
   meeting: { color: 0xff2030, amount: 0.12 },
   nominations: { color: 0xff3040, amount: 0.22 },
+  lastwords: { color: 0xffc070, amount: 0.3 },
   dusk: { color: 0xff7a3a, amount: 0.4 },
 };
 const ALARM_SECONDS = 5; // red alert pulse when an emergency meeting is called
@@ -383,6 +384,7 @@ export class World {
     this.updateAmbience(dt, t);
     this.ship.decor.update(t, { night: this.night, progress: this.progress });
     this.updateBeams(dt);
+    this.updateShipEvent(dt, t);
     this.flyby?.update(this.serverNow(), t);
     this.hallucinations?.update(dt, t);
     // the big Observation Deck window (where clues appear) only needs repainting when it can be seen
@@ -588,7 +590,11 @@ export class World {
     let amount = mood ? mood.amount : 0;
     this.moodColor.setHex(mood ? mood.color : 0xffffff);
     const alarm = t < this.alarmUntil;
-    if (alarm) {
+    const disco = this.shipEventLive('disco');
+    if (disco) {
+      this.moodColor.setHSL((t * 0.6) % 1, 1, 0.55);
+      amount = 0.85;
+    } else if (alarm) {
       this.moodColor.setHex(0xff1020);
       amount = 0.6 + 0.4 * (0.5 + 0.5 * Math.sin(t * 9));
     } else if (this.phase === 'nominations') {
@@ -627,6 +633,83 @@ export class World {
   // Teleporting and "who is where"
   // ---------------------------------------------------------------------------
 
+  // ---------------------------------------------------------------------------
+  // The Captain's ship events, and the last-words spotlight
+  // ---------------------------------------------------------------------------
+
+  setShipEvent(ev) {
+    const key = ev ? `${ev.kind}:${ev.until}` : '';
+    if (key === this.shipEventKey) return;
+    this.shipEventKey = key;
+    this.shipEvent = ev;
+    if (ev?.kind === 'alarm') this.alarmUntil = this.clock.elapsedTime + Math.max(1, (ev.until - this.serverNow()) / 1000);
+  }
+
+  shipEventLive(kind) {
+    return this.shipEvent?.kind === kind && this.serverNow() < this.shipEvent.until;
+  }
+
+  updateShipEvent(dt, t) {
+    // zero gravity: everyone drifts up and bobs about
+    const zerog = this.shipEventLive('zerog');
+    let i = 0;
+    for (const a of this.avatars.values()) {
+      i += 1;
+      if (zerog) {
+        a.root.position.y = 0.9 + Math.sin(t * 1.3 + i) * 0.45;
+        a.body.rotation.z = Math.sin(t * 0.7 + i) * 0.5;
+        a.floating = true;
+      } else if (a.floating) {
+        a.root.position.y = 0;
+        a.body.rotation.z = 0;
+        a.floating = false;
+      }
+    }
+    // confetti storm
+    if (this.shipEventLive('confetti')) {
+      this.confettiIn = (this.confettiIn ?? 0) - dt;
+      if (this.confettiIn <= 0) {
+        this.confettiIn = 0.25;
+        const list = [...this.avatars.values()];
+        const a = list[Math.floor(Math.random() * list.length)];
+        if (a?.root.visible) a.burst(16, null, 3, 2.5);
+      }
+    }
+    // the last-words spotlight follows its player
+    if (this.spot) {
+      const a = this.avatars.get(this.spot.userData.id);
+      if (a) this.spot.position.set(a.root.position.x, 0, a.root.position.z);
+      this.spot.children[0].material.opacity = 0.16 + Math.sin(t * 3) * 0.04;
+    }
+  }
+
+  setSpotlight(id) {
+    if ((this.spot?.userData.id || null) === (id || null)) return;
+    if (this.spot) {
+      this.scene.remove(this.spot);
+      this.spot.traverse((o) => {
+        o.geometry?.dispose();
+        o.material?.dispose();
+      });
+      this.spot = null;
+    }
+    if (!id) return;
+    const g = new THREE.Group();
+    const cone = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.9, 1.6, 9, 24, 1, true),
+      new THREE.MeshBasicMaterial({ color: 0xfff1c4, transparent: true, opacity: 0.16, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide }),
+    );
+    cone.position.y = 4.5;
+    g.add(cone);
+    const pool = new THREE.Mesh(new THREE.CircleGeometry(1.6, 28), new THREE.MeshBasicMaterial({ color: 0xfff1c4, transparent: true, opacity: 0.3, depthWrite: false, blending: THREE.AdditiveBlending }));
+    pool.rotation.x = -Math.PI / 2;
+    pool.position.y = 0.03;
+    g.add(pool);
+    g.userData.id = id;
+    this.scene.add(g);
+    this.spot = g;
+  }
+
   // Ship systems that change the world: disguises, the blackout and sealed rooms.
   // { disguise: { id: asId }, blackout: bool, lockdowns: [{ room, allowed }] }
   setSystems({ disguise = {}, blackout = false, lockdowns = [] }) {
@@ -661,14 +744,14 @@ export class World {
   }
 
   // Beam yourself into a room. Returns a reason string if you can't right now.
-  teleport(roomId) {
+  teleport(roomId, { force = false } = {}) {
     if (!this.canMove()) return 'You can only teleport while exploring the ship.';
     const room = roomById(roomId);
     if (!room) return 'Unknown room.';
     if (this.room === roomId) return null;
     if (this.lockedOut(roomId)) return `🔐 ${room.name} is in lockdown. Try again in a minute.`;
     const now = performance.now() / 1000;
-    if (now < this.teleportReadyAt) return 'The teleporter is recharging…';
+    if (now < this.teleportReadyAt && !force) return 'The teleporter is recharging…';
     this.teleportReadyAt = now + TELEPORT_COOLDOWN;
     const [x0, z0, x1, z1] = room.rect;
     // the bridge has the big table in the middle, so land at its south side

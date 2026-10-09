@@ -201,6 +201,7 @@ function night(s) {
 const ANIM_LABELS = {
   airlock: '🚪 Airlocked', consumed: '🦑 Consumed by tentacles', spaghettified: '🍝 Spaghettified', abducted: '🛸 Abducted', melted: '🫠 Melted',
   confetti: '🎉 Exploded into confetti', frozen: '🧊 Frozen solid', duck: '🦆 Turned into a rubber duck', floataway: '🎈 Floated away', fainted: '😵 Fainted dramatically', shot: '🔫 Shot',
+  balloon: '🎈 Inflated and popped', disco: '🪩 Danced to death', tiny: '🐜 Shrank to nothing', rocket: '🚀 Rocketed into space',
 };
 
 function describeEvent(e, name) {
@@ -226,6 +227,19 @@ function story(s) {
       el('button', { className: 'primary', onclick: () => sayBox.value.trim() && act('say', { text: sayBox.value }, 'Story sent!').then(() => (sayBox.value = '')) }, 'Show cloud bubble'),
       el('div', { className: 'hint' }, 'Quick announcements:'),
       el('div', { className: 'grid-buttons' }, ...JOKES.map((j) => el('button', { title: j, onclick: () => act('say', { text: j }) }, j.slice(3, 32) + '…'))),
+    ),
+    el('section', {},
+      el('h3', {}, '🎉 Ship events'),
+      el('div', { className: 'hint' }, 'Shake things up for everyone. Purely for fun: no effect on the rules.'),
+      el('div', { className: 'grid-buttons' },
+        ...[['zerog', '🪐 Zero gravity (25s)'], ['disco', '🪩 Disco mode (25s)'], ['alarm', '🚨 Red alert'], ['confetti', '🎉 Confetti storm']].map(([kind, label]) =>
+          el('button', { onclick: () => act('ship-event', { kind }) }, label)),
+      ),
+      el('div', { className: 'hint' }, 'Sound stingers (everyone hears them):'),
+      el('div', { className: 'grid-buttons' },
+        ...[['trombone', '🎺 Sad trombone'], ['drumroll', '🥁 Drumroll'], ['airhorn', '📯 Air horn'], ['crickets', '🦗 Crickets'], ['kazoo', '🎶 Kazoo'], ['gasp', '😱 Gasp']].map(([name, label]) =>
+          el('button', { onclick: () => act('stinger', { name }) }, label)),
+      ),
     ),
     el('section', {},
       el('h3', {}, '🎭 Puppet the crew'),

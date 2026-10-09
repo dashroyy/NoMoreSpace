@@ -3,6 +3,8 @@
 import { $, el, clear } from '../util.js';
 import { store, role, player, send } from '../store.js';
 import { notebookTab } from './notebook.js';
+import { logTab } from './social.js';
+import { openBugReport } from './report.js';
 import { renderRing } from './hud.js';
 
 let current = 'role';
@@ -44,7 +46,7 @@ export function refreshRoleCard() {
 
 function render() {
   const tabs = el('div', { className: 'tabs' },
-    ...[['role', '📜 My role'], ['notebook', '🗒️ Notebook'], ['almanac', '📖 All roles'], ['help', '❔ How to play']].map(([id, label]) =>
+    ...[['role', '📜 My role'], ['notebook', '🗒️ Notebook'], ['log', '📰 Day log'], ['almanac', '📖 All roles'], ['help', '❔ How to play']].map(([id, label]) =>
       el('button', { className: current === id ? 'active' : '', onclick: () => openRoleCard(id) }, label),
     ),
   );
@@ -52,7 +54,7 @@ function render() {
     renderRing();
     if (current === 'notebook') render();
   };
-  const body = { role: myRole, notebook: () => notebookTab(onNotebookChange), almanac }[current]?.() || howToPlay();
+  const body = { role: myRole, notebook: () => notebookTab(onNotebookChange), log: () => logTab(store.state || {}, render), almanac }[current]?.() || howToPlay();
   openModal(el('div', { className: 'rolecard' }, tabs, body));
 }
 
@@ -166,8 +168,10 @@ export function howToPlay() {
       el('li', {}, el('b', {}, 'Dawn: '), 'the Captain (or ARIA) tells the story of who died.'),
       el('li', {}, el('b', {}, 'Explore: '), 'walk the ship or press M (🚀 Rooms) to teleport into any room. Only people in the same room hear your chat, so meet someone in a room for a private talk. Do tasks and look out of the Observation Deck windows for clues.'),
       el('li', {}, el('b', {}, 'Emergency meeting: '), 'everyone returns to the bridge to share information.'),
+      el('li', {}, el('b', {}, 'Claims & log: '), 'press 📣 Claim (C) to tell everyone your role (or a lie); it shows by your seat. The 📰 Day log (L) records every vote, death, clue and claim.'),
+      el('li', {}, el('b', {}, 'Whispers: '), 'in the 🚀 Rooms menu, ask someone for a private chat: if they accept, you are both beamed into an empty room.'),
       el('li', {}, el('b', {}, 'Nominations: '), 'press ☝️ Nominate to put someone up for the airlock (each living player nominates once per day; each player can be nominated once). The nominator accuses, the nominee defends, and everyone votes ✋ YES or 🙅 NO at the same time (keys Y / N). You can change your vote until the count; not voting counts as NO. Then the clock hand sweeps round the table revealing every vote.'),
-      el('li', {}, el('b', {}, 'Dusk: '), 'the player with the most votes (at least half the living, no tie) is airlocked.'),
+      el('li', {}, el('b', {}, 'Last words & dusk: '), 'the player with the most votes (at least half the living, no tie) gets a spotlight and 15 seconds of last words, then the airlock.'),
     ),
     el('h3', {}, '👻 Death'),
     el('p', {}, 'Dead players stay at the table as ghosts. They can talk but lose their ability, and get ONE ghost vote for the rest of the game, so spend it wisely.'),
@@ -184,6 +188,7 @@ export function howToPlay() {
     el('h3', {}, '⌨️ Controls'),
     el('p', {}, el('kbd', {}, 'WASD'), ' move · ', el('kbd', {}, 'E'), ' use task · ', el('kbd', {}, 'Q'), ' emote · ', el('kbd', {}, 'R'), ' role card · ', el('kbd', {}, 'Space'), ' raise hand · ', el('kbd', {}, 'Enter'), ' chat · mouse wheel zoom'),
     el('p', { className: 'hint' }, 'Slow computer? ', el('a', { href: '?lowfx=1', style: { color: 'var(--accent)' } }, 'Switch to low graphics'), ' (', el('a', { href: '?lowfx=0', style: { color: 'var(--accent)' } }, 'back to high'), '). Your seat is kept when the page reloads.'),
+    el('p', {}, el('button', { className: 'small', onclick: () => openBugReport() }, '🐞 Report a bug')),
     store.state?.you?.isController && store.state.mode === 'autopilot' && store.state.phase !== 'lobby'
       ? el('div', {}, el('h3', {}, '👑 Host controls'), el('button', { className: 'danger', onclick: () => confirm('Reset the ship back to the lobby for everyone?') && send('reset').catch(() => {}) }, '♻️ Reset the ship'))
       : null,
