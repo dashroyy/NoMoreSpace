@@ -793,3 +793,144 @@ test('the Captain can start silly ship events', () => {
   assert.throws(() => g.shipEventStart(captain.id, 'explode', 1000), /Unknown/);
   assert.throws(() => g.shipEventStart(g.players[0].id, 'disco', 1000), /Captain/);
 });
+
+// ---------------------------------------------------------------------------
+// Party features: ghosts, AFK, bios, ship names, rematches and the season
+// ---------------------------------------------------------------------------
+
+const SEVEN = ['parasite', 'hacker', 'engineer', 'comms', 'scanner', 'medic', 'marine'];
+
+// Night 1, then day 1 exploring.
+function toRoam(g, role, now = 2000) {
+  playNight(g, { [role('hacker').id]: [role('comms').id], [role('scanner').id]: [role('comms').id, role('medic').id] });
+  g.applyDraft(now);
+  g.beginRoam(now);
+}
+
+test('ghost predictions: first bet free, then one change a day, and the Psychic award', () => {
+  const { g, p, role } = setup(SEVEN);
+  toRoam(g, role);
+  const ghost = role('comms');
+  assert.throws(() => g.predict(ghost.id, role('parasite').id), /Only ghosts/);
+  g.kill(ghost, 'captain');
+  g.predict(ghost.id, role('hacker').id, 3000);
+  g.predict(ghost.id, role('parasite').id, 4000); // the one change today
+  assert.throws(() => g.predict(ghost.id, role('medic').id, 5000), /once a day/);
+  assert.throws(() => g.predict(ghost.id, ghost.id), /another player/);
+  g.day += 1; // tomorrow
+  g.predict(ghost.id, role('medic').id, 6000);
+  g.day -= 1;
+  g.predictions[ghost.id] = { id: role('parasite').id, since: 4000, day: 1, changedDay: 1 };
+  assert.strictEqual(g.viewFor(ghost.id).you.prediction.id, role('parasite').id);
+  g.endGame(p[0].id, 'crew', 9000);
+  const psychic = g.awards.find((a) => a.title === 'Psychic');
+  assert.strictEqual(psychic?.id, ghost.id);
+  assert.deepStrictEqual(g.viewFor(p[1].id).predictions, [{ id: ghost.id, target: role('parasite').id, day: 1 }]);
+});
+
+test('poltergeist: ghosts haunt the room they float in, 3 times a day with a cooldown', () => {
+  const { g, p, role } = setup(SEVEN);
+  toRoam(g, role);
+  const ghost = role('medic');
+  assert.throws(() => g.haunt(ghost.id, 'flicker', 'medbay', 3000), /Only ghosts/);
+  g.kill(ghost, 'captain');
+  assert.throws(() => g.haunt(ghost.id, 'flicker', 'corridor', 3000), /room first/);
+  assert.throws(() => g.haunt(ghost.id, 'explode', 'medbay', 3000), /Unknown/);
+  assert.deepStrictEqual(g.haunt(ghost.id, 'flicker', 'medbay', 3000), { kind: 'flicker', room: 'medbay', at: 3000 });
+  assert.throws(() => g.haunt(ghost.id, 'crate', 'medbay', 4000), /sink in/);
+  g.haunt(ghost.id, 'crate', 'cargo', 10_000);
+  g.haunt(ghost.id, 'cackle', 'galley', 20_000);
+  assert.strictEqual(g.viewFor(ghost.id).you.haunts.left, 0);
+  assert.throws(() => g.haunt(ghost.id, 'flicker', 'medbay', 30_000), /ectoplasm/);
+  g.day += 1;
+  assert.strictEqual(g.viewFor(ghost.id).you.haunts.left, 3, 'fresh pranks tomorrow');
+  g.beginMeeting(40_000);
+  assert.throws(() => g.haunt(ghost.id, 'flicker', 'medbay', 50_000), /exploring/);
+  g.endGame(p[0].id, 'crew', 60_000);
+  assert.strictEqual(g.awards.find((a) => a.title === 'Poltergeist')?.id, ghost.id);
+});
+
+test('away from keyboard: idle players show a sleep icon and count as ready', () => {
+  const { g, p, role } = setup(SEVEN);
+  toRoam(g, role, 100_000);
+  for (const x of p) g.touch(x.id, 100_000);
+  p.slice(1).forEach((x) => g.setReady(x.id, true));
+  assert.strictEqual(g.updateAfk(150_000), false, 'not idle long enough yet');
+  assert.strictEqual(g.everyoneReady(), false);
+  p.slice(1).forEach((x) => g.touch(x.id, 180_000));
+  assert.strictEqual(g.updateAfk(195_000), true);
+  assert.deepStrictEqual([...g.afk], [p[0].id]);
+  assert.ok(g.everyoneReady(), 'the idle player no longer holds the ship up');
+  assert.ok(g.viewFor(p[0].id).afk.includes(p[0].id));
+  assert.strictEqual(g.touch(p[0].id, 196_000), true, 'moving the mouse wakes them up');
+  assert.strictEqual(g.everyoneReady(), false);
+  // each day starts fresh
+  g.afk.add(p[0].id);
+  g.beginRoam(300_000);
+  assert.strictEqual(g.afk.size, 0);
+});
+
+test('bios end up in the stories; ship names', () => {
+  const g = new Game('TEST', { random: seeded(3) });
+  const a = g.addPlayer('Zorp');
+  g.setBio(a.id, '  is allergic to zero gravity. ');
+  assert.strictEqual(a.bio, 'allergic to zero gravity');
+  assert.ok(g.shipName.length > 0, 'every ship gets a silly name');
+  assert.throws(() => g.setShipName('nobody', 'Hax'), /Only the host/);
+  g.setShipName(a.id, '  The   Leaky Teapot ');
+  assert.strictEqual(g.shipName, 'The Leaky Teapot');
+  g.setShipName(a.id, '');
+  assert.ok(g.shipName.length > 0, 'a blank name gets a random one');
+  const story = st.dawnStory([{ name: 'Zorp', bio: 'allergic to zero gravity' }], () => 0);
+  assert.match(story, /Zorp, who is allergic to zero gravity/);
+  assert.match(st.dawnStory(['Pip'], () => 0), /Pip/, 'plain names still work');
+  assert.match(st.executionStory('Zorp', () => 0, 'allergic to cheese'), /allergic to cheese/);
+});
+
+test('rematch keeps the crew and their suits, and the season keeps score', () => {
+  const { g, p, role } = setup(SEVEN);
+  const suits = p.map((x) => x.cosmetics.suit);
+  assert.throws(() => g.rematch(p[3].id), /Only the host/, 'mid-game only the host can stop it');
+  g.endGame(p[0].id, 'infiltrators', 5000);
+  const evil = [role('parasite'), role('hacker')];
+  const medic = role('medic');
+  assert.strictEqual(g.viewFor(p[3].id).season.games, 1);
+  g.rematch(p[3].id, 6000); // anyone can call it once the game is over
+  assert.strictEqual(g.phase, 'lobby');
+  assert.strictEqual(g.rematchAt, 6000);
+  assert.deepStrictEqual(g.players.map((x) => x.cosmetics.suit), suits);
+  const season = g.viewFor(p[0].id).season;
+  assert.strictEqual(season.games, 1);
+  for (const e of evil) assert.strictEqual(season.rows.find((r) => r.name === e.name).wins, 1);
+  assert.strictEqual(season.rows.find((r) => r.name === medic.name).wins, 0);
+  assert.ok(season.rows[0].points >= 3, 'winners top the table');
+  assert.strictEqual(g.viewFor(p[0].id).round, 2);
+  // a second game adds to the same season
+  g.start(p[0].id, 7000, { deal: SEVEN });
+  g.endGame(p[0].id, 'crew', 8000);
+  assert.strictEqual(g.viewFor(p[0].id).season.games, 2);
+  assert.strictEqual(g.viewFor(p[0].id).season.rows.find((r) => r.name === p[0].name).games, 2);
+});
+
+test('last words: the most laughed-at ones make the share card', () => {
+  const { g, p, role } = setup(SEVEN);
+  playNight(g, { [role('hacker').id]: [role('comms').id], [role('scanner').id]: [role('comms').id, role('medic').id] });
+  dawnToNominations(g);
+  runVote(g, role('comms'), role('engineer'), g.players);
+  g.beginDusk(9000);
+  assert.strictEqual(g.phase, 'lastwords');
+  const victim = role('engineer');
+  g.noteLastWords(victim.id, 'Tell my cat');
+  g.noteLastWords(victim.id, 'I was the Engineer!');
+  g.noteLastWords(p[1].id, 'not my turn'); // ignored
+  g.react(p[3].id, '🤣');
+  g.react(p[4].id, '😱');
+  g.react(victim.id, '🤣'); // laughing at yourself does not count
+  assert.throws(() => g.react(p[1].id, '💩'), /Unknown reaction/);
+  g.endGame(p[0].id, 'crew', 10_000);
+  const best = g.viewFor(p[0].id).bestLastWords;
+  assert.strictEqual(best.id, victim.id);
+  assert.strictEqual(best.text, 'Tell my cat … I was the Engineer!');
+  assert.strictEqual(best.laughs, 1);
+  assert.strictEqual(best.reactions, 2);
+});

@@ -4,6 +4,7 @@
 // at night everyone is asleep (muted).
 import { socket, store } from './store.js';
 import { problem, toast } from './util.js';
+import { audioContext } from './audio.js';
 
 const HEAR_RADIUS = 11;
 let localStream = null;
@@ -11,6 +12,39 @@ let enabled = false;
 const peers = new Map(); // id -> { pc, audio }
 const remoteOn = new Set();
 let world = null;
+
+// Who is talking: a level meter on each voice (and your own mic), so their
+// avatar and seat light up. Meters are never connected to the speakers.
+const meters = new Map(); // id -> { analyser, data, loudUntil }
+let meterCtx = null;
+
+function meter(id, stream) {
+  try {
+    meterCtx ||= audioContext() || new (window.AudioContext || window.webkitAudioContext)();
+    const analyser = meterCtx.createAnalyser();
+    analyser.fftSize = 512;
+    meterCtx.createMediaStreamSource(stream).connect(analyser);
+    meters.set(id, { analyser, data: new Float32Array(analyser.fftSize), loudUntil: 0 });
+  } catch (err) {
+    console.warn('voice meter', err);
+  }
+}
+
+// ids of everyone talking right now (short pauses between words still count)
+export function speakingIds() {
+  const now = performance.now();
+  const out = new Set();
+  const night = store.state?.phase === 'night' && !store.state?.you?.isCaptain;
+  for (const [id, m] of meters) {
+    if (id === store.me && night) continue; // your mic is muted at night
+    m.analyser.getFloatTimeDomainData(m.data);
+    let sum = 0;
+    for (const v of m.data) sum += v * v;
+    if (Math.sqrt(sum / m.data.length) > 0.02) m.loudUntil = now + 350;
+    if (now < m.loudUntil) out.add(id);
+  }
+  return out;
+}
 
 export function initVoice(w) {
   world = w;
@@ -56,6 +90,7 @@ export function voiceEnabled() {
 export async function toggleVoice() {
   if (enabled) {
     enabled = false;
+    meters.delete(store.me);
     socket.emit('voice', { on: false });
     for (const id of [...peers.keys()]) close(id);
     localStream?.getTracks().forEach((t) => t.stop());
@@ -69,6 +104,7 @@ export async function toggleVoice() {
     return false;
   }
   enabled = true;
+  meter(store.me, localStream);
   socket.emit('voice', { on: true });
   toast('🎙️ Voice on. People near you on the ship can hear you.');
   return true;
@@ -84,6 +120,7 @@ function ensure(id) {
   pc.ontrack = (e) => {
     audio.srcObject = e.streams[0];
     audio.play().catch(() => {});
+    meter(id, e.streams[0]);
   };
   pc.onconnectionstatechange = () => {
     if (['failed', 'closed'].includes(pc.connectionState)) close(id);
@@ -106,6 +143,7 @@ function close(id) {
   peer.pc.close();
   peer.audio.srcObject = null;
   peers.delete(id);
+  meters.delete(id);
 }
 
 function updateVolumes() {

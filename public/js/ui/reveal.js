@@ -2,11 +2,13 @@
 // character, then ARIA replays every night and day from the ship's black box.
 import * as THREE from 'three';
 import { $, el, clear } from '../util.js';
-import { store, send, isController } from '../store.js';
+import { store, send } from '../store.js';
 import { sfx, setAmbient } from '../audio.js';
 import { Avatar, makeTextSprite } from '../world/avatar.js';
 import { buildRoleModel, animateRoleModel } from '../world/models.js';
 import { paintBlackHole } from '../world/sky.js';
+import { seasonTable } from './party.js';
+import { openShareCard } from './sharecard.js';
 
 const TEAM_COLOR = { crew: 0x6cf0ff, infiltrators: 0xff3b5c };
 
@@ -397,10 +399,14 @@ export class Reveal {
         );
       })),
       awardsBox(s),
+      betsBox(s),
+      lastWordsBox(s),
       this.unlocked?.length ? el('div', { className: 'unlocked' }, `🎁 New for your spacesuit: ${this.unlocked.join(', ')}!`) : null,
+      seasonTable(s.season),
       el('div', { className: 'row' },
-        el('button', { onclick: () => this.start(this.state) }, '🔁 Watch again'),
-        isController() ? el('button', { className: 'primary', onclick: () => send('reset').catch(() => {}) }, '🚀 Back to the docking bay (new game)') : el('span', { className: 'hint' }, 'Waiting for the host/Captain to start a new game…'),
+        el('button', { className: 'primary', onclick: () => send('rematch').catch(() => {}) }, '🔁 Rematch (same crew)'),
+        el('button', { onclick: () => openShareCard(s) }, '📸 Share card'),
+        el('button', { onclick: () => this.start(this.state) }, '🎬 Watch again'),
         el('button', { className: 'ghost', onclick: () => this.stop() }, 'Close'),
       ),
     );
@@ -538,6 +544,25 @@ export class Reveal {
 
     this.world.renderer.render(this.scene, this.camera);
   }
+}
+
+// What the ghosts bet on (the server only reveals bets once the game is over).
+function betsBox(s) {
+  const bets = s.predictions || [];
+  if (!bets.length) return null;
+  const name = (id) => s.players.find((p) => p.id === id)?.name || '?';
+  const isParasite = (id) => s.players.find((p) => p.id === id)?.role === 'parasite';
+  return el('div', { className: 'bets' },
+    el('h3', {}, '🔮 Ghost bets'),
+    ...bets.map((b) => el('div', { className: 'hint' }, `👻 ${name(b.id)} bet on ${name(b.target)} (day ${b.day || 1}) ${isParasite(b.target) ? '✔' : '✘'}`)),
+  );
+}
+
+function lastWordsBox(s) {
+  const lw = s.bestLastWords;
+  if (!lw) return null;
+  const name = s.players.find((p) => p.id === lw.id)?.name || '?';
+  return el('div', { className: 'famous-last-words' }, el('h3', {}, '🎤 Famous last words'), el('p', {}, `“${lw.text}” — ${name}${lw.laughs ? ` (🤣 ×${lw.laughs})` : ''}`));
 }
 
 // The silly end-of-game awards (worked out by the server from what happened).

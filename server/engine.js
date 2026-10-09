@@ -15,6 +15,11 @@ const { TASKS } = require('./tasks');
 const DAY_PHASES = ['roam', 'meeting', 'nominations'];
 const TARGET_RULE = { hacker: 'alive', jester: 'alive', medic: 'alive', parasite: 'alive', scanner: 'any', droid: 'any', blackbox: 'any' };
 const DEATH_ANIMS = ['airlock', ...st.NIGHT_ANIMS, 'fainted', 'shot'];
+const HAUNTS = ['flicker', 'crate', 'cackle']; // a ghost's harmless pranks
+const HAUNTS_PER_DAY = 3;
+const HAUNT_COOLDOWN_MS = 6000;
+const REACTIONS = ['😱', '🤣', '🙄', '👀', '🫡'];
+const AFK_MS = 90_000; // no input for this long by day = away from keyboard
 const CLUE_MS = 20_000; // a clue drifts past the Observation Deck for this long
 const CLUE_WARN_MS = 20_000; // players who did a task today get this much warning
 const ROOM_NAMES = {
@@ -40,6 +45,8 @@ function freshPlayerState() {
     systemUsed: false, // once-per-game ship system (see roles.js `system`)
     master: null, // Service Droid's chosen master for today
     notes: [], // private information this player has learned
+    haunts: { day: 0, used: 0, lastAt: 0 }, // a ghost's pranks today
+    lastActive: 0, // last time this player touched the keyboard or mouse
   };
 }
 
@@ -55,6 +62,9 @@ class Game {
     this.autoAdvance = mode === 'autopilot';
     this.customRoles = null;
     this.regPolicy = { stowaway: 'auto', mimic: 'auto' };
+    this.shipName = st.shipName(random);
+    // the evening's running scores, kept across rematches (by player name)
+    this.season = { games: 0, rows: {} };
     this.resetState();
   }
 
@@ -98,8 +108,14 @@ class Game {
     this.shipEvent = null; // the Captain's fun: { kind, until }
     this.awards = null;
     this.startedAt = null;
+    this.predictions = {}; // ghosts' bets on who the Parasite is: pid -> { id, since, day, changedDay }
+    this.lastWordsLog = []; // { id, day, text, reactions, laughs } for the share card
+    this.afk = new Set(); // players away from the keyboard (count as ready)
+    this.activeFloor = 0; // idle time is measured from the start of each day
+    this.seasonCounted = false;
+    this.rematchAt = null;
     // for the end-of-game awards
-    this.stats = { chat: {}, tasks: {}, yesOnEvil: {}, yesOnGood: {}, nominations: {}, yesReceived: {}, systems: {}, hallucinated: [] };
+    this.stats = { chat: {}, tasks: {}, yesOnEvil: {}, yesOnGood: {}, nominations: {}, yesReceived: {}, systems: {}, haunts: {}, hallucinated: [] };
     this.tasksDone = {};
     this.drawings = [];
     this.regCache = {};
@@ -228,7 +244,7 @@ class Game {
     const taken = this.players.map((p) => p.cosmetics.suit);
     const look2 = cosmetics.clean(look, cosmetics.defaults(taken));
     if (taken.includes(look2.suit)) look2.suit = cosmetics.defaults(taken).suit;
-    const player = { id: randomId(), token: randomId(16), name: clean, connected: true, cosmetics: look2, ...freshPlayerState() };
+    const player = { id: randomId(), token: randomId(16), name: clean, bio: '', connected: true, cosmetics: look2, ...freshPlayerState() };
     this.players.push(player);
     if (!this.hostId && this.mode === 'autopilot') this.hostId = player.id;
     this.version++;
@@ -356,6 +372,7 @@ class Game {
       bluffs: this.bluffs,
     });
     this.mimicManifest = this.manifest();
+    for (const p of this.players) p.lastActive = now;
     this.announce('The ship has launched. Ahead, the black hole waits. Somewhere aboard, something is hungry.', 'system');
     this.beginNight(now);
   }
@@ -742,7 +759,7 @@ class Game {
 
     this.chapter.deaths = deaths;
     this.logEvent({ k: 'dawn', deaths: deaths.map((x) => x.id), day: this.night });
-    const story = d.story || st.dawnStory(deaths.map((x) => this.name(x.id)), this.random);
+    const story = d.story || st.dawnStory(deaths.map((x) => ({ name: this.name(x.id), bio: this.get(x.id)?.bio })), this.random);
     this.chapter.story = story;
     this.dawn = { night: this.night, deaths, story, at: now };
     if (d.hallucinate && !this.stats.hallucinated.includes(d.hallucinate)) this.stats.hallucinated.push(d.hallucinate);
@@ -805,7 +822,52 @@ class Game {
     this.history.push({ k: 'end', winner, reason });
     this.awards = this.computeAwards();
     this.endedAt = Date.now();
+    this.updateSeason();
     return true;
+  }
+
+  // Everyone who was the Parasite at any point this game (it can jump hosts).
+  parasiteIds() {
+    const ids = new Set(this.players.filter((p) => p.role === 'parasite').map((p) => p.id));
+    const setup = this.history.find((h) => h.k === 'setup');
+    for (const [id, r] of Object.entries(setup?.roles || {})) if (r === 'parasite') ids.add(id);
+    for (const ch of this.history) for (const e of ch.events || []) if (e.k === 'become-parasite') ids.add(e.a);
+    return ids;
+  }
+
+  // The evening's running scores: 3 points a win, 1 per award.
+  updateSeason() {
+    if (this.seasonCounted) return;
+    this.seasonCounted = true;
+    this.season.games += 1;
+    const deaths = {};
+    for (const ch of this.history) for (const e of ch.events || []) if (e.k === 'death') deaths[e.id] = e.cause;
+    for (const p of this.players.filter((x) => x.role)) {
+      const key = p.name.toLowerCase();
+      const row = (this.season.rows[key] ||= { name: p.name, games: 0, wins: 0, eaten: 0, airlocked: 0, awards: 0, liar: 0, psychic: 0, points: 0 });
+      row.name = p.name;
+      row.games += 1;
+      if (teamOf(p.role) === this.winner) row.wins += 1;
+      if (deaths[p.id] === 'parasite') row.eaten += 1;
+      if (deaths[p.id] === 'airlock' || deaths[p.id] === 'sentinel') row.airlocked += 1;
+      const mine = (this.awards || []).filter((a) => a.id === p.id);
+      row.awards += mine.length;
+      row.liar += mine.filter((a) => a.title === 'Best Liar').length;
+      row.psychic += mine.filter((a) => a.title === 'Psychic').length;
+      row.points = row.wins * 3 + row.awards;
+    }
+  }
+
+  seasonView() {
+    if (!this.season.games) return null;
+    const rows = Object.values(this.season.rows).sort((a, b) => b.points - a.points || b.wins - a.wins || a.name.localeCompare(b.name));
+    return { games: this.season.games, rows };
+  }
+
+  // The last words that got the biggest reaction (laughs count double).
+  bestLastWords() {
+    const score = (w) => w.laughs * 2 + w.reactions;
+    return this.lastWordsLog.slice().sort((a, b) => score(b) - score(a) || b.day - a.day)[0] || null;
   }
 
   // Silly end-of-game awards, from what actually happened.
@@ -823,7 +885,7 @@ class Game {
     const add = (p, icon, title, why) => p && out.push({ id: p.id, icon, title, why });
     // Best Liar: the evil player the crew trusted most
     const liars = players.filter(evil).sort((a, b) => n(s.yesReceived, a) - n(s.yesReceived, b) || Number(b.alive) - Number(a.alive));
-    if (liars[0]) add(liars[0], '🎭', 'Best Liar', `${n(s.yesReceived, liars[0])} YES vote${n(s.yesReceived, liars[0]) === 1 ? '' : 's'} against them all game, as the ${ROLES[liars[0].role].name}.`);
+    if (liars[0]) add(liars[0], '🎭', 'Best Liar', `${n(s.yesReceived, liars[0])} YES vote${n(s.yesReceived, liars[0]) === 1 ? '' : 's'} against them all game, as ${ROLES[liars[0].role].name.startsWith('The ') ? ROLES[liars[0].role].name : `the ${ROLES[liars[0].role].name}`}.`);
     const sharp = most(s.yesOnEvil, 1, (p) => !evil(p));
     add(sharp, '🕵️', 'Sharpest Eye', `Voted to airlock evil ${n(s.yesOnEvil, sharp)} time${n(s.yesOnEvil, sharp) === 1 ? '' : 's'}.`);
     const wrong = most(s.yesOnGood, 2, (p) => !evil(p));
@@ -841,6 +903,12 @@ class Game {
     const worker = most(s.tasks, 2);
     add(worker, '🛠️', 'Hardest Worker', `${n(s.tasks, worker)} tasks done.`);
     for (const id of s.hallucinated) add(this.get(id), '🦆', 'Talked to the Ducks', 'Saw things that were not there (thanks, Holo-Jester).');
+    // Psychic: the ghost who first bet on the Parasite (and stuck with it)
+    const parasites = this.parasiteIds();
+    const psychic = Object.entries(this.predictions).filter(([, b]) => parasites.has(b.id)).sort((a, b) => a[1].since - b[1].since)[0];
+    if (psychic) add(this.get(psychic[0]), '👻', 'Psychic', `Called it from beyond the grave: bet on ${this.name(psychic[1].id)} on day ${psychic[1].day || 1}.`);
+    const spooky = most(s.haunts, 2);
+    add(spooky, '🎃', 'Poltergeist', `Haunted the ship ${n(s.haunts, spooky)} times.`);
     return out;
   }
 
@@ -913,6 +981,8 @@ class Game {
 
   beginRoam(now) {
     this.setPhase('roam', this.dur('roam'), now);
+    this.activeFloor = now;
+    this.afk.clear();
     this.visits = {};
     // clues drift past at a random moment while everyone is exploring
     const when = () => now + Math.round(this.dur('roam') * (0.3 + this.random() * 0.35));
@@ -1139,7 +1209,7 @@ class Game {
   }
 
   execute(p, now, cause) {
-    const story = cause === 'sentinel' ? `${p.name} is fried by the Sentinel's defences and swept out of the airlock.` : st.executionStory(p.name, this.random);
+    const story = cause === 'sentinel' ? `${p.name} is fried by the Sentinel's defences and swept out of the airlock.` : st.executionStory(p.name, this.random, p.bio);
     this.ev({ k: 'execute', id: p.id, cause, votes: this.block?.votes || 0, story });
     this.kill(p, cause === 'sentinel' ? 'sentinel' : 'airlock');
     this.executedToday = p.id;
@@ -1288,7 +1358,122 @@ class Game {
 
   everyoneReady() {
     const voters = this.readyVoters();
-    return voters.length > 0 && voters.every((p) => this.ready.has(p.id));
+    return voters.length > 0 && voters.some((p) => !this.afk.has(p.id)) && voters.every((p) => this.ready.has(p.id) || this.afk.has(p.id));
+  }
+
+  // ---------------------------------------------------------------------------
+  // Away from keyboard: after 90 seconds without input by day, a player shows
+  // 💤 and counts as ready, so one distracted friend can't hold everyone up.
+  // ---------------------------------------------------------------------------
+
+  // Returns true if the player was marked away (so everyone needs an update).
+  touch(pid, now = Date.now()) {
+    const p = this.get(pid);
+    if (!p) return false;
+    p.lastActive = now;
+    return this.afk.delete(pid);
+  }
+
+  updateAfk(now = Date.now()) {
+    if (!DAY_PHASES.includes(this.phase)) return false;
+    let changed = false;
+    for (const p of this.players) {
+      if (!p.connected || this.afk.has(p.id)) continue;
+      if (now - Math.max(p.lastActive || 0, this.activeFloor) > AFK_MS) {
+        this.afk.add(p.id);
+        changed = true;
+      }
+    }
+    return changed;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Ghosts: bets on the Parasite and harmless haunting
+  // ---------------------------------------------------------------------------
+
+  // Dead players secretly bet on who the Parasite is. The first bet is free;
+  // after that you can change it once a day.
+  predict(pid, targetId, now = Date.now()) {
+    const p = this.get(pid);
+    if (!p) throw new Error('Only players can do that.');
+    if (['lobby', 'ended'].includes(this.phase)) throw new Error('No game running.');
+    if (p.alive) throw new Error('Only ghosts can place bets. Stay alive!');
+    const t = this.get(targetId);
+    if (!t || t.id === pid) throw new Error('Pick another player.');
+    const cur = this.predictions[pid];
+    if (cur?.id === targetId) return cur;
+    if (cur && cur.changedDay === this.day) throw new Error('You can only change your bet once a day.');
+    this.predictions[pid] = { id: targetId, since: now, day: this.day, changedDay: cur ? this.day : null };
+    return this.predictions[pid];
+  }
+
+  hauntsLeft(p) {
+    return HAUNTS_PER_DAY - (p.haunts.day === this.day ? p.haunts.used : 0);
+  }
+
+  // A ghost's prank in the room they are floating in. Anonymous to the living.
+  haunt(pid, kind, room, now = Date.now()) {
+    const p = this.get(pid);
+    if (!p || p.alive) throw new Error('Only ghosts can haunt the ship.');
+    if (this.phase !== 'roam') throw new Error('Haunt the ship while the crew is exploring.');
+    if (!HAUNTS.includes(kind)) throw new Error('Unknown haunting.');
+    if (!room || room === 'corridor' || !ROOM_NAMES[room]) throw new Error('Float into a room first.');
+    if (p.haunts.day !== this.day) p.haunts = { day: this.day, used: 0, lastAt: 0 };
+    if (p.haunts.used >= HAUNTS_PER_DAY) throw new Error('You are out of ectoplasm until tomorrow.');
+    if (p.haunts.lastAt && now - p.haunts.lastAt < HAUNT_COOLDOWN_MS) throw new Error('Let the spookiness sink in first…');
+    p.haunts.used += 1;
+    p.haunts.lastAt = now;
+    this.bump('haunts', pid);
+    this.ev({ k: 'haunt', a: pid, kind, room });
+    return { kind, room, at: now };
+  }
+
+  // ---------------------------------------------------------------------------
+  // Reactions, last words, bios, the ship's name and rematches
+  // ---------------------------------------------------------------------------
+
+  react(pid, emoji) {
+    if (!REACTIONS.includes(emoji)) throw new Error('Unknown reaction.');
+    if (!this.get(pid) && this.captain?.id !== pid) throw new Error('Join a ship first.');
+    if (this.phase === 'night' || this.phase === 'lobby') throw new Error('Not now.');
+    // reactions to last words decide the "funniest last words" on the share card
+    const w = this.phase === 'lastwords' && this.lastWordsLog.find((x) => x.day === this.day && x.id === this.lastWords?.id);
+    if (w && pid !== w.id) {
+      w.reactions += 1;
+      if (emoji === '🤣') w.laughs += 1;
+    }
+  }
+
+  noteLastWords(pid, text) {
+    if (this.phase !== 'lastwords' || this.lastWords?.id !== pid) return;
+    let w = this.lastWordsLog.find((x) => x.day === this.day && x.id === pid);
+    if (!w) this.lastWordsLog.push((w = { id: pid, day: this.day, text: '', reactions: 0, laughs: 0 }));
+    w.text = (w.text ? `${w.text} … ${text}` : text).slice(0, 160);
+  }
+
+  // "Finish the sentence: Zorp is…" ARIA weaves it into the stories.
+  setBio(pid, text) {
+    const p = this.get(pid);
+    if (!p) throw new Error('Only players have bios.');
+    if (this.phase !== 'lobby') throw new Error('Bios are written in the docking bay.');
+    p.bio = String(text || '').replace(/\s+/g, ' ').trim().replace(/^(who is|who's|is)\s+/i, '').replace(/[.!?]+$/, '').slice(0, 48);
+  }
+
+  setShipName(byId, name) {
+    this.requireController(byId);
+    if (this.phase !== 'lobby') throw new Error('Name the ship in the docking bay.');
+    const clean = String(name || '').replace(/\s+/g, ' ').trim().slice(0, 28);
+    this.shipName = clean || st.shipName(this.random);
+  }
+
+  // Back to the docking bay with the same crew, seats and suits. Once a game
+  // is over anyone can call it; mid-game only the host or Captain.
+  rematch(byId, now = Date.now()) {
+    const anyone = this.phase === 'ended' && (this.get(byId) || this.captain?.id === byId);
+    if (!anyone) this.requireController(byId);
+    this.resetState();
+    this.rematchAt = now;
+    this.announce(`Round ${this.season.games + 1}! Same crew, fresh lies. Warm up those dance moves.`, 'system');
   }
 
   // ---------------------------------------------------------------------------
@@ -1477,7 +1662,8 @@ class Game {
       this.logEvent({ k: 'clue', caption: this.clue.caption });
     }
     this.lastClueKey = clues;
-    return this.tickPhase(now) || cluesChanged;
+    const afk = this.updateAfk(now);
+    return this.tickPhase(now) || cluesChanged || afk;
   }
 
   tickPhase(now) {
@@ -1566,6 +1752,7 @@ class Game {
       ghostVote: !p.alive && p.ghostVote,
       connected: p.connected,
       cosmetics: p.cosmetics,
+      bio: p.bio || '',
       nominated: this.nominees.has(p.id),
       nominatedSomeone: this.nominators.has(p.id),
       role: this.phase === 'ended' ? p.role : undefined,
@@ -1581,6 +1768,11 @@ class Game {
     const nom = this.nomination;
     return {
       code: this.code,
+      shipName: this.shipName,
+      round: this.season.games + (this.phase === 'ended' ? 0 : 1),
+      season: this.seasonView(),
+      rematchAt: this.rematchAt,
+      afk: [...this.afk],
       mode: this.mode,
       phase: this.phase,
       day: this.day,
@@ -1614,6 +1806,8 @@ class Game {
       lastWords: this.lastWords,
       shipEvent: this.shipEvent && this.shipEvent.until > Date.now() ? this.shipEvent : null,
       awards: this.phase === 'ended' ? this.awards : null,
+      predictions: this.phase === 'ended' ? Object.entries(this.predictions).map(([id, b]) => ({ id, target: b.id, day: b.day })) : null,
+      bestLastWords: this.phase === 'ended' ? this.bestLastWords() : null,
       systems: this.systemsView(),
       ready: [...this.ready],
       readyNeeded: this.readyVoters().length,
@@ -1662,6 +1856,9 @@ class Game {
       manifest: p.role === 'mimic' && p.alive ? this.mimicManifest : null,
       master: p.role === 'droid' && p.alive ? p.master : null,
       ready: this.ready.has(pid),
+      afk: this.afk.has(pid),
+      prediction: this.predictions[pid] || null,
+      haunts: !p.alive && this.phase !== 'ended' ? { left: this.hauntsLeft(p) } : null,
       tasksDone: this.tasksDone[pid] || [],
       drew: this.drawings.some((d) => d.author === pid && d.night === this.night && !d.published),
       hand: this.nomination ? !!this.nomination.hands[pid] : false,
@@ -1709,4 +1906,4 @@ class Game {
   }
 }
 
-module.exports = { Game, DEATH_ANIMS, DAY_PHASES, ROOM_NAMES };
+module.exports = { Game, DEATH_ANIMS, DAY_PHASES, ROOM_NAMES, HAUNTS, REACTIONS, HAUNTS_PER_DAY, AFK_MS };

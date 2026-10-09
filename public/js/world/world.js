@@ -5,6 +5,7 @@ import { buildShip } from './ship.js';
 import { SpaceCanvases, buildBackdrop } from './sky.js';
 import { Flyby } from './flyby.js';
 import { Hallucinations } from './hallucinate.js';
+import { PartyFx } from './party-fx.js';
 import { moveWithCollision, roomAt, roomById, walkable, seatPosition, TASK_STATIONS, SPAWN, DRAWING_SLOTS } from './layout.js';
 
 const SEATED = ['dawn', 'meeting', 'nominations', 'lastwords', 'dusk'];
@@ -100,6 +101,7 @@ export class World {
     this.drawingSlots = new Map(); // id -> slot index
     this.doneTasks = new Set();
     this.clock = new THREE.Clock();
+    this.fx = new PartyFx(this);
     this.alarmUntil = 0;
     this.moodColor = new THREE.Color();
     this._tint = new THREE.Color();
@@ -384,6 +386,7 @@ export class World {
     this.updateAmbience(dt, t);
     this.ship.decor.update(t, { night: this.night, progress: this.progress });
     this.updateBeams(dt);
+    this.fx.update(dt, t);
     this.updateShipEvent(dt, t);
     this.flyby?.update(this.serverNow(), t);
     this.hallucinations?.update(dt, t);
@@ -606,6 +609,7 @@ export class World {
       const isFlicker = this.ship.flicker.includes(light);
       let target = base * (this.night ? 0.25 : this.blackout ? 0.04 : alarm ? 1.25 : 1);
       if ((isFlicker || Math.random() < instability * 0.05) && Math.random() < instability) target *= Math.random() * 0.5;
+      if (light.userData.hauntUntil > t) target = base * (Math.random() < 0.45 ? 0.03 : 1.7); // a ghost is playing with the lights
       light.intensity += (target - light.intensity) * Math.min(1, dt * 15);
       this._tint.copy(light.userData.color).lerp(this.moodColor, amount);
       light.color.lerp(this._tint, alarm ? 1 : tintK);

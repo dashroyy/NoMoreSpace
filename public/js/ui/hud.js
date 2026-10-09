@@ -133,7 +133,8 @@ export function renderHud(state) {
   const readyBtn = $('btn-ready');
   readyBtn.hidden = !you.id || you.isCaptain || !DAY_PHASES.includes(state.phase) || !!nom;
   if (!readyBtn.hidden) {
-    const count = `${state.ready?.length || 0}/${state.readyNeeded || 0}`;
+    // players away from the keyboard count as ready
+    const count = `${new Set([...(state.ready || []), ...(state.afk || [])]).size}/${state.readyNeeded || 0}`;
     readyBtn.classList.toggle('on', !!you.ready);
     readyBtn.querySelector('b').textContent = you.ready ? `Ready ✓ ${count}` : `${READY_LABEL[state.phase]} ${count}`;
     readyBtn.title = state.mode === 'captain' && !state.autoAdvance
@@ -199,9 +200,10 @@ export function renderRing() {
       p.alive ? '' : '👻',
       p.ghostVote ? el('span', { className: 'ghostvote', title: 'Has a ghost vote' }) : null,
       badge ? el('span', { className: `nb-badge ${badge.trust}`, title: badge.title }, badge.text) : null,
-      DAY_PHASES.includes(state.phase) && state.ready?.includes(p.id) && !nom ? el('span', { className: 'ready-tick', title: 'Ready to move on' }, '✓') : null,
+      state.afk?.includes(p.id) ? el('span', { className: 'afk-badge', title: 'Away from keyboard (counts as ready)' }, '💤')
+        : DAY_PHASES.includes(state.phase) && state.ready?.includes(p.id) && !nom ? el('span', { className: 'ready-tick', title: 'Ready to move on' }, '✓') : null,
     );
-    const seat = el('button', { className: cls.join(' '), style: { left: `${x}px`, top: `${y}px` }, title: `${p.name}${p.alive ? '' : ' (dead)'}${p.nominated ? ' · nominated today' : ''}${p.nominatedSomeone ? ' · has nominated' : ''}` },
+    const seat = el('button', { className: cls.join(' '), dataset: { id: p.id }, style: { left: `${x}px`, top: `${y}px` }, title: `${p.name}${p.bio ? ` (is ${p.bio})` : ''}${p.alive ? '' : ' (dead)'}${p.nominated ? ' · nominated today' : ''}${p.nominatedSomeone ? ' · has nominated' : ''}` },
       nom && nom.hands[p.id] && (nom.locked[p.id] || p.id === you.id) ? el('span', { className: 'hand' }, '✋') : null,
       nom && nom.stage !== 'count' && nom.cast?.includes(p.id) ? el('span', { className: 'cast-tick', title: 'Has voted' }, '🗳️') : null,
       token,

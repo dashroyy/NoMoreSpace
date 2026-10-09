@@ -8,7 +8,7 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 const { Server } = require('socket.io');
-const { Game, DEATH_ANIMS, ROOM_NAMES } = require('./engine');
+const { Game, DEATH_ANIMS, ROOM_NAMES, HAUNTS, REACTIONS, HAUNTS_PER_DAY } = require('./engine');
 const { ROLES, TYPES, DISTRIBUTION, MIN_PLAYERS, MAX_PLAYERS, EVIL_INFO_MIN, teamOf } = require('./roles');
 const cosmetics = require('./cosmetics');
 const { TASKS } = require('./tasks');
@@ -47,6 +47,9 @@ const GAME_DATA = JSON.stringify({
   playerEmotes: PLAYER_EMOTES,
   captainEmotes: CAPTAIN_EMOTES,
   iceServers: ICE_SERVERS,
+  haunts: HAUNTS,
+  hauntsPerDay: HAUNTS_PER_DAY,
+  reactions: REACTIONS,
 });
 
 const MIME_TYPES = {
@@ -163,12 +166,16 @@ io.on('connection', (socket) => {
   let lastEmote = 0;
   let lastWhisper = 0;
   let lastReport = 0;
+  let lastReact = 0;
+  // events that don't count as someone being at the keyboard
+  const QUIET_EVENTS = new Set(['rtc', 'voice', 'get-drawing', 'active']);
 
   // Wrap every handler so a rule error goes back to that person as a message.
   const on = (event, handler, { update = true } = {}) =>
     socket.on(event, (data = {}, reply) => {
       try {
         if (typeof data !== 'object' || data === null) data = {};
+        if (room && me && !QUIET_EVENTS.has(event)) room.game.touch(me);
         const result = handler(data);
         if (update && room) broadcast(room);
         if (typeof reply === 'function') reply({ ok: true, ...(result || {}) });
@@ -192,6 +199,7 @@ io.on('connection', (socket) => {
     if (isCaptain(r, me)) r.captainLeftAt = null;
     socket.join(r.code);
     socket.emit('joined', { code: r.code, token: person.token, id: person.id });
+    r.game.touch(person.id);
     // Send drawings already on the walls.
     for (const d of r.game.drawings.filter((x) => x.published)) socket.emit('drawing', { id: d.id, data: d.data });
   }
@@ -270,6 +278,13 @@ io.on('connection', (socket) => {
     io.to(room.code).emit('bubble', room.game.bubble);
   });
   on('end', ({ winner }) => game().endGame(me, winner));
+  on('ship-name', ({ name }) => game().setShipName(me, name));
+  // anyone can call a rematch once the game is over: same crew, seats and suits
+  on('rematch', () => {
+    game().rematch(me, Date.now());
+    room.positions = {};
+    io.to(room.code).emit('drawings-cleared');
+  });
   on('reset', () => {
     game().reset(me);
     room.positions = {};
@@ -292,6 +307,27 @@ io.on('connection', (socket) => {
   on('hand', ({ up }) => game().setHand(me, up));
   on('done-speaking', () => game().doneSpeaking(me, Date.now()));
   on('ready', ({ on: value }) => game().setReady(me, !!value));
+  on('bio', ({ text }) => game().setBio(me, text));
+  // ghosts: a secret bet on the Parasite, and harmless pranks in the room they float in
+  on('predict', ({ target }) => game().predict(me, target, Date.now()));
+  on('haunt', ({ kind }) => {
+    const g = game();
+    const where = room.positions[me]?.room;
+    const e = g.haunt(me, kind, where, Date.now());
+    io.to(room.code).emit('haunt', e);
+  });
+  // emoji reactions float up from your seat
+  on('react', ({ emoji }) => {
+    const now = Date.now();
+    if (now - lastReact < 450) return;
+    lastReact = now;
+    game().react(me, emoji);
+    io.to(room.code).emit('react', { id: me, emoji });
+  }, { update: false });
+  // "I'm still here": sent now and then while someone is using the keyboard or mouse
+  on('active', () => {
+    if (room && me && room.game.touch(me)) broadcast(room);
+  }, { update: false });
   on('shoot', ({ target }) => game().gunnerShot(me, target));
   on('task', ({ task }) => game().completeTask(me, task));
   on('drawing', ({ data, signed }) => {
@@ -379,9 +415,22 @@ io.on('connection', (socket) => {
       for (const id of [...g.players.map((p) => p.id), g.captain.id]) personSocket(room, id)?.emit('chat', message);
       return { heard: g.players.length, channel: 'all' };
     }
+    // the dead gossip on their own channel at night
+    if (channel === 'ghost') {
+      if (!sender || sender.alive) throw new Error('Only the dead can use the ghost channel.');
+      if (g.phase !== 'night') throw new Error('The ghost channel opens at night. By day, the living can hear you.');
+      message.channel = 'ghost';
+      const ids = g.players.filter((p) => !p.alive).map((p) => p.id);
+      if (g.captain) ids.push(g.captain.id);
+      for (const id of new Set(ids)) personSocket(room, id)?.emit('chat', message);
+      return { heard: ids.length - 1, channel: 'ghost' };
+    }
     if (g.phase === 'night') throw new Error('Shh... everyone is asleep. (Draw something instead!)');
     g.noteChat(me);
-    if (g.phase === 'lastwords' && g.lastWords?.id === me) message.lastWords = true;
+    if (g.phase === 'lastwords' && g.lastWords?.id === me) {
+      message.lastWords = true;
+      g.noteLastWords(me, clean);
+    }
     const heard = deliver(g, me, message);
     return { heard, channel: message.channel };
   }, { update: false });
@@ -474,6 +523,7 @@ io.on('connection', (socket) => {
     const lock = room.game.activeLockdown(inRoom);
     if (lock && !lock.allowed.includes(me)) inRoom = 'corridor';
     room.positions[me] = { x: Math.round(x * 100) / 100, z: Math.round(z * 100) / 100, r: Math.round(r * 100) / 100, m: m ? 1 : 0, room: inRoom };
+    if (m && room.game.touch(me)) broadcast(room); // walking around counts as being here
     room.game.recordVisit(me, inRoom);
     room.posDirty = true;
   });

@@ -56,7 +56,7 @@ export function renderLobby(state) {
     el('li', {},
       el('span', { className: 'seatno' }, i + 1),
       el('span', { className: 'dot', style: { background: suitHex(p) } }),
-      el('span', { className: 'name' }, p.name, p.id === store.me ? ' (you)' : '', p.id === state.hostId ? ' 👑' : ''),
+      el('span', { className: 'name' }, p.name, p.id === store.me ? ' (you)' : '', p.id === state.hostId ? ' 👑' : '', p.bio ? el('small', { className: 'bio' }, `is ${p.bio}`) : null),
       ctl ? el('button', { className: 'ghost', title: 'Move up', onclick: () => send('seat', { id: p.id, dir: -1 }).catch((e) => problem(e.message)) }, '▲') : null,
       ctl ? el('button', { className: 'ghost', title: 'Move down', onclick: () => send('seat', { id: p.id, dir: 1 }).catch((e) => problem(e.message)) }, '▼') : null,
       ctl && p.id !== store.me ? el('button', { className: 'ghost', title: 'Remove', onclick: () => confirm(`Remove ${p.name}?`) && send('kick', { id: p.id }).catch((e) => problem(e.message)) }, '✕') : null,

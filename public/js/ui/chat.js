@@ -6,7 +6,7 @@ import { send, store } from '../store.js';
 import { sfx } from '../audio.js';
 
 let tab = 'near';
-const logs = { near: [], evil: [] };
+const logs = { near: [], evil: [], ghost: [] };
 
 export function initChat() {
   $('chat-form').addEventListener('submit', (e) => {
@@ -27,6 +27,14 @@ export function initChat() {
     const text = input.value.trim();
     if (!text) return;
     send('chat', { text, channel: 'evil' }).catch(() => {});
+    input.value = '';
+  });
+  $('ghost-form').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const input = $('ghost-input');
+    const text = input.value.trim();
+    if (!text) return;
+    send('chat', { text, channel: 'ghost' }).catch(() => {});
     input.value = '';
   });
   for (const b of document.querySelectorAll('.chat-tabs .tab')) {
@@ -52,7 +60,7 @@ function setTab(name) {
 
 function line(m) {
   const cls = ['msg', m.ghost ? 'ghost' : '', m.from === store.state?.you?.id ? 'mine' : '', m.name?.startsWith('Captain ') ? 'captain' : '', m.channel === 'evil' ? 'evil' : '', m.channel === 'intercept' ? 'intercept' : '', m.lastWords ? 'lastwords' : '', m.system ? 'system' : ''].join(' ');
-  const tag = { all: '📢', near: '👂', evil: '🦑', intercept: '' }[m.channel] || '';
+  const tag = { all: '📢', near: '👂', evil: '🦑', ghost: '👻', intercept: '' }[m.channel] || '';
   return el('div', { className: cls }, m.system ? null : el('span', { className: 'ch' }, tag), m.system ? null : el('b', {}, `${m.name}${m.ghost ? ' 👻' : ''}: `), m.text);
 }
 
@@ -64,10 +72,14 @@ function render() {
   const evil = $('evil-log');
   evil.replaceChildren(...logs.evil.slice(-80).map(line));
   evil.scrollTop = evil.scrollHeight;
+  const ghost = $('ghost-log');
+  ghost.replaceChildren(...logs.ghost.slice(-80).map(line));
+  ghost.scrollTop = ghost.scrollHeight;
 }
 
 export function addChat(m) {
   if (m.channel === 'evil') logs.evil.push(m);
+  else if (m.channel === 'ghost') logs.ghost.push(m);
   else logs.near.push(m);
   if (logs.near.length > 200) logs.near.shift();
   if (m.from !== store.state?.you?.id) sfx('chat');
@@ -82,6 +94,7 @@ export function systemLine(text) {
 export function clearChat() {
   logs.near = [];
   logs.evil = [];
+  logs.ghost = [];
   render();
 }
 

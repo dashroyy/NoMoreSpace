@@ -19,6 +19,8 @@ import { initConnection, openBugReport } from './ui/report.js';
 import { recordGame } from './progress.js';
 import { Reveal } from './ui/reveal.js';
 import { clearNotebook } from './ui/notebook.js';
+import { initParty, renderParty } from './ui/party.js';
+import { initCoach, renderCoach } from './ui/coach.js';
 import { initVoice, toggleVoice, voiceEnabled } from './voice.js';
 
 const SEAT_KEY = 'nms-seat';
@@ -81,6 +83,8 @@ async function boot() {
   });
   initSystems(world);
   initVote();
+  initParty(world);
+  initCoach();
   initHud(world, {
     onRoleCard: (tab) => openRoleCard(typeof tab === 'string' ? tab : 'role'),
     onUse: () => {
@@ -178,6 +182,8 @@ async function boot() {
     for (const d of state.drawings) if (!world.drawingCache.has(d.id)) socket.emit('get-drawing', { id: d.id });
     world.setDrawings(state.drawings);
 
+    renderParty(state, prev);
+    renderCoach(state);
     if (prev && prev.code === state.code) announceChanges(state, prev, world);
   });
 }

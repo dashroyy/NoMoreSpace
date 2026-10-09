@@ -118,13 +118,45 @@ function fill(template, name) {
   return template.replaceAll('{name}', name);
 }
 
-function dawnStory(deadNames, random = Math.random) {
-  if (!deadNames.length) return pick(QUIET_NIGHT_LINES, random);
-  return deadNames.map((n) => fill(pick(NIGHT_DEATH_LINES, random), n)).join(' ');
+// Lines that use a player's own lobby bio ("Zorp is… allergic to zero gravity").
+const BIO_DEATH_LINES = [
+  '{name}, who is {bio}, floated out of bed and straight into the tentacles.',
+  'Everyone knew {name} was {bio}. Nobody knew {name} was also delicious.',
+  '{name}, famously {bio}, went to check a noise in the vents. The vents won.',
+  'Here lies {name}: {bio}, and now also deceased.',
+  'Ship log: {name} ({bio}) was taken in the night. The Parasite left a one-star review.',
+];
+
+const BIO_EXECUTION_LINES = [
+  '{name}, who is {bio}, is shown the airlock. The airlock is not impressed.',
+  'Being {bio} was not enough to save {name}. Out they go.',
+];
+
+function fillBio(template, name, bio) {
+  return template.replaceAll('{name}', name).replaceAll('{bio}', bio);
 }
 
-function executionStory(name, random = Math.random) {
+// dead: names, or { name, bio } (bios are used most of the time when set)
+function dawnStory(dead, random = Math.random) {
+  if (!dead.length) return pick(QUIET_NIGHT_LINES, random);
+  return dead
+    .map((d) => (typeof d === 'string' ? { name: d } : d))
+    .map(({ name, bio }) => (bio && random() < 0.7 ? fillBio(pick(BIO_DEATH_LINES, random), name, bio) : fill(pick(NIGHT_DEATH_LINES, random), name)))
+    .join(' ');
+}
+
+function executionStory(name, random = Math.random, bio = '') {
+  if (bio && random() < 0.5) return fillBio(pick(BIO_EXECUTION_LINES, random), name, bio);
   return fill(pick(EXECUTION_LINES, random), name);
+}
+
+const SHIP_NAMES = [
+  'The Wobbly Goose', 'The Last Biscuit', 'HMS Questionable', 'The Space Noodle', 'SS Probably Fine',
+  'The Cosmic Kettle', 'The Doomed Duckling', 'The Midnight Snack', 'The Gravity Skeptic', 'The Unsinkable II',
+];
+
+function shipName(random = Math.random) {
+  return pick(SHIP_NAMES, random);
 }
 
 function nightDeathAnim(random = Math.random) {
@@ -224,6 +256,7 @@ module.exports = {
   validateRoles,
   otherNumber,
   dawnStory,
+  shipName,
   executionStory,
   nightDeathAnim,
   losingTeam,

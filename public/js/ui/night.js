@@ -41,7 +41,7 @@ export function renderNight(state) {
     });
   }
   if (!you.alive) {
-    clear(box, el('h3', {}, '👻 You are a ghost'), el('p', {}, 'The dead do not wake at night, but they can still haunt the walls with art. Tomorrow you can still talk, and you have ' + (you.ghostVote ? 'one ghost vote left.' : 'no vote left.')));
+    clear(box, el('h3', {}, '👻 You are a ghost'), el('p', {}, 'The dead do not wake at night, but they can still paint, gossip on the ghost channel and update their bet on the Parasite. Tomorrow, while the crew explores, you can haunt them. You can still talk, and you have ' + (you.ghostVote ? 'one ghost vote left.' : 'no vote left.')));
     return;
   }
   const prompt = you.prompt;

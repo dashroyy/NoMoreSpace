@@ -295,6 +295,37 @@ The end screen hands out silly **awards** from what actually happened: 🎭 Best
 
 Playing also **unlocks cosmetics**, tracked in your browser (no account needed): 🏆 Laurels (win 3 games), 🦑 Tentacles (win on the evil team), 🤡 Jester cap (play the Holo-Jester), 🛸 Mini UFO (play 5 games) and a 🐋 space whale pet (win 2 games with the crew). Locked items show a 🔒 and how to earn them.
 
+## 9a. Playing with friends: the party touches
+
+Small details borrowed from the best party games (Among Us, Jackbox, Town of Salem, Mario Party) to keep a group laughing together, even after they're knocked out.
+
+### 👻 Ghosts stay in the game
+- **🔮 Bet on the Parasite:** dead players secretly bet on who the Parasite is (action bar, or the night screen). The first bet is free; after that it can change once a day. Bets are revealed on the end screen, and the first ghost to bet on the real Parasite (and keep the bet) wins **👻 Psychic**.
+- **🎃 Haunting:** while the crew explores, each ghost gets **3 pranks a day** in the room they're floating in: **💡 flicker the lights**, **📦 drop a crate** out of nowhere, or **🎃 make a pumpkin cackle**. Pranks are anonymous; the living in that room see and hear them. The most active ghost wins **🎃 Poltergeist**.
+- **Ghost channel:** at night the dead get their own chat on the night screen, to gossip while the living sleep.
+
+### 😱 Reactions and voices
+- **Emoji reactions** (😱 🤣 🙄 👀 🫡) at dawn, in the meeting, during nominations, last words and dusk. They float up from your seat on the bridge table and above your avatar in 3D.
+- **Speaking rings:** whoever is talking on voice chat gets a glowing green ring under their avatar and around their seat.
+
+### ✍️ Your own jokes
+- **Lobby bio:** "Finish the sentence: *Zorp* is…" (up to 48 characters). It shows in the crew list and on seat tooltips, and ARIA works it into the stories: *"Zorp, who is allergic to zero gravity, floated out of bed and straight into the tentacles."*
+- **The ship's name:** every ship gets a silly name (*The Wobbly Goose*, *SS Probably Fine*…) that the host or Captain can change in the lobby (🎲 for a random one). It shows in the lobby, the top bar and on the share card.
+
+### 🔁 Game after game
+- **Rematch (same crew):** once a game is over, *anyone* can press Rematch. Everyone goes back to the docking bay with the same seats, suits and bios, and the crew does a warm-up dance for "Round 2!".
+- **Tonight's season:** a running scoreboard across the evening's games (by player name): **3 points a win, 1 per award**, plus times eaten 🦑, airlocked 🚪 and Best Liar 🎭. Shown in the lobby and on the end screen.
+- **📸 Share card:** a 1080×1350 image with the ship's name, the winner, every role, the top awards, the **famous last words** (the ones that got the most 🤣 reactions) and the season leaders. Share it straight to your phone's apps, copy it, or save it as a PNG.
+
+### ⏱️ Pace and catching up
+- **"Previously on No More Space…":** from day 2, a recap card at dawn: yesterday's airlocking (with votes), Gunner shots, claims, and who died in the night.
+- **10-second warning:** a bell and a toast ten seconds before exploring, the meeting or nominations end, then a big countdown with ticks for the last five seconds.
+- **Away from keyboard:** after 90 seconds with no input during the day, a player shows **💤** on their seat and counts as **Ready**, so one distracted friend can't hold everyone up. Any key, click or movement wakes them.
+
+### 🧭 Helping new players
+- **"What now?" line** under the timer: one sentence for your role and the moment, e.g. *"🔧 Your number comes at dawn. Find out who sits next to you."* Ghosts and the Captain get their own.
+- **First-game coach:** for players with fewer than 2 finished games, a tip bubble points at the right button the first time each key moment comes up (role card, night choice, rooms, Ready, claims, nominating, voting, reactions, ghost tools). Each tip shows once; "Got it" dismisses it for good.
+
 ## 9b. Behind the scenes
 - **Phones:** when a phone wakes up after the screen was off, the game reconnects straight away and shows "Reconnecting…" until it's back.
 - **Play stats:** every finished game adds one line (no names) to `data/stats.jsonl` on the server. See the summary at **/stats** (win rates by player count, average length, how often each role is dealt and survives).

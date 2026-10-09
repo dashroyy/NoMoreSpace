@@ -10,6 +10,7 @@ A spooky, slightly silly space spin-off of **Blood on the Clocktower**, played o
 - 🚀 **3D ship** with 12 rooms, proximity text & voice chat, 11 task minigames, window clues, night drawings on the walls
 - 🕐 BotC-style days: private chats → emergency meeting → nominations where **everyone votes YES/NO at once** and a clockwise **vote clock** reveals the hands → airlock, with a **Ready** button to skip ahead when everyone's done talking
 - ⚡ **Ship systems**: once-per-game online abilities for 8 roles: intercept a room's chat, door logs, lockdowns, sensor sweeps, med-scans, spoofed messages, disguises and blackouts
+- 👻 Ghosts stay in the game (bets on the Parasite, haunting, a ghost channel), emoji reactions, speaking rings, lobby bios, ship names, rematches with a season scoreboard, and a shareable result card
 - 🗒️ A private **notebook** for tracking claims and suspicions, shown as badges around the bridge table
 - 🎬 An **epic end-game reveal** that unmasks every character model and replays each night
 

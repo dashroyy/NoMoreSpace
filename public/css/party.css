@@ -1,0 +1,116 @@
+/* ==========================================================================
+   Party touches: reactions, speaking rings, ghosts, the dawn recap, the
+   10-second countdown, AFK, the "what now?" line, the first-game coach,
+   ship names, bios, the season table and the share card.
+   Loaded after retro.css and uses its tokens.
+   ========================================================================== */
+
+/* ---------- Top bar: ship name and "what do I do now?" ---------- */
+.ship-name { font-family: var(--font-title); font-size: 0.7rem; color: var(--amber); letter-spacing: 0.06em; text-transform: uppercase; max-width: 22ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-shadow: 0 0 8px rgba(255, 181, 71, 0.45); }
+.hud-todo { max-width: min(520px, 70vw); margin: 2px auto 0; font-size: 0.95rem; color: #d6fbff; text-shadow: 0 0 8px rgba(108, 240, 255, 0.35); line-height: 1.15; }
+.hud-todo:empty { display: none; }
+
+/* ---------- Emoji reactions ---------- */
+.reactions {
+  position: absolute; left: 50%; bottom: 78px; transform: translateX(-50%); display: flex; gap: 6px; padding: 5px 8px;
+  background: rgba(4, 6, 16, 0.75); border: 1px solid rgba(108, 240, 255, 0.25);
+  clip-path: polygon(0 var(--cut), var(--cut) 0, 100% 0, 100% calc(100% - var(--cut)), calc(100% - var(--cut)) 100%, 0 100%);
+}
+.reactions .react-btn { width: 44px; height: 40px; padding: 0; font-size: 1.35rem; line-height: 1; background: transparent; border-color: transparent; box-shadow: none; clip-path: none; }
+.reactions .react-btn:hover:not(:disabled) { transform: translateY(-3px) scale(1.15); background: rgba(108, 240, 255, 0.12); }
+.reactions .react-btn:active:not(:disabled) { transform: scale(0.9); }
+.react-float { position: fixed; z-index: 40; pointer-events: none; font-size: 1.7rem; transform: translate(-50%, 0); animation: react-up 1.6s ease-out forwards; }
+@keyframes react-up {
+  0% { opacity: 0; transform: translate(-50%, 0) scale(0.5); }
+  15% { opacity: 1; transform: translate(-50%, -14px) scale(1.25); }
+  100% { opacity: 0; transform: translate(-50%, -110px) scale(1); }
+}
+
+/* ---------- Speaking rings and AFK on the bridge table ---------- */
+.seat.speaking .token { box-shadow: 0 0 0 3px #7dffa8, 0 0 14px #7dffa8; animation: talk 0.5s ease-in-out infinite alternate; }
+@keyframes talk { to { box-shadow: 0 0 0 4px #7dffa8, 0 0 22px #7dffa8; } }
+.seat .afk-badge { position: absolute; left: -9px; bottom: -8px; font-size: 0.75rem; filter: drop-shadow(0 0 3px #000); }
+.lobby-players .bio { display: block; color: var(--muted); font-size: 0.82rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ---------- Ghost tools ---------- */
+.action.predict span, .action.haunt span { background: radial-gradient(circle at 50% 30%, rgba(185, 164, 255, 0.4), rgba(185, 164, 255, 0.06)); box-shadow: inset 0 0 0 1px rgba(185, 164, 255, 0.45); }
+.action.predict, .action.haunt { border-color: rgba(185, 164, 255, 0.45); }
+.haunt-menu { position: absolute; left: 50%; bottom: 76px; transform: translateX(-50%); padding: 10px; display: grid; gap: 6px; width: min(320px, calc(100% - 20px)); z-index: 6; }
+.night-ghost { border-color: rgba(185, 164, 255, 0.5); }
+.night-ghost h3 { color: #b9a4ff; }
+.night-ghost .chat-log { max-height: 200px; min-height: 80px; }
+.night-ghost .row { justify-content: space-between; }
+.bet-picker .pick-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 6px; margin-top: 10px; }
+.bet-picker .pick { display: flex; align-items: center; gap: 6px; text-align: left; }
+.bet-picker .pick .dot { width: 12px; height: 12px; border-radius: 50%; flex: none; }
+.bet-picker .pick.chosen { border-color: #b9a4ff; background: rgba(185, 164, 255, 0.22); }
+.bet-picker .pick.dead { opacity: 0.6; }
+
+/* ---------- "Previously on No More Space…" ---------- */
+.recap {
+  position: absolute; left: 10px; top: 230px; width: min(320px, calc(100% - 20px)); padding: 10px 12px; display: grid; gap: 4px; z-index: 5;
+  border-color: rgba(255, 181, 71, 0.5); animation: recap-in 0.45s ease-out;
+}
+.recap.out { opacity: 0; transform: translateX(-20px); transition: opacity 0.6s, transform 0.6s; }
+.recap-title { font-family: var(--font-title); font-size: 0.72rem; color: var(--amber); letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 2px; }
+.recap-line { font-size: 1rem; line-height: 1.15; }
+@keyframes recap-in { from { opacity: 0; transform: translateX(-24px); } }
+
+/* The timer block is taller now (timer, black hole, "what now?"), so toasts and banners sit lower. */
+body:not(.phase-night):not(.phase-dawn):not(.phase-dusk):not(.phase-lastwords) .toasts { top: 112px; }
+body.phase-dawn .toasts, body.phase-dusk .toasts, body.phase-lastwords .toasts { bottom: 132px; } /* above the reactions */
+.phase-banner { top: 116px; }
+
+/* ---------- The 10-second countdown ---------- */
+.countdown {
+  position: absolute; left: 50%; top: 24vh; transform: translateX(-50%); pointer-events: none; z-index: 5;
+  font-family: var(--font-digital); font-weight: 900; font-size: 3.2rem; line-height: 1; color: var(--amber);
+  text-shadow: 0 0 18px rgba(255, 181, 71, 0.8), 0 0 40px rgba(255, 46, 77, 0.4);
+}
+.countdown.pop { animation: count-pop 0.9s ease-out; }
+@keyframes count-pop { 0% { transform: translateX(-50%) scale(1.5); opacity: 0.3; } 25% { transform: translateX(-50%) scale(1); opacity: 1; } }
+
+/* ---------- First-game coach ---------- */
+.coach {
+  position: fixed; z-index: 45; width: min(300px, calc(100vw - 16px)); padding: 10px 12px; display: grid; gap: 8px; justify-items: end;
+  background: #0b1a2a; border: 1px solid var(--amber); color: #fff3d6; box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.5), 0 0 24px rgba(255, 181, 71, 0.35);
+  animation: coach-in 0.35s cubic-bezier(.2, 1.4, .4, 1);
+}
+.coach-text { justify-self: stretch; font-size: 1rem; line-height: 1.2; }
+.coach-text b { color: var(--amber); }
+.coach::after { content: ''; position: absolute; left: var(--arrow, 50%); bottom: -7px; width: 12px; height: 12px; background: #0b1a2a; border-right: 1px solid var(--amber); border-bottom: 1px solid var(--amber); transform: translateX(-50%) rotate(45deg); }
+.coach.below::after { bottom: auto; top: -7px; transform: translateX(-50%) rotate(-135deg); }
+@keyframes coach-in { from { opacity: 0; transform: translateY(6px) scale(0.96); } }
+
+/* ---------- Lobby: ship name, bio, season ---------- */
+.lobby-ship { font-family: var(--font-title); font-size: 0.75rem; color: var(--amber); text-transform: uppercase; letter-spacing: 0.06em; margin: -2px 0 6px; }
+.lobby-ship .badge:empty { display: none; }
+.bio-field { margin: 4px 0 2px; color: var(--text); }
+.bio-field b { color: var(--phosphor); }
+.lobby-shipname { margin: 10px 0; }
+.season { margin-top: 12px; }
+.season-table { width: 100%; border-collapse: collapse; font-size: 1rem; }
+.season-table th, .season-table td { padding: 3px 6px; text-align: center; border-bottom: 1px solid var(--line); }
+.season-table td:nth-child(2) { text-align: left; max-width: 12ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.season-table tr:nth-child(2) td { color: #ffe9b8; }
+
+/* ---------- End screen extras and the share card ---------- */
+.bets, .famous-last-words { margin: 10px 0; }
+.famous-last-words p { font-size: 1.15rem; margin: 4px 0; }
+.share-card { display: grid; gap: 10px; justify-items: center; }
+.share-preview { width: min(360px, 100%); height: auto; border: 1px solid var(--line); box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6); }
+
+/* ---------- Phones ---------- */
+@media (max-width: 820px) {
+  .reactions { bottom: 64px; }
+  .reactions .react-btn { width: 38px; height: 36px; font-size: 1.2rem; }
+  .recap { top: 64px; left: 50%; transform: translateX(-50%); }
+  .recap.out { transform: translateX(-50%) translateY(-10px); }
+  .hud-todo { font-size: 0.85rem; max-width: 92vw; }
+  .ship-name { display: none; }
+  .countdown { top: 26vh; font-size: 2.6rem; }
+}
+body.phase-night .reactions, body.phase-ended .reactions { display: none; }
+@media (prefers-reduced-motion: reduce) {
+  .react-float, .countdown.pop, .coach, .recap, .seat.speaking .token { animation: none !important; }
+}

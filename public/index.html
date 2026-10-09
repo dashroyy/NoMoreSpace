@@ -11,6 +11,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Sixtyfour&family=Silkscreen&family=VT323&family=Doto:wght@700;900&family=Rubik+Glitch&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="/css/style.css" />
     <link rel="stylesheet" href="/css/retro.css" />
+    <link rel="stylesheet" href="/css/party.css" />
     <script type="importmap">
       { "imports": { "three": "/vendor/three/three.module.min.js" } }
     </script>
@@ -61,10 +62,15 @@
           <div>
             <div class="eyebrow">Docking bay</div>
             <h2>Ship <span id="lobby-code" class="code"></span></h2>
+            <div class="lobby-ship"><span id="lobby-ship"></span> <span id="lobby-round" class="badge"></span></div>
           </div>
           <button id="lobby-copy" class="small ghost">Copy invite link</button>
         </div>
         <div id="lobby-wardrobe">
+          <label class="bio-field">Finish the sentence: <b id="lobby-bio-name">You</b> is…
+            <input id="lobby-bio" maxlength="48" placeholder="allergic to zero gravity" autocomplete="off" />
+          </label>
+          <p class="hint">ARIA will work it into the story if you get eaten.</p>
           <h3>Your spacesuit</h3>
           <div class="eyebrow">Colour</div>
           <div id="pick-suit" class="swatches"></div>
@@ -83,8 +89,10 @@
         <h3>Crew manifest <span id="lobby-count" class="muted"></span></h3>
         <p class="hint" id="lobby-seat-hint">Seat order matters: neighbours at the bridge table are used by some roles.</p>
         <ol id="lobby-players" class="lobby-players"></ol>
+        <div id="lobby-shipname" class="lobby-shipname" hidden></div>
         <div id="lobby-setup" class="lobby-setup"></div>
         <div id="lobby-wait" class="hint"></div>
+        <div id="lobby-season" hidden></div>
         <button id="lobby-leave" class="small ghost">Leave ship</button>
       </div>
     </section>
@@ -93,12 +101,14 @@
     <section id="hud" hidden>
       <header class="topbar">
         <div class="tb-left">
+          <span id="hud-ship" class="ship-name"></span>
           <span class="code" id="hud-code"></span>
           <span id="hud-phase" class="phase-pill"></span>
         </div>
         <div class="tb-center">
           <div id="hud-timer" class="timer">--:--</div>
           <div id="hud-horizon" class="horizon" title="How close the ship is to the black hole"></div>
+          <div id="hud-todo" class="hud-todo"></div>
         </div>
         <div class="tb-right">
           <div id="hud-charge" class="charge" title="Observation Array: do tasks to reveal a clue in the windows tomorrow"><span></span><b>🔭</b></div>
@@ -142,6 +152,8 @@
         <button id="btn-system" class="action system" hidden><span>⚡</span><b>System</b> <kbd>X</kbd></button>
         <button id="btn-claim" class="action claim" hidden><span>📣</span>Claim <kbd>C</kbd></button>
         <button id="btn-emote" class="action"><span>🎭</span>Emote <kbd>Q</kbd></button>
+        <button id="btn-predict" class="action predict" hidden><span>🔮</span><b>Bet on the Parasite</b></button>
+        <button id="btn-haunt" class="action haunt" hidden><span>👻</span><b>Haunt</b></button>
         <button id="btn-hand" class="action hand" hidden><span>✋</span><b>Raise hand</b></button>
         <button id="btn-done-speaking" class="action" hidden><span>🎤</span>I'm done</button>
         <button id="btn-ready" class="action ready" hidden><span>⏭️</span><b>Ready</b></button>
@@ -149,6 +161,10 @@
         <button id="btn-use" class="action" hidden><span>🛠️</span>Use <kbd>E</kbd></button>
       </nav>
       <div id="emote-menu" class="emote-menu card" hidden></div>
+      <div id="haunt-menu" class="haunt-menu card" hidden></div>
+      <div id="reactions" class="reactions" hidden></div>
+      <div id="recap" class="recap card" hidden></div>
+      <div id="countdown" class="countdown" hidden></div>
       <div id="rooms-menu" class="rooms-menu card" hidden></div>
       <div id="nominate-menu" class="rooms-menu card" hidden></div>
       <div id="system-menu" class="rooms-menu card" hidden></div>
@@ -159,6 +175,9 @@
       <div id="reconnect-banner" class="reconnect-banner" hidden>📡 Connection lost. Reconnecting…</div>
       <div id="joystick" class="joystick" hidden><div class="knob"></div></div>
     </section>
+
+    <!-- First-game coach: a tip pointing at the right button -->
+    <div id="coach" class="coach" hidden></div>
 
     <!-- Cloud bubble: the Captain's story -->
     <div id="story" class="story" hidden>
@@ -188,6 +207,13 @@
             <button id="draw-clear" class="small ghost">Clear</button>
             <button id="draw-send" class="small primary">Pin it to the wall</button>
           </div>
+        </div>
+        <div class="card night-ghost" id="night-ghost" hidden>
+          <h3>👻 Ghost channel</h3>
+          <p class="hint">Only the dead can read this. Gossip away while the living sleep.</p>
+          <div class="row"><span id="ghost-bet" class="hint"></span><button id="ghost-bet-btn" class="small">🔮 Place or change your bet</button></div>
+          <div id="ghost-log" class="chat-log"></div>
+          <form id="ghost-form" class="chat-form"><input id="ghost-input" maxlength="200" placeholder="Gossip with the dead…" autocomplete="off" /></form>
         </div>
         <div class="card night-evil" id="night-evil" hidden>
           <h3>🦑 Infiltrator channel</h3>

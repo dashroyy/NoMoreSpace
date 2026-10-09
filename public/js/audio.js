@@ -638,6 +638,15 @@ const SOUNDS = {
   },
   whisper: () => noise({ dur: 2.5, vol: 0.06, freq: 2500 + Math.random() * 2000, q: 8, bus: ambientBus }),
   step: () => noise({ dur: 0.06, vol: 0.05, freq: 300, q: 2 }),
+  // party touches
+  react: () => tone({ freq: 900, slide: 1500, dur: 0.07, vol: 0.035 }),
+  cackle: () => [0, 0.15, 0.3, 0.47].forEach((d, i) => tone({ freq: 560 - i * 40, slide: 400 - i * 30, type: 'sawtooth', dur: 0.12, vol: 0.07, delay: d, filter: { freq: 1800 } })),
+  thud: () => {
+    tone({ freq: 95, slide: 45, dur: 0.35, vol: 0.3 });
+    noise({ dur: 0.2, vol: 0.25, freq: 400, q: 1 });
+  },
+  warn: () => [81, 76].forEach((m, i) => bell(m, now() + i * 0.18, { vol: 0.09, decay: 0.9 })),
+  count: () => tick(now(), { vol: 0.07, bus: sfxBus }),
 };
 
 export function sfx(name) {
