@@ -738,8 +738,9 @@ export class Avatar {
     b.position.set(0, 0, 0);
     b.rotation.set(0, 0, 0);
     let s = 1;
-    this.armL.rotation.set(0, 0, 0.15);
-    this.armR.rotation.set(0, 0, -0.15);
+    // arms rest slightly away from the body so they're visible (out = negative z on the left, positive on the right)
+    this.armL.rotation.set(0, 0, -0.22);
+    this.armR.rotation.set(0, 0, 0.22);
 
     // walking: a low-gravity "moon lope" like the Apollo astronauts. Slow,
     // bounding hops that hang at the top, a lean into each stride, arms held
@@ -758,11 +759,12 @@ export class Avatar {
       // legs reach forward and back, both tucking a little while airborne
       this.legL.rotation.x = (s * 0.5 - hop * 0.18) * w;
       this.legR.rotation.x = (-s * 0.5 - hop * 0.18) * w;
-      // arms out wide for balance, swinging slowly against the legs
-      this.armL.rotation.z = 0.15 + (0.35 + hop * 0.15) * w;
-      this.armR.rotation.z = -0.15 - (0.35 + hop * 0.15) * w;
-      this.armL.rotation.x = -s * 0.35 * w;
-      this.armR.rotation.x = s * 0.35 * w;
+      // arms held out from the sides for balance (rising a little on each hop), swinging against the legs.
+      // (+z turns an arm towards +x, so the left arm goes out with a negative angle and the right with a positive one)
+      this.armL.rotation.z = -0.22 - (0.85 + hop * 0.25) * w;
+      this.armR.rotation.z = 0.22 + (0.85 + hop * 0.25) * w;
+      this.armL.rotation.x = -s * 0.55 * w;
+      this.armR.rotation.x = s * 0.55 * w;
       // touchdown: once per hop, when the sine changes sign
       const landed = walking && Math.sign(s) !== Math.sign(this.lastStride || s);
       this.lastStride = s;
@@ -808,8 +810,8 @@ export class Avatar {
           b.rotation.z = -beat * 0.14;
           b.rotation.y = beat * 0.25;
           b.position.y += Math.abs(Math.cos(e.t * 8.5)) * 0.14;
-          this.armL.rotation.z = 1.15 + beat * 0.95;
-          this.armR.rotation.z = -1.15 + beat * 0.95;
+          this.armL.rotation.z = -1.15 + beat * 0.95; // both arms out to the sides, swinging together
+          this.armR.rotation.z = 1.15 + beat * 0.95;
           this.armL.rotation.x = -0.3;
           this.armR.rotation.x = -0.3;
           this.legL.rotation.x = Math.max(0, beat) * 0.55;
