@@ -41,7 +41,7 @@ function saveSeat(seat) {
 // Canvas text (name tags, room labels) can only use fonts that have finished loading.
 function loadFonts() {
   if (!document.fonts?.load) return Promise.resolve();
-  const fonts = ['700 72px Unbounded', '600 30px "Bricolage Grotesque"', '700 16px "Martian Mono"', '400 40px "Rubik Wet Paint"'];
+  const fonts = ['40px VT323', '40px Silkscreen', '40px Sixtyfour', '900 40px Doto', '40px "Rubik Glitch"'];
   return Promise.race([Promise.all(fonts.map((f) => document.fonts.load(f))), new Promise((r) => setTimeout(r, 2500))]).catch(() => {});
 }
 

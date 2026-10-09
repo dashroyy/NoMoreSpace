@@ -1,0 +1,319 @@
+/* ==========================================================================
+   No More Space: RETRO CYBER HORROR theme
+   An old CRT ship terminal that something has crawled inside. Pixel and
+   terminal fonts, phosphor glow, scanlines, chamfered "hardware" buttons
+   with HUD corner brackets, and glitches when you touch things.
+   Loaded after style.css, so everything here wins.
+   ========================================================================== */
+
+:root {
+  --font-display: 'Sixtyfour', 'Silkscreen', ui-monospace, monospace; /* the logo: an 8-bit home computer */
+  --font-title: 'Silkscreen', 'VT323', ui-monospace, monospace; /* headings, buttons, labels: pixel caps */
+  --font-body: 'VT323', ui-monospace, 'Cascadia Mono', monospace; /* reading text: a green-screen terminal */
+  --font-mono: 'VT323', ui-monospace, monospace;
+  --font-digital: 'Doto', 'VT323', ui-monospace, monospace; /* timers and codes: a dot-matrix readout */
+  --font-spooky: 'Rubik Glitch', 'Silkscreen', fantasy; /* horror moments: a corrupted signal */
+  --phosphor: #6cf0ff;
+  --blood: #ff2e4d;
+  --amber: #ffb547;
+  --radius: 3px;
+  --cut: 8px; /* the chamfer on hardware corners */
+}
+
+/* Pixel and terminal fonts have very different sizes for the same font-size;
+   font-size-adjust makes their lowercase letters the same height. */
+body {
+  font-size: 17px;
+  font-size-adjust: ex-height 0.5;
+  line-height: 1.25;
+  letter-spacing: 0.01em;
+  -webkit-font-smoothing: none;
+}
+h1, h2, h3 { font-family: var(--font-title); font-weight: 400; text-transform: uppercase; letter-spacing: 0.06em; }
+h2 { font-size: 1.05rem; color: #eaf6ff; text-shadow: 0 0 10px rgba(108, 240, 255, 0.35); }
+h3 { font-size: 0.78rem; color: var(--phosphor); text-shadow: 0 0 8px rgba(108, 240, 255, 0.5); }
+h3::before { content: '▌'; color: var(--blood); margin-right: 4px; text-shadow: 0 0 6px var(--blood); }
+.hint { line-height: 1.25; }
+.eyebrow { font-family: var(--font-title); letter-spacing: 0.18em; }
+
+/* ---------- The CRT: scanlines, a rolling scan bar and a faint flicker ---------- */
+body::after {
+  content: ''; position: fixed; inset: 0; z-index: 60; pointer-events: none;
+  background:
+    repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.16) 0 1px, transparent 1px 3px),
+    radial-gradient(ellipse at center, transparent 60%, rgba(0, 0, 0, 0.35) 100%);
+  mix-blend-mode: multiply;
+  animation: crt-flicker 7s infinite steps(1);
+}
+body::before {
+  content: ''; position: fixed; left: 0; right: 0; top: -20vh; height: 18vh; z-index: 61; pointer-events: none;
+  background: linear-gradient(180deg, transparent, rgba(108, 240, 255, 0.045) 50%, transparent);
+  animation: scanbar 9s linear infinite;
+}
+@keyframes scanbar { to { transform: translateY(140vh); } }
+@keyframes crt-flicker { 0%, 100% { opacity: 1; } 47% { opacity: 0.85; } 48% { opacity: 1; } 83% { opacity: 0.9; } }
+
+/* ---------- Panels: terminal frames with HUD corner brackets ---------- */
+.card {
+  border-radius: var(--radius);
+  border: 1px solid rgba(108, 240, 255, 0.22);
+  background:
+    /* corner brackets */
+    linear-gradient(var(--phosphor), var(--phosphor)) top left / 14px 2px no-repeat,
+    linear-gradient(var(--phosphor), var(--phosphor)) top left / 2px 14px no-repeat,
+    linear-gradient(var(--phosphor), var(--phosphor)) top right / 14px 2px no-repeat,
+    linear-gradient(var(--phosphor), var(--phosphor)) top right / 2px 14px no-repeat,
+    linear-gradient(var(--blood), var(--blood)) bottom left / 14px 2px no-repeat,
+    linear-gradient(var(--blood), var(--blood)) bottom left / 2px 14px no-repeat,
+    linear-gradient(var(--phosphor), var(--phosphor)) bottom right / 14px 2px no-repeat,
+    linear-gradient(var(--phosphor), var(--phosphor)) bottom right / 2px 14px no-repeat,
+    /* scanlines over a dark glassy screen */
+    repeating-linear-gradient(0deg, rgba(108, 240, 255, 0.025) 0 1px, transparent 1px 3px),
+    linear-gradient(180deg, rgba(8, 14, 26, 0.9), rgba(4, 6, 14, 0.92));
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.7), 0 0 26px rgba(108, 240, 255, 0.07), inset 0 0 40px rgba(0, 0, 0, 0.5), var(--shadow);
+}
+
+/* ---------- Text inputs: a terminal prompt ---------- */
+input, textarea, select {
+  border-radius: 0;
+  border: 1px solid rgba(108, 240, 255, 0.25);
+  border-left: 3px solid rgba(108, 240, 255, 0.55);
+  background: rgba(0, 4, 10, 0.75);
+  color: #d9fbff;
+  caret-color: var(--phosphor);
+  font-size: 1.05rem;
+}
+input::placeholder, textarea::placeholder { color: rgba(138, 146, 184, 0.75); }
+input:focus, textarea:focus, select:focus { border-color: var(--phosphor); box-shadow: 0 0 0 1px var(--phosphor), 0 0 14px rgba(108, 240, 255, 0.3); }
+
+/* ---------- Buttons: chamfered hardware switches ---------- */
+button {
+  --edge: rgba(108, 240, 255, 0.5);
+  --ink: #c9f8ff;
+  --fill: rgba(5, 12, 24, 0.9);
+  font-family: var(--font-title); font-weight: 400; text-transform: uppercase; letter-spacing: 0.07em; font-size: 0.82rem;
+  color: var(--ink);
+  border-radius: 0;
+  border: 1px solid var(--edge);
+  clip-path: polygon(0 var(--cut), var(--cut) 0, 100% 0, 100% calc(100% - var(--cut)), calc(100% - var(--cut)) 100%, 0 100%);
+  background:
+    /* the border, carried round the cut corners */
+    linear-gradient(135deg, transparent 4.9px, var(--edge) 4.9px 6.3px, transparent 6.3px) top left / 10px 10px no-repeat,
+    linear-gradient(315deg, transparent 4.9px, var(--edge) 4.9px 6.3px, transparent 6.3px) bottom right / 10px 10px no-repeat,
+    repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.035) 0 1px, transparent 1px 3px),
+    var(--fill);
+  box-shadow: inset 0 0 12px rgba(108, 240, 255, 0.08);
+  text-shadow: 0 0 6px rgba(108, 240, 255, 0.45);
+  transition: background-color 0.15s, color 0.15s, filter 0.15s, transform 0.08s;
+}
+button:hover:not(:disabled) {
+  --edge: var(--phosphor);
+  --fill: rgba(16, 48, 66, 0.92);
+  color: #fff;
+  border-color: var(--phosphor);
+  box-shadow: inset 0 0 18px rgba(108, 240, 255, 0.25);
+  transform: none;
+  animation: glitch 0.32s steps(2, end) 1;
+}
+button:active:not(:disabled) {
+  --fill: var(--phosphor);
+  color: #00121a; text-shadow: none;
+  transform: translateY(1px);
+  box-shadow: none;
+}
+button:focus-visible { outline: 2px dashed var(--phosphor); outline-offset: 3px; }
+button:disabled { opacity: 0.35; filter: grayscale(0.8); }
+/* a glitch: the text tears into red and cyan for a moment */
+@keyframes glitch {
+  0% { text-shadow: -2px 0 var(--blood), 2px 0 #3cf; transform: translateX(-1px); }
+  50% { text-shadow: 2px 0 var(--blood), -2px 0 #3cf; transform: translateX(1px) skewX(-4deg); }
+  100% { text-shadow: 0 0 6px rgba(108, 240, 255, 0.45); transform: none; }
+}
+
+/* Primary: a lit phosphor key with a blinking cursor */
+button.primary {
+  --edge: #d6fdff;
+  --fill: linear-gradient(180deg, #8ff6ff, #2fc4e6);
+  color: #001820; text-shadow: none;
+  font-family: var(--font-title);
+  background:
+    linear-gradient(135deg, transparent 4.9px, var(--edge) 4.9px 6.3px, transparent 6.3px) top left / 10px 10px no-repeat,
+    linear-gradient(315deg, transparent 4.9px, var(--edge) 4.9px 6.3px, transparent 6.3px) bottom right / 10px 10px no-repeat,
+    repeating-linear-gradient(0deg, rgba(0, 40, 60, 0.12) 0 1px, transparent 1px 3px),
+    linear-gradient(180deg, #9af7ff, #2bbfe2);
+  box-shadow: 0 0 22px rgba(108, 240, 255, 0.45);
+  filter: drop-shadow(0 0 8px rgba(108, 240, 255, 0.35));
+}
+button.primary:hover:not(:disabled) {
+  background:
+    linear-gradient(135deg, transparent 4.9px, #fff 4.9px 6.3px, transparent 6.3px) top left / 10px 10px no-repeat,
+    linear-gradient(315deg, transparent 4.9px, #fff 4.9px 6.3px, transparent 6.3px) bottom right / 10px 10px no-repeat,
+    repeating-linear-gradient(0deg, rgba(0, 40, 60, 0.12) 0 1px, transparent 1px 3px),
+    linear-gradient(180deg, #c8fbff, #4fd6f2);
+  color: #001820;
+  filter: drop-shadow(0 0 14px rgba(108, 240, 255, 0.6));
+  animation: glitch-dark 0.32s steps(2, end) 1;
+}
+button.primary:active:not(:disabled) { background: #fff; }
+@keyframes glitch-dark {
+  0% { text-shadow: -2px 0 var(--blood); transform: translateX(-1px); }
+  50% { text-shadow: 2px 0 #0077aa; transform: translateX(1px) skewX(-4deg); }
+  100% { text-shadow: none; transform: none; }
+}
+button.primary::after {
+  content: '▮'; position: static; display: inline-block; margin-left: 6px; background: none; transform: none;
+  font-size: 0.8em; opacity: 0; animation: none;
+}
+button.primary:hover:not(:disabled)::after { opacity: 1; transform: none; transition: none; animation: cursor 0.7s steps(1) infinite; }
+@keyframes cursor { 50% { opacity: 0; } }
+
+/* Danger: a blood-red emergency switch */
+button.danger {
+  --edge: var(--blood);
+  --fill: rgba(60, 0, 12, 0.9);
+  color: #ffd2da; text-shadow: 0 0 8px rgba(255, 46, 77, 0.8);
+  box-shadow: inset 0 0 16px rgba(255, 46, 77, 0.25);
+  background:
+    linear-gradient(135deg, transparent 4.9px, var(--edge) 4.9px 6.3px, transparent 6.3px) top left / 10px 10px no-repeat,
+    linear-gradient(315deg, transparent 4.9px, var(--edge) 4.9px 6.3px, transparent 6.3px) bottom right / 10px 10px no-repeat,
+    repeating-linear-gradient(-45deg, rgba(255, 46, 77, 0.1) 0 6px, transparent 6px 12px),
+    var(--fill);
+}
+button.danger:hover:not(:disabled) { --fill: rgba(110, 0, 22, 0.95); color: #fff; }
+
+/* Ghost: just glowing text, like a menu item on an old terminal */
+button.ghost { clip-path: none; background: none; border-color: transparent; box-shadow: none; color: var(--muted); text-shadow: none; }
+button.ghost:hover:not(:disabled) { background: none; border-color: transparent; color: var(--phosphor); text-shadow: 0 0 8px var(--phosphor); box-shadow: none; }
+button.ghost:hover:not(:disabled)::before { content: '> '; }
+
+button.small { --cut: 6px; padding: 6px 10px; font-size: 0.72rem; border-radius: 0; }
+button.big { --cut: 12px; padding: 14px 22px; font-size: 0.95rem; }
+/* round icon buttons become square hardware keys */
+button.icon { --cut: 6px; border-radius: 0; width: 38px; height: 38px; font-size: 1.05rem; text-shadow: none; }
+button.on {
+  --edge: var(--phosphor);
+  --fill: rgba(24, 80, 100, 0.9);
+  color: #fff;
+  box-shadow: inset 0 0 0 1px rgba(108, 240, 255, 0.4), inset 0 0 18px rgba(108, 240, 255, 0.35);
+}
+button.icon.off::after { border-radius: 0; }
+
+kbd {
+  border-radius: 0; border: 1px solid rgba(108, 240, 255, 0.45); border-bottom-width: 2px;
+  background: rgba(0, 0, 0, 0.6); color: var(--phosphor);
+  font-family: var(--font-title); font-size: 0.62em; font-weight: 400; padding: 1px 4px;
+  text-shadow: 0 0 5px rgba(108, 240, 255, 0.6);
+}
+
+/* ---------- Chips, swatches and tabs ---------- */
+.chip { --cut: 5px; border-radius: 0; font-size: 0.7rem; padding: 5px 8px; }
+.chip.selected { --edge: var(--phosphor); --fill: rgba(24, 80, 100, 0.9); color: #fff; }
+.chip.locked { --edge: rgba(138, 146, 184, 0.4); color: var(--muted); text-shadow: none; }
+.swatch { --cut: 0px; clip-path: none; border-radius: 0; background-image: none !important; box-shadow: inset 0 0 0 2px rgba(0, 0, 0, 0.35); }
+.swatch.selected { box-shadow: 0 0 0 2px #000, 0 0 0 4px var(--phosphor), 0 0 12px var(--phosphor); }
+
+/* role-card tabs, the chat tabs, segmented tabs: [ BRACKETED ] when active */
+.tabs, .chat-tabs { gap: 2px; }
+.tabs button, .chat-tabs .tab { --cut: 0px; clip-path: none; background: transparent; border: 1px solid transparent; border-bottom: 2px solid rgba(108, 240, 255, 0.18); box-shadow: none; color: var(--muted); text-shadow: none; }
+.tabs button.active, .chat-tabs .tab.active { border-radius: 0; color: var(--phosphor); border-bottom-color: var(--phosphor); text-shadow: 0 0 8px rgba(108, 240, 255, 0.7); background: linear-gradient(0deg, rgba(108, 240, 255, 0.12), transparent); }
+.tabs button.active::before, .chat-tabs .tab.active::before { content: '['; margin-right: 4px; }
+.tabs button.active::after, .chat-tabs .tab.active::after { content: ']'; margin-left: 4px; }
+.chat-tabs .tab.evil.active { color: var(--evil); border-bottom-color: var(--evil); }
+
+/* ---------- The action bar: a row of console keys ---------- */
+.actionbar { border-radius: 0; border-color: rgba(108, 240, 255, 0.25); background: rgba(2, 4, 10, 0.75); padding: 5px; gap: 6px; }
+.action {
+  --cut: 9px;
+  padding: 5px 12px 5px 5px; gap: 8px; font-size: 0.74rem; border-radius: 0;
+}
+.action span {
+  border-radius: 0; width: 30px; height: 30px;
+  background: rgba(0, 0, 0, 0.55);
+  box-shadow: inset 0 0 0 1px rgba(108, 240, 255, 0.35), inset 0 0 10px rgba(108, 240, 255, 0.15);
+  clip-path: polygon(0 5px, 5px 0, 100% 0, 100% calc(100% - 5px), calc(100% - 5px) 100%, 0 100%);
+}
+.action.danger span, .action.hand span, .action.ready span { border-radius: 0; }
+.action.ready { --edge: rgba(125, 255, 168, 0.6); }
+.action.ready.on { --fill: rgba(20, 70, 40, 0.92); color: #d9ffe6; }
+.action.nominate { --edge: var(--amber); color: #ffe2b0; text-shadow: 0 0 6px rgba(255, 181, 71, 0.6); }
+.action.system { --edge: var(--evil); color: #ecd6ff; text-shadow: 0 0 6px rgba(199, 125, 255, 0.6); }
+.action.claim { --edge: rgba(155, 227, 107, 0.7); }
+.action.rooms { --edge: var(--phosphor); }
+
+/* ---------- Top bar, timer, banners ---------- */
+.phase-pill { border-radius: 0; font-family: var(--font-title); font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.1em; clip-path: polygon(0 6px, 6px 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%); }
+.code { font-family: var(--font-digital); font-weight: 900; letter-spacing: 0.3em; text-shadow: 0 0 10px rgba(108, 240, 255, 0.7); }
+.timer { font-family: var(--font-digital); font-weight: 900; font-size: 1.9rem; letter-spacing: 0.06em; color: #e9fdff; text-shadow: 0 0 12px rgba(108, 240, 255, 0.8); }
+.timer.urgent { color: var(--blood); text-shadow: 0 0 14px rgba(255, 46, 77, 0.9); }
+.tb-center { border-radius: 0; border: 1px solid rgba(108, 240, 255, 0.18); background: rgba(0, 3, 8, 0.7); }
+.horizon { font-family: var(--font-body); font-size: 0.9rem; }
+.charge { border-radius: 0; }
+.phase-banner { border-radius: 0; font-family: var(--font-title); text-transform: uppercase; border-color: rgba(108, 240, 255, 0.35); text-shadow: 0 0 10px rgba(108, 240, 255, 0.6); clip-path: polygon(0 10px, 10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%); }
+.toast { border-radius: 0; font-family: var(--font-body); font-size: 1.05rem; border-left-width: 3px; }
+.toast.death, .toast.evil { animation: drop 0.3s ease-out, tear 0.4s steps(2) 0.3s 1; }
+@keyframes tear { 50% { transform: translateX(3px) skewX(-6deg); filter: hue-rotate(40deg); } }
+.problem { border-radius: 0; font-family: var(--font-body); font-size: 1.05rem; }
+.minimap { border-radius: 0; }
+.ring-title { font-family: var(--font-title); text-transform: uppercase; }
+.use-prompt { border-radius: 0; font-family: var(--font-title); font-size: 0.8rem; text-transform: uppercase; }
+
+/* ---------- Title screen ---------- */
+.logo {
+  font-family: var(--font-display); font-weight: 400; font-size: clamp(1.7rem, 6.5vw, 3rem); letter-spacing: 0.02em; line-height: 1.15;
+  text-shadow: -2px 0 rgba(255, 46, 77, 0.7), 2px 0 rgba(60, 200, 255, 0.7), 0 0 28px rgba(108, 240, 255, 0.55);
+  animation: flicker 6s infinite, logo-tear 9s infinite;
+}
+.logo span { font-family: var(--font-spooky); font-size: 1.55em; color: var(--blood); letter-spacing: 0.06em; text-shadow: 0 0 26px rgba(255, 46, 77, 0.7), 3px 0 rgba(60, 200, 255, 0.5); }
+@keyframes logo-tear { 0%, 96%, 100% { transform: none; clip-path: none; } 97% { transform: translateX(-4px) skewX(8deg); clip-path: inset(30% 0 40% 0); } 98% { transform: translateX(3px); clip-path: inset(60% 0 10% 0); } }
+.tagline { font-size: 1.1rem; }
+.mode { border-radius: 0; }
+.footnote a { color: var(--phosphor); }
+
+/* ---------- Menus and lists ---------- */
+.room-row { --cut: 7px; text-transform: none; letter-spacing: 0; font-family: var(--font-body); font-size: 1rem; text-shadow: none; }
+.room-row b { font-family: var(--font-title); font-weight: 400; text-transform: uppercase; font-size: 0.78rem; letter-spacing: 0.06em; }
+.room-row.here { --edge: var(--phosphor); --fill: rgba(24, 80, 100, 0.85); }
+.who-chip { border-radius: 0; font-family: var(--font-body); font-size: 0.95rem; }
+.vote-btn { --cut: 12px; font-size: 1.1rem; }
+.vote-btn.yes.on { --edge: var(--blood); --fill: rgba(110, 0, 22, 0.95); color: #fff; }
+.vote-btn.no.on { --edge: var(--phosphor); --fill: rgba(24, 80, 100, 0.95); color: #fff; }
+.vote-stage { font-family: var(--font-title); text-transform: uppercase; }
+.vote-timer { font-family: var(--font-digital); font-weight: 900; }
+.award, .unlocked, .sys-box, .chat-who, .vt-row, .intercept-tag, .reconnect-banner { border-radius: 0; }
+.award b, .sys-box b { font-family: var(--font-title); font-weight: 400; text-transform: uppercase; font-size: 0.8rem; letter-spacing: 0.05em; }
+.seat .nm { font-family: var(--font-body); font-size: 0.95rem; }
+.chat-log { font-size: 1rem; }
+.night-title { font-family: var(--font-spooky); letter-spacing: 0.08em; text-shadow: -3px 0 rgba(255, 46, 77, 0.6), 3px 0 rgba(60, 200, 255, 0.6), 0 0 30px rgba(140, 100, 255, 0.7); }
+.reveal-chapter { font-family: var(--font-spooky); }
+.reveal-chapter.win-crew { font-family: var(--font-display); }
+.cloud-author { font-family: var(--font-title); }
+.cloud-text { font-family: var(--font-body); font-size: 1.25rem; line-height: 1.2; }
+
+/* the story "cloud" keeps its shape (it's a speech bubble) but looks printed on an old screen */
+.cloud { background-image: repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.035) 0 1px, transparent 1px 3px); }
+
+/* everything boxy, like an old terminal (round tokens and avatars excepted) */
+.rolecard-hero, .ability, .note, .alm, .room-row, .nomination-box, .summary-card, .home-card, .mode, .badge, .tabs, .seg, .chat, .ring-panel, .command, .modal-box, .rooms-menu, .emote-menu, .story .cloud-deaths span, .flag, .draw-tools button, .task-box { border-radius: 0 !important; }
+.badge { font-family: var(--font-title); font-weight: 400; font-size: 0.62rem; letter-spacing: 0.08em; }
+.rolecard-hero h2 { font-size: 1.3rem; }
+.ability { border-left-width: 3px; font-size: 1.1rem; }
+
+/* the round seats on the bridge table stay round tokens, not switches */
+.seat { clip-path: none; background: none; border: 1px solid transparent; box-shadow: none; text-shadow: none; text-transform: none; letter-spacing: 0; animation: none !important; }
+.seat:hover:not(:disabled) { background: rgba(108, 240, 255, 0.08); border-color: rgba(108, 240, 255, 0.3); }
+.seat.selectable { border-color: rgba(255, 181, 71, 0.45); }
+.night-action .pick { text-transform: none; letter-spacing: 0; font-family: var(--font-body); font-size: 1rem; }
+
+@media (prefers-reduced-motion: reduce) {
+  body::before, body::after, .logo, button:hover, .toast { animation: none !important; }
+}
+
+/* ---------- Phones ---------- */
+@media (max-width: 820px) {
+  body { font-size: 16px; }
+  .timer { font-size: 1.45rem; }
+  .horizon { font-size: 0.78rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 46vw; }
+  .action { font-size: 0.66rem; letter-spacing: 0.05em; }
+  button.small { font-size: 0.66rem; }
+  .logo { font-size: clamp(1.4rem, 8vw, 2.2rem); }
+}

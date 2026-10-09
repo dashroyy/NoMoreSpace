@@ -67,7 +67,13 @@ function mesh(geometry, material, x = 0, y = 0, z = 0) {
 export function makeTextSprite(text, { color = '#ffffff', size = 34, bg = null, maxWidth = 360, padding = 14, scale = 0.012, border = null } = {}) {
   const canvas = document.createElement('canvas');
   const ctx = canvas.getContext('2d');
-  ctx.font = `600 ${size}px 'Bricolage Grotesque', system-ui, sans-serif`;
+  // terminal font: VT323 is small for its size, so draw it bigger and shrink the sprite to match
+  const k = 1.4;
+  scale /= k;
+  padding *= k;
+  size = Math.round(size * k);
+  maxWidth *= k;
+  ctx.font = `${size}px VT323, ui-monospace, monospace`;
   // word wrap
   const words = String(text).split(' ');
   const lines = [];
@@ -84,7 +90,7 @@ export function makeTextSprite(text, { color = '#ffffff', size = 34, bg = null, 
   const height = lines.length * size * 1.25 + padding * 2;
   canvas.width = Math.ceil(width);
   canvas.height = Math.ceil(height);
-  ctx.font = `600 ${size}px 'Bricolage Grotesque', system-ui, sans-serif`;
+  ctx.font = `${size}px VT323, ui-monospace, monospace`;
   if (bg) {
     ctx.fillStyle = bg;
     const r = Math.min(24, height / 2);
