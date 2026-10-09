@@ -1,5 +1,6 @@
 // The docking bay: customise your suit, see who's aboard, and (host/Captain)
 // choose the roles and launch.
+import { isUnlocked, UNLOCKS } from '../progress.js';
 import { $, el, clear, problem, toast } from '../util.js';
 import { store, send, suitHex, isController, isCaptain } from '../store.js';
 import { HAT_LABELS, PET_LABELS } from '../world/avatar.js';
@@ -34,9 +35,18 @@ export function renderLobby(state) {
     clear($('pick-suit'), ...Object.entries(data.suits).map(([id, hex]) =>
       el('button', { className: `swatch ${mine.suit === id ? 'selected' : ''} ${taken.has(id) ? 'taken' : ''}`, style: { background: hex }, title: id, disabled: taken.has(id), onclick: () => setLook({ suit: id }) }),
     ));
-    clear($('pick-hat'), ...data.hats.map((h) => el('button', { className: `chip ${mine.hat === h ? 'selected' : ''}`, onclick: () => setLook({ hat: h }) }, HAT_LABELS[h] || h)));
+    // unlockable items show a lock and how to earn them (progress.js)
+    const chip = (id, selected, label, pick) => {
+      const open = isUnlocked(id);
+      return el('button', {
+        className: `chip ${selected ? 'selected' : ''} ${open ? '' : 'locked'}`,
+        title: open ? '' : `🔒 ${UNLOCKS[id].hint}`,
+        onclick: () => (open ? pick() : problem(`🔒 ${UNLOCKS[id].label}: ${UNLOCKS[id].hint} to unlock it.`)),
+      }, open ? label : `🔒 ${label.replace(/^\S+ /, '')}`);
+    };
+    clear($('pick-hat'), ...data.hats.map((h) => chip(h, mine.hat === h, HAT_LABELS[h] || h, () => setLook({ hat: h }))));
     clear($('pick-visor'), ...Object.entries(data.visors).map(([id, hex]) => el('button', { className: `swatch ${mine.visor === id ? 'selected' : ''}`, style: { background: hex }, title: id, onclick: () => setLook({ visor: id }) })));
-    clear($('pick-pet'), ...data.pets.map((p) => el('button', { className: `chip ${mine.pet === p ? 'selected' : ''}`, onclick: () => setLook({ pet: p }) }, PET_LABELS[p] || p)));
+    clear($('pick-pet'), ...data.pets.map((p) => chip(p, mine.pet === p, PET_LABELS[p] || p, () => setLook({ pet: p }))));
   }
 
   const n = state.players.length;

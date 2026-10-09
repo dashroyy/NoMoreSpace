@@ -83,7 +83,7 @@ const GAMES = {
       g.fillStyle = '#ff7a3a';
       g.fillRect(20 + x * 380 - 3, 20, 6, 100);
       g.fillStyle = '#cfd6ff';
-      g.font = "16px 'Bricolage Grotesque'";
+      g.font = '20px VT323, monospace';
       g.fillText(`Calibrated: ${hits}/3`, 20, 135);
     });
     return () => {
@@ -241,7 +241,7 @@ const GAMES = {
         g.arc(s.x, s.y, 9, 0, Math.PI * 2);
         g.fill();
         g.fillStyle = '#000';
-        g.font = "bold 12px 'Bricolage Grotesque'";
+        g.font = '15px VT323, monospace';
         g.textAlign = 'center';
         g.fillText(i + 1, s.x, s.y + 4);
       });

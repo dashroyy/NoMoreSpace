@@ -55,6 +55,12 @@ function runVote(g, nominator, nominee, voters, now = 3000) {
 
 const lastNote = (p) => p.notes.at(-1)?.text;
 
+// Go to dusk; if someone is on the block, skip their last words straight to the airlock.
+function dusk(g, now) {
+  g.beginDusk(now);
+  if (g.phase === 'lastwords') g.finishLastWords(now);
+}
+
 // ---------------------------------------------------------------------------
 
 test('role lists follow the setup table for every player count and seed', () => {
@@ -119,7 +125,7 @@ test('Short Haul: with 3 players the Parasite first kills on night 3', () => {
   assert.strictEqual(g.firstKillNight, 3);
   playNight(g, { [role('scanner').id]: [role('medic').id, role('scanner').id] });
   dawnToNominations(g);
-  g.beginDusk(4000);
+  dusk(g, 4000);
   g.beginNight(5000);
   assert.ok(!g.prompts[role('parasite').id], 'night 2: still hungry, but waiting');
   assert.ok(g.prompts[role('medic').id], 'medic is awake on night 2');
@@ -184,7 +190,7 @@ test('the Parasite kills, the Medic and Marine protect', () => {
   const par = role('parasite');
   playNight(g, { [role('hacker').id]: [role('comms').id], [role('scanner').id]: [role('comms').id, role('medic').id] });
   dawnToNominations(g);
-  g.beginDusk(4000);
+  dusk(g, 4000);
   g.beginNight(5000);
   playNight(g, { [role('hacker').id]: [role('comms').id], [role('medic').id]: [role('engineer').id], [par.id]: [role('engineer').id], [role('scanner').id]: [role('comms').id, role('medic').id] }, 6000);
   assert.strictEqual(g.draft.deaths.length, 0, 'medic saved the engineer');
@@ -194,7 +200,7 @@ test('the Parasite kills, the Medic and Marine protect', () => {
   g.beginRoam(7000);
   g.beginMeeting(7000);
   g.beginNominations(7000);
-  g.beginDusk(8000);
+  dusk(g, 8000);
   g.beginNight(9000);
   playNight(g, { [role('hacker').id]: [role('comms').id], [role('medic').id]: [role('engineer').id], [par.id]: [role('marine').id], [role('scanner').id]: [role('comms').id, role('medic').id] }, 10000);
   assert.strictEqual(g.draft.deaths.length, 0, 'the marine is safe');
@@ -205,7 +211,7 @@ test('a glitched Marine can be killed', () => {
   const { g, role } = setup(['parasite', 'hacker', 'marine', 'comms', 'engineer']);
   playNight(g, { [role('hacker').id]: [role('comms').id] });
   dawnToNominations(g);
-  g.beginDusk(4000);
+  dusk(g, 4000);
   g.beginNight(5000);
   playNight(g, { [role('hacker').id]: [role('marine').id], [role('parasite').id]: [role('marine').id] }, 6000);
   assert.deepStrictEqual(g.draft.deaths.map((d) => d.id), [role('marine').id]);
@@ -216,7 +222,7 @@ test('the Space Drunk: false info and no protection', () => {
   const drunk = role('drunk');
   playNight(g, { [role('hacker').id]: [role('comms').id], [role('scanner').id]: [role('comms').id, role('engineer').id] });
   dawnToNominations(g);
-  g.beginDusk(4000);
+  dusk(g, 4000);
   g.beginNight(5000);
   assert.ok(g.prompts[drunk.id], 'the drunk "medic" still gets to choose');
   playNight(g, { [role('hacker').id]: [role('comms').id], [drunk.id]: [role('engineer').id], [role('parasite').id]: [role('engineer').id], [role('scanner').id]: [role('comms').id, role('engineer').id] }, 6000);
@@ -230,7 +236,7 @@ test('jumping hosts: the Parasite kills itself and the Incubator takes over', ()
   const inc = role('incubator');
   playNight(g, { [role('scanner').id]: [role('comms').id, role('medic').id] });
   dawnToNominations(g);
-  g.beginDusk(4000);
+  dusk(g, 4000);
   g.beginNight(5000);
   playNight(g, { [par.id]: [par.id], [role('medic').id]: [role('comms').id], [role('scanner').id]: [role('comms').id, role('medic').id] }, 6000);
   g.applyDraft(7000);
@@ -245,7 +251,7 @@ test('Incubator takes over when the Parasite is airlocked with 5+ alive', () => 
   playNight(g, { [role('scanner').id]: [role('comms').id, role('medic').id] });
   dawnToNominations(g);
   runVote(g, role('comms'), role('parasite'), p);
-  g.beginDusk(9000);
+  dusk(g, 9000);
   assert.ok(!role('parasite')?.alive || role('parasite') === role('incubator'));
   assert.strictEqual(g.get(p[1].id).role, 'parasite', 'the incubator is the new Parasite');
   assert.strictEqual(g.winner, null);
@@ -257,7 +263,7 @@ test('airlocking the Parasite wins the game for the crew', () => {
   dawnToNominations(g);
   runVote(g, role('comms'), role('parasite'), p.slice(1));
   assert.strictEqual(g.block.id, role('parasite').id);
-  g.beginDusk(9000);
+  dusk(g, 9000);
   assert.strictEqual(g.winner, 'crew');
   assert.strictEqual(g.phase, 'dusk', 'airlock animation plays first');
   g.tick(9000 + g.dur('dusk') + 1);
@@ -345,7 +351,7 @@ test('airlocking the Ambassador loses the game for the crew', () => {
   playNight(g, { [role('hacker').id]: [role('comms').id], [role('scanner').id]: [role('comms').id, role('engineer').id] });
   dawnToNominations(g);
   runVote(g, p[0], role('ambassador'), p);
-  g.beginDusk(9000);
+  dusk(g, 9000);
   assert.strictEqual(g.winner, 'infiltrators');
 });
 
@@ -356,7 +362,7 @@ test('First Officer: 3 alive and no airlocking wins for the crew', () => {
   g.kill(role('comms'), 'captain');
   g.kill(role('engineer'), 'captain');
   assert.strictEqual(g.aliveCount(), 3);
-  g.beginDusk(9000);
+  dusk(g, 9000);
   assert.strictEqual(g.winner, 'crew');
 });
 
@@ -365,7 +371,7 @@ test('evil wins when only 2 players are alive', () => {
   playNight(g, { [role('scanner').id]: [role('medic').id, role('scanner').id] });
   dawnToNominations(g);
   runVote(g, role('scanner'), role('medic'), [role('scanner'), role('parasite')]);
-  g.beginDusk(9000);
+  dusk(g, 9000);
   assert.strictEqual(g.winner, 'infiltrators');
 });
 
@@ -374,7 +380,7 @@ test('Coroner learns the airlocked role; Black Box checks someone when killed', 
   playNight(g, { [role('hacker').id]: [role('medic').id], [role('scanner').id]: [role('engineer').id, role('medic').id] });
   dawnToNominations(g);
   runVote(g, p[0], role('engineer'), p);
-  g.beginDusk(9000);
+  dusk(g, 9000);
   g.beginNight(10000);
   playNight(g, { [role('hacker').id]: [role('medic').id], [role('parasite').id]: [role('blackbox').id], [role('medic').id]: [role('coroner').id], [role('scanner').id]: [role('coroner').id, role('medic').id] }, 11000);
   assert.match(g.draft.messages.find((m) => m.role === 'coroner').text, /Engineer/);
@@ -425,7 +431,7 @@ test('tasks charge the Observation Array and a clue appears at dawn', () => {
   assert.ok(g.charge >= g.chargeNeeded());
   g.beginMeeting(3000);
   g.beginNominations(3000);
-  g.beginDusk(3000);
+  dusk(g, 3000);
   g.beginNight(4000);
   playNight(g, { [role('hacker').id]: [role('comms').id], [role('parasite').id]: [role('comms').id], [role('scanner').id]: [role('comms').id, role('engineer').id] }, 5000);
   g.applyDraft(6000);
@@ -519,7 +525,7 @@ test("the Hacker's glitch ends when the Hacker dies", () => {
   const engineer = role('engineer');
   playNight(g, { [hacker.id]: [role('comms').id], [role('scanner').id]: [role('comms').id, role('medic').id] });
   dawnToNominations(g);
-  g.beginDusk(3000);
+  dusk(g, 3000);
   g.beginNight(4000);
   const d = playNight(g, { [hacker.id]: [engineer.id], [role('parasite').id]: [hacker.id], [role('medic').id]: [role('comms').id], [role('scanner').id]: [role('comms').id, role('medic').id] }, 5000);
   assert.strictEqual(d.glitch, null);
@@ -533,7 +539,7 @@ test("the Hacker's glitch ends when the Hacker dies", () => {
   dawnToNominations(second.g);
   assert.ok(second.g.glitch);
   runVote(second.g, second.role('comms'), h2, second.g.players);
-  second.g.beginDusk(9000);
+  dusk(second.g, 9000);
   assert.ok(!h2.alive);
   assert.strictEqual(second.g.glitch, null);
 });
@@ -726,4 +732,64 @@ test('the Holo-Jester makes one player see a fake clue (and things that are not 
   assert.ok(g.manifest().find((m) => m.id === victim.id).hallucinating);
   g.beginNight(20_000);
   assert.strictEqual(g.hallucination, null);
+});
+
+test('last words: the airlocked player gets a spotlight first, and can finish early', () => {
+  const { g, p } = setup(['comms', 'engineer', 'medic', 'hacker', 'parasite']);
+  playNight(g);
+  dawnToNominations(g);
+  runVote(g, p[0], p[1], [p[0], p[2], p[3], p[4]]);
+  g.beginDusk(5000);
+  assert.strictEqual(g.phase, 'lastwords');
+  assert.strictEqual(g.viewFor(p[2].id).lastWords.id, p[1].id);
+  assert.ok(p[1].alive, 'not airlocked yet');
+  g.doneSpeaking(p[2].id, 5100); // only they (or the host) can cut it short
+  assert.strictEqual(g.phase, 'lastwords');
+  g.doneSpeaking(p[1].id, 5200);
+  assert.strictEqual(g.phase, 'dusk');
+  assert.ok(!p[1].alive);
+  assert.ok(g.dayLog.some((e) => e.k === 'airlock' && e.id === p[1].id));
+  // and the timer does it too
+  const second = setup(['comms', 'engineer', 'medic', 'hacker', 'parasite']);
+  playNight(second.g);
+  dawnToNominations(second.g);
+  runVote(second.g, second.p[0], second.p[2], second.p);
+  second.g.beginDusk(5000);
+  second.g.tick(5000 + second.g.dur('lastwords') + 1);
+  assert.strictEqual(second.g.phase, 'dusk');
+});
+
+test('claims, the day log and the end-of-game awards', () => {
+  const { g, p, role } = setup(['comms', 'engineer', 'medic', 'hacker', 'parasite']);
+  playNight(g);
+  dawnToNominations(g);
+  assert.ok(g.dayLog.some((e) => e.k === 'dawn'));
+  g.setClaim(p[0].id, 'comms', 'Bea or Cid is the Medic');
+  g.setClaim(role('hacker').id, 'medic', '');
+  assert.strictEqual(g.baseView().claims[p[0].id].text, 'Bea or Cid is the Medic');
+  assert.throws(() => g.setClaim(p[0].id, 'banana'), /Unknown role/);
+  g.setClaim(p[0].id, null, '');
+  assert.strictEqual(g.claims[p[0].id], undefined, 'claims can be taken back');
+  for (let i = 0; i < 6; i++) g.noteChat(p[2].id);
+  g.bump('tasks', p[1].id, 2); // (tasks only happen while exploring)
+  runVote(g, p[0], role('parasite'), [p[0], p[1], p[2]]);
+  assert.ok(g.dayLog.some((e) => e.k === 'vote' && e.votes === 3));
+  dusk(g, 9000);
+  assert.strictEqual(g.winner, 'crew');
+  const titles = g.awards.map((a) => a.title);
+  assert.ok(titles.includes('Sharpest Eye'));
+  assert.ok(titles.includes('Chatterbox'));
+  assert.ok(titles.includes('Hardest Worker'));
+  assert.ok(titles.includes('Best Liar'));
+  const sum = g.summary();
+  assert.strictEqual(sum.winner, 'crew');
+  assert.strictEqual(sum.roles.length, 5);
+});
+
+test('the Captain can start silly ship events', () => {
+  const { g, captain } = setup(['comms', 'engineer', 'medic', 'hacker', 'parasite'], { mode: 'captain' });
+  g.shipEventStart(captain.id, 'zerog', 1000);
+  assert.strictEqual(g.shipEvent.kind, 'zerog');
+  assert.throws(() => g.shipEventStart(captain.id, 'explode', 1000), /Unknown/);
+  assert.throws(() => g.shipEventStart(g.players[0].id, 'disco', 1000), /Captain/);
 });

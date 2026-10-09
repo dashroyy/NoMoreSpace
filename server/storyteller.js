@@ -112,7 +112,7 @@ const EXECUTION_LINES = [
   '{name} pirouettes out of the airlock. Ten out of ten for style.',
 ];
 
-const NIGHT_ANIMS = ['consumed', 'spaghettified', 'abducted', 'melted', 'confetti', 'frozen', 'duck', 'floataway'];
+const NIGHT_ANIMS = ['consumed', 'spaghettified', 'abducted', 'melted', 'confetti', 'frozen', 'duck', 'floataway', 'balloon', 'disco', 'tiny', 'rocket'];
 
 function fill(template, name) {
   return template.replaceAll('{name}', name);

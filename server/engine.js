@@ -92,6 +92,14 @@ class Game {
     this.charge = 0;
     this.clue = null;
     this.hallucination = null; // the Holo-Jester's victim for today: { id, seed, clue }
+    this.claims = {}; // public role claims: pid -> { role, text, at }
+    this.dayLog = []; // public record of the game: votes, deaths, clues, claims
+    this.lastWords = null; // { id } while the airlocked player gets their last words
+    this.shipEvent = null; // the Captain's fun: { kind, until }
+    this.awards = null;
+    this.startedAt = null;
+    // for the end-of-game awards
+    this.stats = { chat: {}, tasks: {}, yesOnEvil: {}, yesOnGood: {}, nominations: {}, yesReceived: {}, systems: {}, hallucinated: [] };
     this.tasksDone = {};
     this.drawings = [];
     this.regCache = {};
@@ -141,6 +149,16 @@ class Game {
     return p.role === 'drunk' || (!!glitch && glitch.id === p.id);
   }
 
+  // The public record (the "day log"): things everyone at the table saw happen.
+  logEvent(e) {
+    this.dayLog.push({ day: this.day, night: this.night, phase: this.phase, at: Date.now(), ...e });
+    if (this.dayLog.length > 400) this.dayLog.shift();
+  }
+
+  bump(stat, id, by = 1) {
+    this.stats[stat][id] = (this.stats[stat][id] || 0) + by;
+  }
+
   announce(text, kind = 'info') {
     this.log.push({ text, kind, day: this.day, night: this.night, phase: this.phase, at: Date.now() });
     if (this.log.length > 80) this.log.shift();
@@ -185,6 +203,7 @@ class Game {
       defend: 20,
       ballot: 15, // everyone votes at once
       voteStep: 0.45, // then the clock hand sweeps round revealing each vote
+      lastwords: 15,
       dusk: 9,
     }[kind];
     return Math.round(seconds * 1000 * this.pace);
@@ -298,6 +317,7 @@ class Game {
     }
 
     this.resetState();
+    this.startedAt = now;
     this.players.forEach((p, i) => {
       p.role = roles[i];
       p.believed = roles[i];
@@ -721,9 +741,11 @@ class Game {
     }
 
     this.chapter.deaths = deaths;
+    this.logEvent({ k: 'dawn', deaths: deaths.map((x) => x.id), day: this.night });
     const story = d.story || st.dawnStory(deaths.map((x) => this.name(x.id)), this.random);
     this.chapter.story = story;
     this.dawn = { night: this.night, deaths, story, at: now };
+    if (d.hallucinate && !this.stats.hallucinated.includes(d.hallucinate)) this.stats.hallucinated.push(d.hallucinate);
     this.hallucination = d.hallucinate && this.get(d.hallucinate)?.alive
       ? { id: d.hallucinate, seed: Math.floor(this.random() * 1e9), clue: st.fakeClue(this, this.random) }
       : null;
@@ -781,7 +803,89 @@ class Game {
     this.winner = winner;
     this.winReason = reason;
     this.history.push({ k: 'end', winner, reason });
+    this.awards = this.computeAwards();
+    this.endedAt = Date.now();
     return true;
+  }
+
+  // Silly end-of-game awards, from what actually happened.
+  computeAwards() {
+    const s = this.stats;
+    const players = this.players.filter((p) => p.role);
+    const n = (map, p) => (p ? map[p.id] || 0 : 0);
+    const most = (map, min, filter = () => true) => {
+      let top = null;
+      for (const p of players) if (filter(p) && n(map, p) >= min && (!top || n(map, p) > n(map, top))) top = p;
+      return top;
+    };
+    const evil = (p) => teamOf(p.role) === 'infiltrators';
+    const out = [];
+    const add = (p, icon, title, why) => p && out.push({ id: p.id, icon, title, why });
+    // Best Liar: the evil player the crew trusted most
+    const liars = players.filter(evil).sort((a, b) => n(s.yesReceived, a) - n(s.yesReceived, b) || Number(b.alive) - Number(a.alive));
+    if (liars[0]) add(liars[0], '🎭', 'Best Liar', `${n(s.yesReceived, liars[0])} YES vote${n(s.yesReceived, liars[0]) === 1 ? '' : 's'} against them all game, as the ${ROLES[liars[0].role].name}.`);
+    const sharp = most(s.yesOnEvil, 1, (p) => !evil(p));
+    add(sharp, '🕵️', 'Sharpest Eye', `Voted to airlock evil ${n(s.yesOnEvil, sharp)} time${n(s.yesOnEvil, sharp) === 1 ? '' : 's'}.`);
+    const wrong = most(s.yesOnGood, 2, (p) => !evil(p));
+    add(wrong, '🤦', 'Wrong Every Time', `Voted to airlock good crewmates ${n(s.yesOnGood, wrong)} times.`);
+    const sus = most(s.yesReceived, 2);
+    add(sus, '👀', 'Most Suspicious', `${n(s.yesReceived, sus)} YES votes against them.`);
+    const trigger = most(s.nominations, 2);
+    add(trigger, '☝️', 'Trigger Happy', `Nominated ${n(s.nominations, trigger)} people.`);
+    const chatty = most(s.chat, 5);
+    add(chatty, '🗣️', 'Chatterbox', `${n(s.chat, chatty)} messages sent.`);
+    if (players.length >= 4) {
+      const quiet = players.slice().sort((a, b) => n(s.chat, a) - n(s.chat, b))[0];
+      if (quiet && quiet !== chatty && n(s.chat, quiet) <= 3) add(quiet, '🤐', 'Strong Silent Type', `Only ${n(s.chat, quiet)} message${n(s.chat, quiet) === 1 ? '' : 's'} all game.`);
+    }
+    const worker = most(s.tasks, 2);
+    add(worker, '🛠️', 'Hardest Worker', `${n(s.tasks, worker)} tasks done.`);
+    for (const id of s.hallucinated) add(this.get(id), '🦆', 'Talked to the Ducks', 'Saw things that were not there (thanks, Holo-Jester).');
+    return out;
+  }
+
+  // A one-line summary of a finished game, for the play stats file.
+  summary() {
+    return {
+      at: new Date().toISOString(),
+      mode: this.mode,
+      players: this.players.length,
+      winner: this.winner,
+      days: this.day,
+      minutes: this.startedAt ? Math.round(((this.endedAt || Date.now()) - this.startedAt) / 600) / 100 : null,
+      roles: this.players.map((p) => p.role),
+      survivors: this.players.filter((p) => p.alive).map((p) => p.role),
+    };
+  }
+
+  // ---------------------------------------------------------------------------
+  // Claims: say publicly which role you are (truthfully or not)
+  // ---------------------------------------------------------------------------
+
+  setClaim(pid, role, text) {
+    if (!this.get(pid)) throw new Error('Only players can claim.');
+    if (this.phase === 'lobby') throw new Error('Wait for the game to start.');
+    if (role && !ROLES[role]) throw new Error('Unknown role.');
+    const clean = String(text || '').replace(/\s+/g, ' ').trim().slice(0, 60);
+    const before = this.claims[pid];
+    if (!role && !clean) delete this.claims[pid];
+    else this.claims[pid] = { role: role || null, text: clean, at: Date.now() };
+    if (role && role !== before?.role) this.logEvent({ k: 'claim', id: pid, role });
+  }
+
+  noteChat(pid) {
+    if (this.phase !== 'lobby' && this.get(pid)) this.bump('chat', pid);
+  }
+
+  // ---------------------------------------------------------------------------
+  // The Captain's fun: ship-wide events
+  // ---------------------------------------------------------------------------
+
+  shipEventStart(byId, kind, now = Date.now()) {
+    this.requireController(byId);
+    const seconds = { zerog: 25, disco: 25, alarm: 8, confetti: 6 }[kind];
+    if (!seconds) throw new Error('Unknown ship event.');
+    this.shipEvent = { kind, until: now + seconds * 1000 };
   }
 
   checkWin() {
@@ -887,8 +991,12 @@ class Game {
     nom.cast[pid] = true;
   }
 
-  // Nominator or nominee can finish speaking early.
+  // Nominator or nominee (or someone giving their last words) can finish speaking early.
   doneSpeaking(pid, now) {
+    if (this.phase === 'lastwords' && this.lastWords && (pid === this.lastWords.id || this.isController(pid))) {
+      this.finishLastWords(now);
+      return;
+    }
     const nom = this.nomination;
     if (!nom) return;
     if ((nom.stage === 'accuse' && pid === nom.nominator) || (nom.stage === 'defend' && pid === nom.nominee) || (nom.stage !== 'count' && this.isController(pid))) {
@@ -962,6 +1070,11 @@ class Game {
     if (nominee.role === 'parasite') this.lastParasiteVotes = Math.max(this.lastParasiteVotes, votes);
     this.lastNomination = { nominator: nom.nominator, nominee: nom.nominee, voters, ignored, votes, threshold, result, at: now };
     this.votesToday.push(this.lastNomination);
+    this.logEvent({ k: 'vote', a: nom.nominator, t: nom.nominee, voters, votes, threshold, result });
+    const nomineeEvil = teamOf(nominee.role) === 'infiltrators';
+    for (const id of voters) this.bump(nomineeEvil ? 'yesOnEvil' : 'yesOnGood', id);
+    this.bump('nominations', nom.nominator);
+    this.bump('yesReceived', nom.nominee, votes);
     this.ev({ k: 'nomination', a: nom.nominator, t: nom.nominee, voters, votes, threshold, result });
     const outcome = {
       block: `${nominee.name} has ${votes} votes and is heading for the airlock!`,
@@ -982,6 +1095,7 @@ class Game {
     a.used = true;
     const hit = a.role === 'gunner' && !this.isGlitched(a) && this.reg(t).demon;
     this.ev({ k: 'shot', a: aId, t: tId, hit });
+    this.logEvent({ k: 'shot', a: aId, t: tId, hit });
     if (!hit) {
       this.announce(`${a.name} fires at ${t.name}! ...The plasma fizzles. Nothing happens.`, 'shot');
       return { hit };
@@ -1000,11 +1114,15 @@ class Game {
     if (this.nomination) throw new Error('Finish the current vote first.');
     const victim = this.block?.id ? this.get(this.block.id) : null;
     if (victim) {
-      this.execute(victim, now, 'airlock');
+      // a spotlight and 15 seconds for their last words, then the airlock
+      this.lastWords = { id: victim.id };
+      this.setPhase('lastwords', this.dur('lastwords'), now);
+      this.announce(`🎤 ${victim.name} is walked to the airlock. Any last words?`, 'dusk');
       return;
     }
     this.ev({ k: 'noexec' });
     this.announce('Nobody is airlocked today.', 'dusk');
+    this.logEvent({ k: 'noexec' });
     const fo = this.players.find((p) => p.alive && p.role === 'firstofficer');
     if (this.aliveCount() === 3 && fo && !this.isGlitched(fo)) {
       this.finish('crew', `Three survivors and no airlocking: First Officer ${fo.name} takes the helm and pulls the ship free!`);
@@ -1013,12 +1131,20 @@ class Game {
     this.setPhase('dusk', this.dur('dusk'), now);
   }
 
+  finishLastWords(now) {
+    const victim = this.get(this.lastWords?.id);
+    this.lastWords = null;
+    if (victim?.alive) this.execute(victim, now, 'airlock');
+    else this.beginDusk(now);
+  }
+
   execute(p, now, cause) {
     const story = cause === 'sentinel' ? `${p.name} is fried by the Sentinel's defences and swept out of the airlock.` : st.executionStory(p.name, this.random);
     this.ev({ k: 'execute', id: p.id, cause, votes: this.block?.votes || 0, story });
     this.kill(p, cause === 'sentinel' ? 'sentinel' : 'airlock');
     this.executedToday = p.id;
     this.announce(`${p.name} is airlocked.`, 'death');
+    this.logEvent({ k: cause === 'sentinel' ? 'sentinel' : 'airlock', id: p.id, votes: this.block?.votes || 0 });
     if (p.role === 'ambassador' && !this.isGlitched(p)) {
       this.finish('infiltrators', `${p.name} was the Ambassador! Diplomatic incident: the galaxy declares war on the crew.`);
     }
@@ -1131,6 +1257,7 @@ class Game {
         throw new Error('Unknown system.');
     }
     p.systemUsed = true;
+    this.bump('systems', pid);
     this.ev({ k: 'system', a: pid, sys: sys.id, t: target?.id || null, room: room || null, works });
     return result;
   }
@@ -1180,6 +1307,7 @@ class Game {
     if (done.includes(taskId)) throw new Error('You already did that task today.');
     done.push(taskId);
     this.charge += 1;
+    this.bump('tasks', pid);
     return { charge: this.charge, needed: this.chargeNeeded() };
   }
 
@@ -1225,6 +1353,9 @@ class Game {
         break;
       case 'nominations':
         this.beginDusk(now);
+        break;
+      case 'lastwords':
+        this.finishLastWords(now);
         break;
       case 'dusk':
         if (this.winner) this.end(now);
@@ -1341,6 +1472,10 @@ class Game {
   tick(now = Date.now()) {
     const clues = this.clueKey(now);
     const cluesChanged = clues !== (this.lastClueKey ?? 'false|false');
+    if (this.clue?.at && now >= this.clue.at && !this.clue.logged) {
+      this.clue.logged = true;
+      this.logEvent({ k: 'clue', caption: this.clue.caption });
+    }
     this.lastClueKey = clues;
     return this.tickPhase(now) || cluesChanged;
   }
@@ -1387,6 +1522,10 @@ class Game {
         if (this.nomination) return this.tickNomination(now);
         if (!(auto && (due || this.everyoneReady()))) return false;
         this.beginDusk(now);
+        return true;
+      case 'lastwords':
+        if (!due) return false;
+        this.finishLastWords(now);
         return true;
       case 'dusk':
         if (!due) return false;
@@ -1470,6 +1609,11 @@ class Game {
       },
       block: this.block,
       votesToday: this.phase === 'nominations' || this.phase === 'dusk' ? this.votesToday : [],
+      claims: this.claims,
+      dayLog: this.dayLog,
+      lastWords: this.lastWords,
+      shipEvent: this.shipEvent && this.shipEvent.until > Date.now() ? this.shipEvent : null,
+      awards: this.phase === 'ended' ? this.awards : null,
       systems: this.systemsView(),
       ready: [...this.ready],
       readyNeeded: this.readyVoters().length,

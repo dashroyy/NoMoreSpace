@@ -6,6 +6,7 @@ import { store, isCaptain, suitHex } from '../store.js';
 import { sfx } from '../audio.js';
 import { ROOMS } from '../world/layout.js';
 import { systemLine } from './chat.js';
+import { askToWhisper } from './social.js';
 
 export const ROOM_ICONS = {
   bridge: '🛸', observation: '🔭', navigation: '🧭', comms: '📡', medbay: '🩺', galley: '🍜',
@@ -103,6 +104,7 @@ function renderRooms(force = false) {
     ),
     el('div', { className: 'hint' }, 'Only people in the same room can hear your chat. Pick a room to join someone, or meet in an empty one.'),
     el('div', { className: 'room-list' }, ...rows),
+    whisperRow(me),
     walking.length ? el('div', { className: 'hint' }, `🚶 In the corridors: ${walking.map(name).join(', ')}`) : null,
   );
 }
@@ -139,4 +141,14 @@ function update() {
     box.hidden = !text;
     box.classList.toggle('alone', text.includes('Nobody'));
   }
+}
+
+// 💬 Ask someone for a private chat: if they accept, you're both beamed into an empty room.
+function whisperRow(me) {
+  const others = (store.state?.players || []).filter((p) => p.id !== me);
+  if (!others.length) return null;
+  return el('div', {},
+    el('div', { className: 'hint' }, '💬 Or ask someone for a private chat. If they say yes, you are both beamed into an empty room:'),
+    el('div', { className: 'pick-row' }, ...others.map((p) => el('button', { className: 'small', onclick: () => askToWhisper(p.id) }, `💬 ${p.name}${p.alive ? '' : ' 👻'}`))),
+  );
 }

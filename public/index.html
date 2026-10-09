@@ -8,8 +8,9 @@
     <meta name="theme-color" content="#05060f" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700;900&family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=Martian+Mono:wght@500;700&family=Rubik+Wet+Paint&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Sixtyfour&family=Silkscreen&family=VT323&family=Doto:wght@700;900&family=Rubik+Glitch&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="/css/style.css" />
+    <link rel="stylesheet" href="/css/retro.css" />
     <script type="importmap">
       { "imports": { "three": "/vendor/three/three.module.min.js" } }
     </script>
@@ -46,7 +47,7 @@
             <button id="home-join" class="big">Board</button>
           </div>
         </div>
-        <p class="footnote">3–15 players · best with 7+ · voice chat optional</p>
+        <p class="footnote">3–15 players · best with 7+ · voice chat optional · <a href="#" id="home-bug">🐞 Report a bug</a></p>
         <div class="home-audio">
           <button id="home-music" class="small ghost" title="Music on/off">🎵 Music on</button>
         </div>
@@ -139,6 +140,7 @@
         <button id="btn-rooms" class="action rooms" hidden><span>🚀</span>Rooms <kbd>M</kbd></button>
         <button id="btn-nominate" class="action nominate" hidden><span>☝️</span>Nominate</button>
         <button id="btn-system" class="action system" hidden><span>⚡</span><b>System</b> <kbd>X</kbd></button>
+        <button id="btn-claim" class="action claim" hidden><span>📣</span>Claim <kbd>C</kbd></button>
         <button id="btn-emote" class="action"><span>🎭</span>Emote <kbd>Q</kbd></button>
         <button id="btn-hand" class="action hand" hidden><span>✋</span><b>Raise hand</b></button>
         <button id="btn-done-speaking" class="action" hidden><span>🎤</span>I'm done</button>
@@ -152,6 +154,9 @@
       <div id="system-menu" class="rooms-menu card" hidden></div>
       <div id="vote-panel" class="vote-panel card" hidden></div>
       <div id="intercept-tag" class="intercept-tag" hidden></div>
+      <div id="claim-menu" class="rooms-menu card" hidden></div>
+      <div id="whisper-card" class="whisper-card card" hidden></div>
+      <div id="reconnect-banner" class="reconnect-banner" hidden>📡 Connection lost. Reconnecting…</div>
       <div id="joystick" class="joystick" hidden><div class="knob"></div></div>
     </section>
 

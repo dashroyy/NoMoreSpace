@@ -74,7 +74,7 @@ function floorLabel(text, color) {
   c.width = 1024;
   c.height = 128;
   const g = c.getContext('2d');
-  g.font = "700 64px Unbounded, 'Bricolage Grotesque', sans-serif";
+  g.font = '56px Silkscreen, VT323, monospace';
   g.textAlign = 'center';
   g.textBaseline = 'middle';
   g.fillStyle = color;

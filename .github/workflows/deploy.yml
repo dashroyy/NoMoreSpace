@@ -50,7 +50,7 @@ jobs:
         if: env.HAS_SERVER == 'true'
         run: |
           rsync -az --delete \
-            --exclude '.git' --exclude 'node_modules' --exclude '.github' --exclude 'test' \
+            --exclude '.git' --exclude 'node_modules' --exclude '.github' --exclude 'test' --exclude 'data' \
             -e "ssh -i ~/.ssh/deploy_key -p ${{ secrets.DEPLOY_PORT || 22 }}" \
             ./ "${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}:${{ secrets.DEPLOY_PATH }}/"
 

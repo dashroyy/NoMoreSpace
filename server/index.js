@@ -12,6 +12,7 @@ const { Game, DEATH_ANIMS, ROOM_NAMES } = require('./engine');
 const { ROLES, TYPES, DISTRIBUTION, MIN_PLAYERS, MAX_PLAYERS, EVIL_INFO_MIN, teamOf } = require('./roles');
 const cosmetics = require('./cosmetics');
 const { TASKS } = require('./tasks');
+const records = require('./records');
 
 const PORT = process.env.PORT != null ? Number(process.env.PORT) : 3000;
 const ROOT = path.join(__dirname, '..');
@@ -21,6 +22,7 @@ const MAX_ROOMS = 150;
 const NEAR_RADIUS = 7; // proximity chat distance (players in the same room always hear each other)
 const ROOM_IDS = ['bridge', 'observation', 'navigation', 'comms', 'medbay', 'galley', 'reactor', 'engine', 'hydroponics', 'airlock', 'quarters', 'cargo', 'corridor'];
 const PLAYER_EMOTES = ['wave', 'dance', 'jump', 'spin', 'shrug', 'point', 'cry', 'laugh'];
+const STINGERS = ['trombone', 'drumroll', 'airhorn', 'crickets', 'kazoo', 'gasp'];
 const CAPTAIN_EMOTES = [...PLAYER_EMOTES, 'faint', 'shiver', 'flail', 'grow', 'shrink', 'chicken', 'sneeze', 'moonwalk', 'levitate', 'confetti', 'zap'];
 
 // Voice chat needs STUN (free, public) and optionally a TURN relay for strict networks.
@@ -88,6 +90,23 @@ const server = http.createServer((req, res) => {
     res.end(JSON.stringify({ ok: true, rooms: rooms.size }));
     return;
   }
+  // play stats for balancing (no names), and bug reports for the owner
+  if (url.pathname === '/stats') {
+    res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' });
+    res.end(JSON.stringify(records.statsSummary(), null, 2));
+    return;
+  }
+  if (url.pathname === '/reports') {
+    const token = process.env.NMS_ADMIN_TOKEN;
+    if (!token || url.searchParams.get('token') !== token) {
+      res.writeHead(403, { 'Content-Type': 'text/plain' });
+      res.end('Set NMS_ADMIN_TOKEN on the server and pass ?token=... (or read data/reports.jsonl).');
+      return;
+    }
+    res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' });
+    res.end(JSON.stringify(records.reports(), null, 2));
+    return;
+  }
   if (url.pathname === '/game-data.json') {
     res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' });
     res.end(GAME_DATA);
@@ -123,6 +142,11 @@ function personSocket(room, personId) {
 
 // Each person gets their own view (secrets stay secret).
 function broadcast(room) {
+  // a finished game goes into the play stats, once
+  if (room.game.winner && room.loggedWin !== room.game.version) {
+    room.loggedWin = room.game.version;
+    records.saveGame(room.game.summary());
+  }
   for (const [socketId, personId] of room.sockets) {
     io.to(socketId).emit('state', room.game.viewFor(personId), Date.now());
   }
@@ -137,6 +161,8 @@ io.on('connection', (socket) => {
   let me = null; // person id (player or captain)
   let lastChat = 0;
   let lastEmote = 0;
+  let lastWhisper = 0;
+  let lastReport = 0;
 
   // Wrap every handler so a rule error goes back to that person as a message.
   const on = (event, handler, { update = true } = {}) =>
@@ -282,7 +308,7 @@ io.on('connection', (socket) => {
 
   // Who hears a message from this player right now, by phase and position.
   function hearersOf(g, speakerId) {
-    if (['lobby', 'ended', 'dawn', 'meeting', 'nominations', 'dusk'].includes(g.phase)) return { channel: 'all', ids: g.players.map((p) => p.id) };
+    if (['lobby', 'ended', 'dawn', 'meeting', 'nominations', 'lastwords', 'dusk'].includes(g.phase)) return { channel: 'all', ids: g.players.map((p) => p.id) };
     // Exploring: only players in the same room or close by hear you.
     const mine = room.positions[speakerId];
     const ids = g.players
@@ -354,8 +380,73 @@ io.on('connection', (socket) => {
       return { heard: g.players.length, channel: 'all' };
     }
     if (g.phase === 'night') throw new Error('Shh... everyone is asleep. (Draw something instead!)');
+    g.noteChat(me);
+    if (g.phase === 'lastwords' && g.lastWords?.id === me) message.lastWords = true;
     const heard = deliver(g, me, message);
     return { heard, channel: message.channel };
+  }, { update: false });
+
+  // Public role claims (shown by each seat) and the Captain's ship-wide fun.
+  on('claim', ({ role, text }) => game().setClaim(me, role, text));
+  on('ship-event', ({ kind }) => game().shipEventStart(me, kind, Date.now()));
+  on('stinger', ({ name }) => {
+    game().requireController(me);
+    if (!STINGERS.includes(name)) throw new Error('Unknown sound.');
+    io.to(room.code).emit('stinger', { name });
+  }, { update: false });
+
+  // Whisper requests: ask someone for a private chat; if they say yes, the
+  // server finds an empty room and beams you both there.
+  on('whisper-ask', ({ target }) => {
+    const g = game();
+    if (g.phase !== 'roam') throw new Error('You can only whisper while exploring.');
+    const other = g.get(target);
+    if (!other || other.id === me || !g.get(me)) throw new Error('Pick another player.');
+    const now = Date.now();
+    if (now - lastWhisper < 8000) throw new Error('Give them a moment to answer.');
+    lastWhisper = now;
+    const s = personSocket(room, other.id);
+    if (!s) throw new Error(`${other.name} is offline.`);
+    room.whispers ||= new Map();
+    room.whispers.set(`${me}>${other.id}`, now);
+    s.emit('whisper-invite', { from: me, name: g.get(me).name });
+  }, { update: false });
+  on('whisper-answer', ({ from, yes }) => {
+    const g = game();
+    const key = `${from}>${me}`;
+    const asked = room.whispers?.get(key);
+    room.whispers?.delete(key);
+    if (!asked || Date.now() - asked > 30_000) throw new Error('That invitation has expired.');
+    const asker = personSocket(room, from);
+    if (!yes) {
+      asker?.emit('whisper-reply', { name: g.get(me)?.name, yes: false });
+      return;
+    }
+    if (g.phase !== 'roam') throw new Error('Exploring is over.');
+    // an empty room (not sealed), preferring quiet corners away from the bridge
+    const busy = new Set(Object.values(room.positions).map((p) => p.room));
+    const options = ROOM_IDS.filter((r) => r !== 'corridor' && r !== 'bridge' && !busy.has(r) && !g.activeLockdown(r));
+    const where = options.length ? options[Math.floor(Math.random() * options.length)] : 'bridge';
+    const go = { room: where, with: [from, me] };
+    asker?.emit('whisper-go', { ...go, name: g.get(me)?.name });
+    socket.emit('whisper-go', { ...go, name: g.get(from)?.name });
+  }, { update: false });
+
+  // Bug reports from the in-game button go to data/reports.jsonl for the owner.
+  on('bug-report', ({ text, errors, info }) => {
+    const now = Date.now();
+    if (now - lastReport < 60_000) throw new Error('Thanks! You can send another report in a minute.');
+    lastReport = now;
+    const clean = String(text || '').trim().slice(0, 2000);
+    if (!clean) throw new Error('Tell us what went wrong first.');
+    const g = room?.game;
+    records.saveReport({
+      at: new Date(now).toISOString(),
+      text: clean,
+      errors: (Array.isArray(errors) ? errors : []).slice(-15).map((e) => String(e).slice(0, 400)),
+      info: String(info || '').slice(0, 400),
+      game: g ? { code: g.code, phase: g.phase, day: g.day, players: g.players.length, mode: g.mode } : null,
+    });
   }, { update: false });
 
   // ⚡ Ship systems (see roles.js `system`). The server adds what only it knows: where you stand and who is in the room.
