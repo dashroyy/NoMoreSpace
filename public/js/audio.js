@@ -141,6 +141,13 @@ export function audioContext() {
   return ctx;
 }
 
+// What the room soundscape (world/soundscape.js) plays through: the ambient
+// bus (so the effects volume and the sound switch apply), and the shared noise.
+export function ambienceKit() {
+  if (!ctx || !ambientBus) return null;
+  return { ctx, bus: ambientBus, noise: noiseBuffer, enabled: () => enabled };
+}
+
 // ---------------------------------------------------------------------------
 // Basic building blocks
 // ---------------------------------------------------------------------------

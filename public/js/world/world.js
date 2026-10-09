@@ -6,6 +6,8 @@ import { SpaceCanvases, buildBackdrop } from './sky.js';
 import { Flyby } from './flyby.js';
 import { Hallucinations } from './hallucinate.js';
 import { PartyFx } from './party-fx.js';
+import { buildAmbience } from './ambience.js';
+import { Soundscape } from './soundscape.js';
 import { moveWithCollision, roomAt, roomById, walkable, seatPosition, TASK_STATIONS, SPAWN, DRAWING_SLOTS } from './layout.js';
 
 const SEATED = ['dawn', 'meeting', 'nominations', 'lastwords', 'dusk'];
@@ -80,6 +82,11 @@ export class World {
     this.backdrop = buildBackdrop(this.scene);
     this.backdrop.group.traverse((o) => o.material && (o.material.fog = false));
     this.ship = buildShip(this.scene, this.space);
+    // the rooms' little moving details, and their sounds (louder the closer you are)
+    this.ambience = buildAmbience(this.ship.group, { lowFx: this.lowFx });
+    this.soundscape = new Soundscape();
+    this.ambience.onVent = (x, z) => this.soundscape.oneShot('vent', { x, z }, this.listener());
+    this.ambience.onChirp = (x, z) => this.soundscape.oneShot('chirp', { x, z }, this.listener());
     this.backdrop.setProgress(0);
     if (this.lowFx) {
       // per-room coloured lights are the most expensive part on weak GPUs
@@ -393,6 +400,8 @@ export class World {
     this.updateCamera(dt);
     this.updateAmbience(dt, t);
     this.ship.decor.update(t, { night: this.night, progress: this.progress });
+    this.ambience.update(dt, t, { night: this.night, progress: this.progress, alarm: t < this.alarmUntil });
+    this.soundscape.update({ ...this.listener(), phase: this.phase, night: this.phase === 'night' });
     this.ship.exterior.update(t);
     this.updateBeams(dt);
     this.fx.update(dt, t);
@@ -645,6 +654,13 @@ export class World {
       st.ring.scale.setScalar(1 + Math.sin(t * 3) * 0.05);
       st.icon.position.y = 1.7 + Math.sin(t * 2) * 0.08;
     }
+  }
+
+  // where the ears are: your spacesuit, the bridge table when seated, or the camera for spectators
+  listener() {
+    if (SEATED.includes(this.phase)) return { x: 0, z: 0 };
+    if (this.spectator) return { x: this.camTarget.x, z: this.camTarget.z };
+    return { x: this.local.x, z: this.local.z };
   }
 
   rumble(seconds = 1.6) {

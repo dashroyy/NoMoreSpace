@@ -7,7 +7,7 @@ A spooky, slightly silly space spin-off of **Blood on the Clocktower**, played o
 - 🎭 **23 hidden roles**: 22 matching Blood on the Clocktower's *Trouble Brewing* (Crew, Drifters, Saboteurs, The Parasite) plus the 🤡 **Holo-Jester**, who makes a player hallucinate, unlocked by player count
 - 👥 **3–15 players**, using BotC's own setup table (plus a quick 3–4 player "Short Haul" mode)
 - 👨‍✈️ Play with a human **Captain** (Storyteller) running a full **Command Station**, or let **ARIA the autopilot** run the game
-- 🚀 **3D ship** with 12 rooms, proximity text & voice chat, 11 task minigames, window clues, night drawings on the walls
+- 🚀 **3D ship** with 12 rooms that each have their own moving details and sounds, proximity text & voice chat, 11 task minigames, window clues, night drawings on the walls
 - 🕐 BotC-style days: private chats → emergency meeting → nominations where **everyone votes YES/NO at once** and a clockwise **vote clock** reveals the hands → airlock, with a **Ready** button to skip ahead when everyone's done talking
 - ⚡ **Ship systems**: once-per-game online abilities for 8 roles: intercept a room's chat, door logs, lockdowns, sensor sweeps, med-scans, spoofed messages, disguises and blackouts
 - 🤖 Robot crewmates who do tasks, use ship systems and haunt when dead, a 🎓 practice mode, 🌐 public ships for finding a game, 🔮 "who dies tonight?" guesses, replay links, and games that survive server restarts
