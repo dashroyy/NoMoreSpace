@@ -67,6 +67,22 @@ Each role does exactly what its Trouble Brewing counterpart does. *Night\** mean
 
 Every role card (press **R**) shows the ability, when it wakes, flavour text, **3–4 strategy tips** and everything you've learned so far.
 
+### ⚡ Ship systems: abilities that only work online
+Eight roles also get a **once-per-game ship system**, an extra ability that uses what a website can do and a table can't: live rooms, private chat and the 3D ship. Press the ⚡ button in the action bar (or **X**). Like every ability, they are **duds for the Space Drunk and for glitched players**, who are told it worked. Dead players can't use them. Every use shows up in the end-of-game replay.
+
+| Role | System | What it does |
+|---|---|---|
+| 📡 Comms Officer | 🎧 **Intercept** | While exploring: listen in to any room's chat for 45 s. You read the words, but not who said them |
+| 📚 Archivist | 🗂️ **Door logs** | By day: read a room's door log: everyone who has been inside it today |
+| 🛡️ Security Chief | 🔐 **Lockdown** | While exploring: seal the room you're in for 60 s. Nobody else can get in (a red force field appears), nobody can listen in, and nobody outside can talk to you |
+| 🔧 Engineer | 📶 **Sensor sweep** | While exploring: learn how many evil players are standing in a room right now (registration applies) |
+| 💉 Medic | 🩺 **Med-scan** | By day: learn whether a player's systems are glitched (hacked) right now |
+| 💻 Hacker | 👾 **Spoof** | By day: send a chat message that looks like it came from another player. Whoever can hear you sees it (everyone, during the meeting) |
+| 🎭 Mimic | 🎭 **Disguise** | While exploring: look exactly like another player for 60 s: suit, hat, name tag, map dot and chat name |
+| 🦑 The Parasite | 🌑 **Blackout** | While exploring: cut the lights for 45 s. Name tags, the map, the Rooms list, door logs and sensors go dark, and nearby chat names show as ??? |
+
+The good systems give the crew more ways to find information; the evil ones muddy exactly that information (a blackout blinds door logs and sensors, a spoof or disguise makes chat lie). Everything timed ends when the emergency meeting is called. The Captain sees through every trick in their chat.
+
 The role card also has a private **🗒️ Notebook**, like the scrap of paper BotC players keep: for each player, note the role they claim, whether you trust them (😇 / 😈) and a few words. Your guesses appear as small badges on the bridge table. It's stored only in your browser and is wiped when a new game starts.
 
 ## 3. Player counts & balance
@@ -142,14 +158,17 @@ Players with an ability choose targets on their screen. If they don't choose in 
 | **Dawn** | The Captain's (or ARIA's) story of the night appears in a **cloud bubble**; deaths play their **death animations** at the bridge table | ~10 s + 4 s per death |
 | **Explore** | Walk the ship. **Proximity chat** (text and voice): only players in the same room (or within a few steps; in corridors only distance counts) hear you, which recreates BotC's private conversations. Press **M** / tap **🚀 Rooms** (or click a room on the map) to **teleport** into any room; the list shows who is in each room, and a line above the chat says exactly who can hear you. Do **tasks**, look for **clues**, find the **drawings** | 25 s per living player (+90 s on day 1) |
 | **Emergency meeting** | Everyone's pulled back to their seats on the bridge. Open discussion | 12 s per living player |
-| **Nominations** | Click a player on the bridge table to nominate them. The **nominator accuses (20 s)**, the **nominee defends (20 s)**, then the **vote clock** sweeps clockwise from the seat after the nominee | 30 s per living player |
+| **Nominations** | Press **☝️ Nominate** (or click a seat) and pick a player. The **nominator accuses (20 s)**, the **nominee defends (20 s)**, then **everyone votes at once (15 s)**, and the **vote clock** sweeps round the table revealing each vote | 30 s per living player |
 | **Dusk** | The player "on the block" is **airlocked** | ~9 s |
 
 **Ready to move on:** while exploring, in the meeting and during nominations (between votes), everyone has a **⏭️ Ready** button. When every connected player is ready, the ship moves on without waiting for the timer, like a Storyteller asking "any more nominations?". A new nomination resets everyone's readiness. In Captain mode the Command Station shows who is ready, and readiness only skips ahead when auto-advance is on.
 
-### Nominations & voting (exactly like BotC)
+### Nominations & voting (BotC rules, built for playing online)
 - Each *living* player may nominate **once per day**; each player may be nominated **once per day**.
-- Raise your hand before the clock hand reaches your seat. When it passes you, your vote is **locked**.
+- **Nominate:** a ☝️ Nominate button opens a list of everyone who can still be nominated. Pick one and confirm (no fiddly clicking on tiny seats).
+- **Vote panel:** as soon as someone is nominated, a vote panel appears in the middle of the screen with two big buttons, **✋ YES (airlock them)** and **🙅 NO (spare them)**, also on the keys **Y** and **N**. You can vote during the speeches and **change your mind until the count starts**. Not voting counts as NO.
+- **Votes are secret until the count.** Everyone sees *who* has voted (a 🗳️ over their seat) but not *how*. When the ballot closes (after 15 s, or as soon as everyone connected has voted) the clock hand sweeps round the table from the seat after the nominee, revealing each ✋ in turn, just like hands going up around a real table. This replaces BotC's "raise your hand before the clock reaches you", which felt like waiting around online.
+- The panel shows how many have voted, how many YES votes are needed (and who to beat), whether your vote is a ghost vote, and the Service Droid's master rule. Afterwards it shows the result and who voted YES, and the bridge table panel keeps a list of **today's votes**.
 - A nominee goes "on the block" with votes **≥ half the living players** (rounded up) **and** more votes than anyone else that day. **A tie means nobody** goes on the block, and the next nominee must beat the tied number.
 - One airlocking per day at most.
 - **Dead players** stay at the table as ghosts. They can talk and get **one ghost vote** for the rest of the game.

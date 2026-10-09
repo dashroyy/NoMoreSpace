@@ -194,7 +194,7 @@ export class Reveal {
         for (const d of ch.deaths || []) steps.push({ dur: 2.4, focus: d.id, caption: `💀 ${name(d.id)} did not wake up.`, enter: () => this.kill(d.id, d.anim) });
       }
       if (ch.k === 'day') {
-        const interesting = ch.events.filter((e) => ['nomination', 'execute', 'shot', 'sentinel', 'become-parasite', 'story'].includes(e.k) && !(e.k === 'nomination' && e.result === 'safe' && e.votes < 2));
+        const interesting = ch.events.filter((e) => ['nomination', 'execute', 'shot', 'sentinel', 'become-parasite', 'story', 'system'].includes(e.k) && !(e.k === 'nomination' && e.result === 'safe' && e.votes < 2));
         if (!interesting.length) continue;
         steps.push({ dur: 2, chapter: `DAY ${ch.n}`, caption: '', overview: true, enter: () => { sfx('dawn'); this.lighting('day'); } });
         for (const e of interesting) {
@@ -282,6 +282,22 @@ export class Reveal {
         return { dur: 3, focus: e.a, caption: `🥚 With the Parasite dead, ${name(e.a)} the Incubator hatched a new one!`, enter: () => this.transform(e.a) };
       case 'story':
         return { dur: 3.6, bubble: e.text, caption: '', overview: true };
+      case 'system': {
+        // ⚡ ship systems, shown in the replay so everyone learns what really happened
+        const ROOM = (id) => ({ bridge: 'the Bridge', observation: 'the Observation Deck', navigation: 'Navigation', comms: 'Comms', medbay: 'the Medbay', galley: 'the Galley', reactor: 'the Reactor', engine: 'the Engine Room', hydroponics: 'Hydroponics', airlock: 'the Airlock', quarters: 'Crew Quarters', cargo: 'the Cargo Bay' })[id] || 'a room';
+        const dud = e.works === false ? ' …but it was a dud!' : '';
+        const text = {
+          intercept: `🎧 ${name(e.a)} secretly listened in on ${ROOM(e.room)}.${dud}`,
+          accesslog: `🗂️ ${name(e.a)} read the door log of ${ROOM(e.room)}.${dud}`,
+          lockdown: `🔐 ${name(e.a)} sealed ${ROOM(e.room)} for a private chat.${dud}`,
+          sweep: `📶 ${name(e.a)} swept ${ROOM(e.room)} for evil.${dud}`,
+          medscan: `🩺 ${name(e.a)} med-scanned ${name(e.t)}.${dud}`,
+          spoof: `👾 ${name(e.a)} sent a fake message pretending to be ${name(e.t)}!`,
+          disguise: `🎭 ${name(e.a)} disguised themself as ${name(e.t)}!`,
+          blackout: `🌑 ${name(e.a)} cut the lights!`,
+        }[e.sys];
+        return text ? { dur: 2.6, focus: e.a, beam: e.t ? [e.a, e.t, 0xc77dff] : null, caption: text, enter: () => sfx('chime') } : null;
+      }
       default:
         return null;
     }

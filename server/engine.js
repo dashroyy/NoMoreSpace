@@ -15,6 +15,10 @@ const { TASKS } = require('./tasks');
 const DAY_PHASES = ['roam', 'meeting', 'nominations'];
 const TARGET_RULE = { hacker: 'alive', medic: 'alive', parasite: 'alive', scanner: 'any', droid: 'any', blackbox: 'any' };
 const DEATH_ANIMS = ['airlock', ...st.NIGHT_ANIMS, 'fainted', 'shot'];
+const ROOM_NAMES = {
+  bridge: 'the Bridge', observation: 'the Observation Deck', navigation: 'Navigation', comms: 'Comms', medbay: 'the Medbay', galley: 'the Galley',
+  reactor: 'the Reactor', engine: 'the Engine Room', hydroponics: 'Hydroponics', airlock: 'the Airlock', quarters: 'Crew Quarters', cargo: 'the Cargo Bay',
+};
 
 function randomId(bytes = 8) {
   return crypto.randomBytes(bytes).toString('hex');
@@ -31,6 +35,7 @@ function freshPlayerState() {
     believed: null, // what the player thinks they are (differs for the Space Drunk)
     ghostVote: true, // dead players get one vote for the rest of the game
     used: false, // once-per-game abilities (Gunner, Sentinel)
+    systemUsed: false, // once-per-game ship system (see roles.js `system`)
     master: null, // Service Droid's chosen master for today
     notes: [], // private information this player has learned
   };
@@ -89,6 +94,9 @@ class Game {
     this.regCache = {};
     this.lastParasiteVotes = 0;
     this.mimicManifest = null;
+    this.systems = { intercepts: [], lockdowns: [], disguises: {}, blackoutUntil: 0 };
+    this.visits = {}; // room -> Set of players seen inside today (door logs)
+    this.votesToday = []; // results of today's nominations
     this.version = (this.version || 0) + 1;
     for (const p of this.players) Object.assign(p, freshPlayerState());
   }
@@ -154,6 +162,8 @@ class Game {
     this.phaseEndsAt = durationMs == null ? null : now + durationMs;
     this.pausedRemaining = null;
     this.ready.clear();
+    // timed ship systems only last while exploring
+    if (phase !== 'roam' && this.systems) this.systems = { intercepts: [], lockdowns: [], disguises: {}, blackoutUntil: 0 };
   }
 
   // How long each part of the day lasts. Tuned so a 10-player game runs about
@@ -170,7 +180,8 @@ class Game {
       nominations: clamp(alive * 30, 150, 420),
       accuse: 20,
       defend: 20,
-      voteStep: 1.4,
+      ballot: 15, // everyone votes at once
+      voteStep: 0.45, // then the clock hand sweeps round revealing each vote
       dusk: 9,
     }[kind];
     return Math.round(seconds * 1000 * this.pace);
@@ -782,6 +793,7 @@ class Game {
 
   beginRoam(now) {
     this.setPhase('roam', this.dur('roam'), now);
+    this.visits = {};
     this.announce(`Day ${this.day}. Explore the ship, do tasks and whisper with crewmates.`, 'day');
   }
 
@@ -792,6 +804,7 @@ class Game {
 
   beginNominations(now) {
     this.setPhase('nominations', this.dur('nominations'), now);
+    this.votesToday = [];
     this.announce('Nominations are open. Who should be airlocked?', 'meeting');
   }
 
@@ -829,7 +842,19 @@ class Game {
     const start = this.players.indexOf(b);
     const order = [];
     for (let k = 1; k <= n; k++) order.push(this.players[(start + k) % n].id);
-    this.nomination = { nominator: aId, nominee: bId, stage: 'accuse', stageEndsAt: now + this.dur('accuse'), order, hands: {}, locked: {}, index: -1 };
+    // hands: who votes YES; cast: who has made up their mind (YES or NO). Votes can be
+    // cast from the moment of the nomination and changed until the count starts.
+    this.nomination = { nominator: aId, nominee: bId, stage: 'accuse', stageEndsAt: now + this.dur('accuse'), order, hands: {}, cast: {}, locked: {}, index: -1 };
+  }
+
+  // Players whose vote we wait for before counting early (connected and able to vote).
+  ballotVoters() {
+    return this.players.filter((p) => p.connected && this.canVote(p));
+  }
+
+  everyoneVoted() {
+    const nom = this.nomination;
+    return !!nom && this.ballotVoters().every((p) => nom.cast[p.id]);
   }
 
   setHand(pid, up) {
@@ -837,15 +862,16 @@ class Game {
     if (!nom) throw new Error('No vote right now.');
     const p = this.get(pid);
     if (!p || !this.canVote(p)) throw new Error('You have no vote left.');
-    if (nom.locked[pid]) throw new Error('Your vote is locked in.');
+    if (nom.stage === 'count') throw new Error('The votes are being counted.');
     nom.hands[pid] = !!up;
+    nom.cast[pid] = true;
   }
 
   // Nominator or nominee can finish speaking early.
   doneSpeaking(pid, now) {
     const nom = this.nomination;
     if (!nom) return;
-    if ((nom.stage === 'accuse' && pid === nom.nominator) || (nom.stage === 'defend' && pid === nom.nominee) || this.isController(pid)) {
+    if ((nom.stage === 'accuse' && pid === nom.nominator) || (nom.stage === 'defend' && pid === nom.nominee) || (nom.stage !== 'count' && this.isController(pid))) {
       nom.stageEndsAt = now;
       this.tickNomination(now);
     }
@@ -853,7 +879,10 @@ class Game {
 
   tickNomination(now) {
     const nom = this.nomination;
-    if (!nom || now < nom.stageEndsAt) return false;
+    if (!nom) return false;
+    // the ballot closes early once everyone has voted
+    if (nom.stage === 'vote' && now < nom.stageEndsAt && this.everyoneVoted()) nom.stageEndsAt = now;
+    if (now < nom.stageEndsAt) return false;
     if (nom.stage === 'accuse') {
       nom.stage = 'defend';
       nom.stageEndsAt = now + this.dur('defend');
@@ -861,11 +890,16 @@ class Game {
     }
     if (nom.stage === 'defend') {
       nom.stage = 'vote';
-      nom.index = 0;
-      nom.stageEndsAt = now + this.dur('voteStep') + 1500 * this.pace;
+      nom.stageEndsAt = now + this.dur('ballot');
       return true;
     }
-    // The clock hand reaches the next voter and locks their hand in.
+    if (nom.stage === 'vote') {
+      nom.stage = 'count';
+      nom.index = 0;
+      nom.stageEndsAt = now + 800;
+      return true;
+    }
+    // The clock hand reaches the next voter and reveals their vote.
     const id = nom.order[nom.index];
     nom.locked[id] = true;
     nom.index += 1;
@@ -907,6 +941,7 @@ class Game {
     const nominee = this.get(nom.nominee);
     if (nominee.role === 'parasite') this.lastParasiteVotes = Math.max(this.lastParasiteVotes, votes);
     this.lastNomination = { nominator: nom.nominator, nominee: nom.nominee, voters, ignored, votes, threshold, result, at: now };
+    this.votesToday.push(this.lastNomination);
     this.ev({ k: 'nomination', a: nom.nominator, t: nom.nominee, voters, votes, threshold, result });
     const outcome = {
       block: `${nominee.name} has ${votes} votes and is heading for the airlock!`,
@@ -970,6 +1005,124 @@ class Game {
     this.checkWin();
     this.dusk = { id: p.id, cause, anim: 'airlock', story };
     this.setPhase('dusk', this.dur('dusk'), now);
+  }
+
+  // ---------------------------------------------------------------------------
+  // ⚡ Ship systems: once-per-game day abilities that only work online, using
+  // the live rooms, chat and 3D ship. The Space Drunk and glitched players
+  // get duds that look like they worked.
+  // ---------------------------------------------------------------------------
+
+  systemFor(p) {
+    return p ? ROLES[p.believed]?.system || null : null;
+  }
+
+  blackout(now = Date.now()) {
+    return now < (this.systems?.blackoutUntil || 0);
+  }
+
+  // Remember who has been inside each room today (for the Archivist's door logs).
+  recordVisit(pid, room, now = Date.now()) {
+    if (this.phase !== 'roam' || !ROOM_NAMES[room] || this.blackout(now)) return;
+    (this.visits[room] ||= new Set()).add(pid);
+  }
+
+  activeLockdown(room, now = Date.now()) {
+    return this.systems.lockdowns.find((l) => l.room === room && l.works && now < l.until) || null;
+  }
+
+  // Who is secretly listening to this room right now.
+  listeners(room, now = Date.now()) {
+    if (this.activeLockdown(room, now)) return [];
+    return this.systems.intercepts.filter((i) => i.room === room && i.works && now < i.until && this.get(i.by)?.alive).map((i) => i.by);
+  }
+
+  disguiseOf(pid, now = Date.now()) {
+    const d = this.systems.disguises[pid];
+    return d && now < d.until && this.get(pid)?.alive ? d.as : null;
+  }
+
+  // args: { room, target, text } from the player, plus { here, occupants } filled in by the server
+  // from live positions: the room the user stands in, and who is in the chosen room.
+  useSystem(pid, args = {}, now = Date.now()) {
+    const p = this.get(pid);
+    const sys = this.systemFor(p);
+    if (!sys) throw new Error('Your role has no ship system.');
+    if (!p.alive) throw new Error('The dead cannot use ship systems.');
+    if (p.systemUsed) throw new Error(`You already used ${sys.name}.`);
+    if (!sys.phases.includes(this.phase)) throw new Error(`${sys.name} only works ${sys.phases.includes('meeting') ? 'during the day' : 'while exploring the ship'}.`);
+    if (this.pausedRemaining != null) throw new Error('The game is paused.');
+    const works = !this.broken(p);
+    const until = now + (sys.seconds || 0) * 1000;
+    const room = sys.target === 'here' ? args.here : args.room;
+    if (['room', 'here'].includes(sys.target) && !ROOM_NAMES[room]) throw new Error(sys.target === 'here' ? 'Stand inside a room first (not a corridor).' : 'Pick a room.');
+    const target = sys.target === 'player' || sys.target === 'spoof' ? this.get(args.target) : null;
+    if ((sys.target === 'player' || sys.target === 'spoof') && (!target || target.id === pid)) throw new Error('Pick another player.');
+    if (sys.id === 'disguise' && !target.alive) throw new Error('Pick a living player.');
+    const occupants = (args.occupants || []).filter((id) => this.get(id));
+    const where = ROOM_NAMES[room];
+    const result = {};
+
+    switch (sys.id) {
+      case 'intercept':
+        this.systems.intercepts.push({ by: pid, room, until, works });
+        this.tell(p, `🎧 You tap into ${where}'s comms for ${sys.seconds} seconds…`, { kind: 'system' });
+        result.until = until;
+        break;
+      case 'accesslog': {
+        let names;
+        if (works) names = [...(this.visits[room] || [])].map((id) => this.get(id)?.name).filter(Boolean);
+        else names = st.sample(this.players.filter((o) => o.id !== pid), Math.floor(this.random() * 4), this.random).map((o) => o.name);
+        this.tell(p, `🗂️ Door log for ${where} today: ${names.length ? names.join(', ') : 'nobody'}.`, { kind: 'system' });
+        break;
+      }
+      case 'lockdown':
+        this.systems.lockdowns.push({ room, until, allowed: occupants, by: pid, works });
+        this.tell(p, `🔐 ${where[0].toUpperCase()}${where.slice(1)} is sealed for ${sys.seconds} seconds. Nobody else can get in or listen in.`, { kind: 'system' });
+        break;
+      case 'sweep': {
+        if (this.blackout(now)) throw new Error('The sensors are dead during the blackout. Try again when the lights come back.');
+        const inside = occupants.map((id) => this.get(id));
+        const evil = works ? inside.filter((o) => this.reg(o).evil).length : Math.floor(this.random() * Math.min(3, inside.length + 1));
+        this.tell(p, `📶 Sensor sweep of ${where}: ${inside.length} aboard, ${evil} evil.`, { kind: 'system' });
+        break;
+      }
+      case 'medscan': {
+        const glitched = works ? this.isGlitched(target) : this.random() < 0.3;
+        this.tell(p, `🩺 Med-scan: ${target.name}'s systems are ${glitched ? 'GLITCHED ⚠️' : 'clean ✅'}.`, { kind: 'system' });
+        break;
+      }
+      case 'spoof': {
+        const text = String(args.text || '').replace(/\s+/g, ' ').trim().slice(0, 200);
+        if (!text) throw new Error('Write the fake message first.');
+        result.spoof = { as: target.id, text };
+        this.tell(p, `👾 You sent a message as ${target.name}: "${text}"`, { kind: 'system' });
+        break;
+      }
+      case 'disguise':
+        this.systems.disguises[pid] = { as: target.id, until };
+        this.tell(p, `🎭 You look exactly like ${target.name} for ${sys.seconds} seconds. Your chat shows their name too.`, { kind: 'system' });
+        break;
+      case 'blackout':
+        this.systems.blackoutUntil = until;
+        this.tell(p, `🌑 The lights are out for ${sys.seconds} seconds.`, { kind: 'system' });
+        break;
+      default:
+        throw new Error('Unknown system.');
+    }
+    p.systemUsed = true;
+    this.ev({ k: 'system', a: pid, sys: sys.id, t: target?.id || null, room: room || null, works });
+    return result;
+  }
+
+  // What everyone can see about ship systems right now (only systems that really work).
+  systemsView(now = Date.now()) {
+    const s = this.systems;
+    return {
+      lockdowns: s.lockdowns.filter((l) => l.works && now < l.until).map((l) => ({ room: l.room, until: l.until, allowed: l.allowed })),
+      disguises: Object.entries(s.disguises).filter(([id]) => this.disguiseOf(id, now)).map(([id, d]) => ({ id, as: d.as, until: d.until })),
+      blackoutUntil: this.blackout(now) ? s.blackoutUntil : 0,
+    };
   }
 
   // Players can say they are happy to move on, like a Storyteller asking
@@ -1260,9 +1413,12 @@ class Game {
         order: nom.order,
         index: nom.index,
         hands: nom.hands,
+        cast: Object.keys(nom.cast),
         locked: nom.locked,
       },
       block: this.block,
+      votesToday: this.phase === 'nominations' || this.phase === 'dusk' ? this.votesToday : [],
+      systems: this.systemsView(),
       ready: [...this.ready],
       readyNeeded: this.readyVoters().length,
       lastNomination: this.lastNomination,
@@ -1312,8 +1468,19 @@ class Game {
       tasksDone: this.tasksDone[pid] || [],
       drew: this.drawings.some((d) => d.author === pid && d.night === this.night && !d.published),
       hand: this.nomination ? !!this.nomination.hands[pid] : false,
+      cast: this.nomination ? !!this.nomination.cast[pid] : false,
+      system: this.systemFor(p) && p.alive ? { id: this.systemFor(p).id, used: p.systemUsed } : null,
+      intercepting: this.systems.intercepts.filter((i) => i.by === pid && Date.now() < i.until).map((i) => ({ room: i.room, until: i.until }))[0] || null,
     };
+    // Votes stay secret until the clock hand reveals them (you always see your own).
+    if (view.nomination) view.nomination = this.secretBallot(view.nomination, pid);
     return view;
+  }
+
+  secretBallot(nom, pid) {
+    const hands = {};
+    for (const [id, up] of Object.entries(nom.hands)) if (id === pid || nom.locked[id]) hands[id] = up;
+    return { ...nom, hands };
   }
 
   grimoire() {
@@ -1339,4 +1506,4 @@ class Game {
   }
 }
 
-module.exports = { Game, DEATH_ANIMS, DAY_PHASES };
+module.exports = { Game, DEATH_ANIMS, DAY_PHASES, ROOM_NAMES };

@@ -176,6 +176,54 @@ test('room chat: corridors only count distance, the sender learns how many heard
   await waitFor(() => players[4].chats.some((m) => m.text === 'welcome aboard'));
 });
 
+test('ship systems over the network: intercepts, spoofs, disguises and lockdowns', async () => {
+  const { host, players, room } = await makeShip(5);
+  assert.ok((await call(host, 'start', { deal: ['comms', 'security', 'engineer', 'mimic', 'parasite'] })).ok);
+  room.game.resolveNight(Date.now());
+  room.game.applyDraft(Date.now());
+  room.game.beginRoam(Date.now());
+  const [comms, security, engineer, mimic, parasite] = players;
+  const id = (c) => latest(c).you.id;
+  await waitFor(() => latest(comms).you.system?.id === 'intercept');
+  comms.emit('pos', { x: 0, z: 43, r: 0, m: 0, room: 'cargo' });
+  security.emit('pos', { x: 25, z: 0, r: 0, m: 0, room: 'galley' });
+  engineer.emit('pos', { x: 30, z: 4, r: 0, m: 0, room: 'galley' });
+  mimic.emit('pos', { x: -26, z: 0, r: 0, m: 0, room: 'medbay' });
+  parasite.emit('pos', { x: -30, z: 25, r: 0, m: 0, room: 'reactor' });
+  await waitFor(() => Object.keys(room.positions).length === 5);
+
+  // the Comms Officer hears the galley, without names
+  assert.ok((await call(comms, 'system', { room: 'galley' })).ok);
+  await call(security, 'chat', { text: 'I am the Security Chief' });
+  await waitFor(() => comms.chats.some((m) => m.text === 'I am the Security Chief'));
+  const heard = comms.chats.find((m) => m.text === 'I am the Security Chief');
+  assert.strictEqual(heard.channel, 'intercept');
+  assert.strictEqual(heard.from, null);
+  assert.ok(!heard.name.includes('P1'));
+
+  // a lockdown stops the eavesdropping
+  assert.ok((await call(security, 'system', {})).ok);
+  await wait(650);
+  await call(security, 'chat', { text: 'now we are safe' });
+  await waitFor(() => engineer.chats.some((m) => m.text === 'now we are safe'));
+  await wait(150);
+  assert.ok(!comms.chats.some((m) => m.text === 'now we are safe'));
+  assert.ok(latest(engineer).systems.lockdowns.some((l) => l.room === 'galley'));
+
+  // the Mimic disguises as the Engineer: chat shows the Engineer's name
+  assert.ok((await call(mimic, 'system', { target: id(engineer) })).ok);
+  parasite.emit('pos', { x: -26, z: 2, r: 0, m: 0, room: 'medbay' });
+  await waitFor(() => room.positions[id(parasite)]?.room === 'medbay');
+  await call(mimic, 'chat', { text: 'trust me' });
+  await waitFor(() => parasite.chats.some((m) => m.text === 'trust me'));
+  assert.strictEqual(parasite.chats.find((m) => m.text === 'trust me').name, 'P2');
+  assert.ok(latest(parasite).systems.disguises.some((d) => d.id === id(mimic) && d.as === id(engineer)));
+
+  // using a system twice is refused
+  const again = await call(mimic, 'system', { target: id(comms) });
+  assert.ok(!again.ok);
+});
+
 test('Captain mode: only the Captain controls the game and sees the manifest', async () => {
   const { host: captain, players, room } = await makeShip(0, 'captain').catch(() => ({}));
   if (!captain) return;

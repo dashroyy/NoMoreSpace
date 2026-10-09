@@ -6,6 +6,7 @@ import { sfx } from '../audio.js';
 import { ROOMS, CORRIDORS } from '../world/layout.js';
 import { blackHoleProgress } from '../world/world.js';
 import { canTeleport, teleportTo } from './rooms.js';
+import { renderVote, openNominate, votesTodayList } from './vote.js';
 import { badgeFor } from './notebook.js';
 
 const DAY_PHASES = ['roam', 'meeting', 'nominations'];
@@ -120,18 +121,9 @@ export function renderHud(state) {
 
   const you = state.you || {};
   const nom = state.nomination;
-  const canVote = !!you.id && !you.isCaptain && (you.alive || you.ghostVote);
-  const locked = nom?.locked?.[you.id];
-  const handBtn = $('btn-hand');
-  handBtn.hidden = !nom || !canVote;
-  if (nom) {
-    const up = !!nom.hands[you.id];
-    handBtn.classList.toggle('up', up);
-    handBtn.classList.toggle('locked', !!locked);
-    handBtn.disabled = !!locked;
-    handBtn.querySelector('b').textContent = locked ? (up ? 'Voted YES' : 'Did not vote') : up ? 'Hand UP (click to lower)' : 'Raise hand to vote';
-  }
-  $('btn-done-speaking').hidden = !nom || !((nom.stage === 'accuse' && nom.nominator === you.id) || (nom.stage === 'defend' && nom.nominee === you.id));
+  // voting happens in the vote panel now (vote.js)
+  $('btn-hand').hidden = true;
+  $('btn-done-speaking').hidden = true;
   // everyone ready = skip the rest of this part of the day
   const readyBtn = $('btn-ready');
   readyBtn.hidden = !you.id || you.isCaptain || !DAY_PHASES.includes(state.phase) || !!nom;
@@ -150,6 +142,7 @@ export function renderHud(state) {
 
   renderRing();
   renderNomination(state);
+  renderVote(state);
 }
 
 function seatHint(state) {
@@ -158,7 +151,7 @@ function seatHint(state) {
   if (selectMode?.kind === 'puppet') return '🎭 Click a player to puppet.';
   if (state.phase === 'nominations' && !state.nomination && you.alive && !you.isCaptain) {
     const me = player(you.id);
-    if (me && !me.nominatedSomeone) return '☝️ Click a player to nominate them for the airlock.';
+    if (me && !me.nominatedSomeone) return '☝️ Press Nominate (or click a player here) to put someone up for the airlock.';
     return 'You have already nominated today.';
   }
   if (state.phase === 'nominations' && !state.nomination) return 'Waiting for nominations…';
@@ -178,7 +171,7 @@ export function renderRing() {
   const c = box / 2;
   const R = c - 32;
   const children = [el('div', { className: 'table' })];
-  if (nom && nom.stage === 'vote' && nom.index >= 0) {
+  if (nom && nom.stage === 'count' && nom.index >= 0) {
     const currentId = nom.order[Math.min(nom.index, nom.order.length - 1)];
     const seat = players.find((p) => p.id === currentId)?.seat ?? 0;
     const angle = (seat / n) * 360;
@@ -193,7 +186,7 @@ export function renderRing() {
     const nominatable = state.phase === 'nominations' && !nom && you.alive && meP && !meP.nominatedSomeone && p.alive && !p.nominated;
     const selectable = selectMode ? p.alive || selectMode.kind === 'puppet' : nominatable;
     const cls = ['seat', p.alive ? '' : 'dead', p.id === you.id ? 'me' : '', p.connected ? '' : 'offline', nom?.nominee === p.id ? 'nominee' : '', state.block?.id === p.id ? 'block' : '', selectable ? 'selectable' : ''];
-    const isCurrent = nom?.stage === 'vote' && nom.order[nom.index] === p.id;
+    const isCurrent = nom?.stage === 'count' && nom.order[nom.index] === p.id;
     if (isCurrent) cls.push('current');
     if (nom?.locked?.[p.id] && nom.hands[p.id]) cls.push('locked-yes');
     const badge = p.id !== you.id && !you.isCaptain && state.phase !== 'lobby' ? badgeFor(p.id) : null;
@@ -204,7 +197,8 @@ export function renderRing() {
       DAY_PHASES.includes(state.phase) && state.ready?.includes(p.id) && !nom ? el('span', { className: 'ready-tick', title: 'Ready to move on' }, '✓') : null,
     );
     const seat = el('button', { className: cls.join(' '), style: { left: `${x}px`, top: `${y}px` }, title: `${p.name}${p.alive ? '' : ' (dead)'}${p.nominated ? ' · nominated today' : ''}${p.nominatedSomeone ? ' · has nominated' : ''}` },
-      nom && nom.hands[p.id] ? el('span', { className: 'hand' }, '✋') : null,
+      nom && nom.hands[p.id] && (nom.locked[p.id] || p.id === you.id) ? el('span', { className: 'hand' }, '✋') : null,
+      nom && nom.stage !== 'count' && nom.cast?.includes(p.id) ? el('span', { className: 'cast-tick', title: 'Has voted' }, '🗳️') : null,
       token,
       el('span', { className: 'nm' }, p.name),
     );
@@ -222,41 +216,16 @@ function clickSeat(p, nominatable) {
     renderRing();
     return;
   }
-  if (nominatable) {
-    if (!confirm(`Nominate ${p.name} for the airlock?`)) return;
-    send('nominate', { target: p.id }).then(() => sfx('gavel')).catch((e) => problem(e.message));
-  }
+  if (nominatable) openNominate(p.id);
 }
 
 function renderNomination(state) {
+  // the big vote panel shows the live vote; the bridge table panel keeps today's record
   const box = $('nomination-box');
-  const nom = state.nomination;
-  const last = state.lastNomination;
-  if (!nom && !(last && state.phase === 'nominations' && serverNow() - last.at < 8000)) {
-    box.hidden = true;
-    return;
-  }
-  box.hidden = false;
-  if (!nom) {
-    const name = (id) => player(id)?.name || '?';
-    clear(box,
-      el('div', { className: 'stage' }, 'RESULT'),
-      el('div', {}, el('b', {}, name(last.nominee)), ` got ${last.votes} vote${last.votes === 1 ? '' : 's'} (needed ${last.threshold}).`),
-      el('div', { className: 'hint' }, { block: '☠️ Heading for the airlock at dusk…', tie: '⚖️ Tie: nobody is on the block.', safe: '🛟 Safe for now.' }[last.result]),
-      state.block?.id ? el('div', { className: 'hint' }, `On the block: ${name(state.block.id)} (${state.block.votes} votes)`) : null,
-    );
-    return;
-  }
-  const name = (id) => player(id)?.name || '?';
-  const stageText = { accuse: `🗣️ ${name(nom.nominator)} explains why`, defend: `🛡️ ${name(nom.nominee)} defends themself`, vote: '🕐 The vote goes clockwise…' }[nom.stage];
-  const yes = Object.entries(nom.hands).filter(([id, up]) => up && nom.locked[id]).length;
-  clear(box,
-    el('div', { className: 'stage' }, nom.stage === 'vote' ? 'VOTING' : nom.stage === 'accuse' ? 'ACCUSATION' : 'DEFENCE', ' · ', el('span', { id: 'nom-timer' }, '')),
-    el('div', {}, el('b', {}, name(nom.nominator)), ' nominates ', el('b', {}, name(nom.nominee)), '!'),
-    el('div', {}, stageText),
-    el('div', { className: 'hint' }, `YES so far: ${yes} · needs ${Math.max(state.threshold, (state.block?.votes || 0) + (state.block?.id ? 1 : 0))}${state.block?.id ? ` to beat ${name(state.block.id)}` : ''}`),
-    el('div', { className: 'hint' }, 'Raise your hand (Space) before the clock hand reaches your seat.'),
-  );
+  const list = votesTodayList(state);
+  const block = state.block?.id && state.phase === 'nominations' ? el('div', { className: 'hint' }, `☠️ On the block: ${player(state.block.id)?.name} (${state.block.votes} votes)`) : null;
+  box.hidden = !list && !block;
+  if (!box.hidden) clear(box, block, list);
 }
 
 // ---------------------------------------------------------------------------
@@ -308,10 +277,10 @@ function drawMinimap() {
   }
   // everyone else, as small dots in their suit colour
   const players = store.state?.players || [];
-  if (['lobby', 'roam'].includes(store.state?.phase)) {
+  if (['lobby', 'roam'].includes(store.state?.phase) && !world.blackout) {
     for (const [id, p] of Object.entries(world.whereabouts())) {
       if (id === world.myId) continue;
-      const pl = players.find((x) => x.id === id);
+      const pl = players.find((x) => x.id === (world.disguise?.[id] || id));
       g.globalAlpha = pl && !pl.alive ? 0.45 : 1;
       g.fillStyle = pl ? suitHex(pl) : '#fff';
       g.beginPath();

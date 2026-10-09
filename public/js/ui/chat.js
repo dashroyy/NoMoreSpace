@@ -51,8 +51,8 @@ function setTab(name) {
 }
 
 function line(m) {
-  const cls = ['msg', m.ghost ? 'ghost' : '', m.from === store.state?.you?.id ? 'mine' : '', m.name?.startsWith('Captain ') ? 'captain' : '', m.channel === 'evil' ? 'evil' : '', m.system ? 'system' : ''].join(' ');
-  const tag = { all: '📢', near: '👂', evil: '🦑' }[m.channel] || '';
+  const cls = ['msg', m.ghost ? 'ghost' : '', m.from === store.state?.you?.id ? 'mine' : '', m.name?.startsWith('Captain ') ? 'captain' : '', m.channel === 'evil' ? 'evil' : '', m.channel === 'intercept' ? 'intercept' : '', m.system ? 'system' : ''].join(' ');
+  const tag = { all: '📢', near: '👂', evil: '🦑', intercept: '' }[m.channel] || '';
   return el('div', { className: cls }, m.system ? null : el('span', { className: 'ch' }, tag), m.system ? null : el('b', {}, `${m.name}${m.ghost ? ' 👻' : ''}: `), m.text);
 }
 

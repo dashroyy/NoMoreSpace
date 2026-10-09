@@ -11,6 +11,9 @@ import { initDrawing, renderNight } from './ui/night.js';
 import { openTask } from './ui/tasks.js';
 import { initCommand, renderCommand } from './ui/command.js';
 import { initRooms } from './ui/rooms.js';
+import { ROOMS } from './world/layout.js';
+import { initSystems } from './ui/systems.js';
+import { initVote } from './ui/vote.js';
 import { Reveal } from './ui/reveal.js';
 import { clearNotebook } from './ui/notebook.js';
 import { initVoice, toggleVoice, voiceEnabled } from './voice.js';
@@ -56,6 +59,8 @@ async function boot() {
   initVoice(world);
   initLobby({ onLeave: leave });
   initRooms(world);
+  initSystems(world);
+  initVote();
   initHud(world, {
     onRoleCard: (tab) => openRoleCard(typeof tab === 'string' ? tab : 'role'),
     onUse: () => {
@@ -245,6 +250,20 @@ function onPhaseChange(state, prev, world, reveal) {
 
 // Toasts and sounds for things that happen within a phase.
 function announceChanges(state, prev, world) {
+  // ship systems everyone notices
+  const sys = state.systems || {};
+  const was = prev.systems || {};
+  if (sys.blackoutUntil && sys.blackoutUntil !== was.blackoutUntil) {
+    sfx('doom');
+    phaseBanner('🌑 BLACKOUT', 'The lights are out. Who is who?', 4000);
+  }
+  for (const l of sys.lockdowns || []) {
+    if (!(was.lockdowns || []).some((b) => b.room === l.room && b.until === l.until)) {
+      sfx('lock');
+      toast(`🔐 ${ROOMS.find((r) => r.id === l.room)?.name || 'A room'} has gone into lockdown!`, 'info', 6000);
+    }
+  }
+
   // new private info
   const notes = state.you?.notes || [];
   const before = prev.you?.notes?.length || 0;

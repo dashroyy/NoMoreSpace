@@ -145,11 +145,13 @@ export class World {
         a.target = { x: start.x, z: start.z, r: seat.facing, m: 0 };
         this.avatars.set(p.id, a);
       }
-      if (JSON.stringify(a.look) !== JSON.stringify(p.cosmetics)) a.setLook(p.cosmetics);
+      // the Mimic's disguise: wear someone else's suit and name tag
+      const shown = (this.disguise?.[p.id] && state.players.find((x) => x.id === this.disguise[p.id])) || p;
+      if (JSON.stringify(a.look) !== JSON.stringify(shown.cosmetics)) a.setLook(shown.cosmetics);
       if (a.pet && !a.pet.parent) this.scene.add(a.pet);
       const labelColor = p.id === this.myId ? '#6cf0ff' : p.alive ? '#ffffff' : '#9aa0b8';
-      if (a.name !== p.name || a.labelColor !== labelColor) {
-        a.setName(p.name, labelColor);
+      if (a.name !== shown.name || a.labelColor !== labelColor) {
+        a.setName(shown.name, labelColor);
         a.labelColor = labelColor;
       }
       if (!p.alive && !a.ghost && !a.deathState && !a.pendingDeath) a.setGhost(true);
@@ -162,6 +164,8 @@ export class World {
         this.avatars.delete(id);
       }
     }
+    this.lastState = state;
+    for (const a of this.avatars.values()) if (a.label) a.label.visible = !this.blackout;
     this.playerCount = state.players.length;
     if (this.seatCount !== this.playerCount) {
       this.ship.setSeats(this.playerCount);
@@ -431,7 +435,10 @@ export class World {
     const moving = len > 0.05;
     if (moving) {
       const sp = (SPEED * Math.min(1, len)) / len;
-      [this.local.x, this.local.z] = moveWithCollision(this.local.x, this.local.z, dx * sp * dt, dz * sp * dt);
+      const [nx, nz] = moveWithCollision(this.local.x, this.local.z, dx * sp * dt, dz * sp * dt);
+      // sealed rooms: you can walk out, but not in
+      const into = roomAt(nx, nz);
+      if (!(into !== this.room && this.lockedOut(into))) [this.local.x, this.local.z] = [nx, nz];
       const want = Math.atan2(dx, dz);
       let diff = want - this.local.r;
       while (diff > Math.PI) diff -= Math.PI * 2;
@@ -576,7 +583,7 @@ export class World {
     for (const light of this.ship.lights) {
       const base = light.userData.base ?? 40;
       const isFlicker = this.ship.flicker.includes(light);
-      let target = base * (this.night ? 0.25 : alarm ? 1.25 : 1);
+      let target = base * (this.night ? 0.25 : this.blackout ? 0.04 : alarm ? 1.25 : 1);
       if ((isFlicker || Math.random() < instability * 0.05) && Math.random() < instability) target *= Math.random() * 0.5;
       light.intensity += (target - light.intensity) * Math.min(1, dt * 15);
       this._tint.copy(light.userData.color).lerp(this.moodColor, amount);
@@ -584,7 +591,7 @@ export class World {
     }
     this._tint.copy(this.hemiColor).lerp(this.moodColor, amount * 0.6);
     this.hemi.color.lerp(this._tint, alarm ? 1 : tintK);
-    this.hemi.intensity = (this.night ? 0.35 : 1.6 - this.progress * 0.5) * (this.lowFx ? 1.5 : 1);
+    this.hemi.intensity = (this.night ? 0.35 : this.blackout ? 0.18 : 1.6 - this.progress * 0.5) * (this.lowFx ? 1.5 : 1);
     this.ship.holo.rotation.y = t * 0.6;
     this.ship.disk.rotation.z = t * 1.5;
     const core = this.ship.group.userData.reactorCore;
@@ -605,12 +612,46 @@ export class World {
   // Teleporting and "who is where"
   // ---------------------------------------------------------------------------
 
+  // Ship systems that change the world: disguises, the blackout and sealed rooms.
+  // { disguise: { id: asId }, blackout: bool, lockdowns: [{ room, allowed }] }
+  setSystems({ disguise = {}, blackout = false, lockdowns = [] }) {
+    const key = JSON.stringify([disguise, blackout, lockdowns]);
+    if (key === this.systemsKey) return;
+    this.systemsKey = key;
+    this.disguise = disguise;
+    this.blackout = blackout;
+    this.lockdowns = lockdowns;
+    if (this.lastState) this.syncPlayers(this.lastState);
+    // a red force field over each sealed room
+    for (const m of this.lockMeshes || []) {
+      this.scene.remove(m);
+      m.geometry.dispose();
+      m.material.dispose();
+    }
+    this.lockMeshes = lockdowns.map(({ room }) => {
+      const [x0, z0, x1, z1] = roomById(room).rect;
+      const mesh = new THREE.Mesh(
+        new THREE.BoxGeometry(x1 - x0, 4.2, z1 - z0),
+        new THREE.MeshBasicMaterial({ color: 0xff2a4a, transparent: true, opacity: 0.12, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide }),
+      );
+      mesh.position.set((x0 + x1) / 2, 2.1, (z0 + z1) / 2);
+      this.scene.add(mesh);
+      return mesh;
+    });
+  }
+
+  // Is this room sealed against you?
+  lockedOut(roomId) {
+    return (this.lockdowns || []).some((l) => l.room === roomId && !l.allowed.includes(this.myId));
+  }
+
   // Beam yourself into a room. Returns a reason string if you can't right now.
   teleport(roomId) {
     if (!this.canMove()) return 'You can only teleport while exploring the ship.';
     const room = roomById(roomId);
     if (!room) return 'Unknown room.';
     if (this.room === roomId) return null;
+    if (this.lockedOut(roomId)) return `🔐 ${room.name} is in lockdown. Try again in a minute.`;
     const now = performance.now() / 1000;
     if (now < this.teleportReadyAt) return 'The teleporter is recharging…';
     this.teleportReadyAt = now + TELEPORT_COOLDOWN;

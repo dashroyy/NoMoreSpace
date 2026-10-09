@@ -67,6 +67,17 @@ export function wakeText(r) {
   return '🛡️ Always on: you never need to wake up.';
 }
 
+// The role's ⚡ ship system: its once-per-game online ability.
+function systemBox(r, you) {
+  const sys = r.system;
+  const status = !you.alive ? 'Offline: the dead cannot use ship systems.' : you.system?.used ? 'Used.' : `Ready. Press ${sys.icon} ${sys.name} in the action bar (or X) ${sys.phases.includes('meeting') ? 'during the day' : 'while exploring'}.`;
+  return el('div', { className: 'sys-box' },
+    el('b', {}, `⚡ Ship system: ${sys.icon} ${sys.name}`),
+    el('div', {}, sys.text),
+    el('small', {}, status),
+  );
+}
+
 function typeBadge(r) {
   const t = store.data.types[r.type];
   return el('span', { className: 'badge', style: { color: t.color } }, t.name);
@@ -91,6 +102,7 @@ function myRole() {
     ),
     el('div', { className: 'ability' }, r.ability),
     el('div', { className: 'wake' }, wakeText(r)),
+    r.system ? systemBox(r, you) : null,
     el('p', { className: 'flavor' }, r.flavor),
     el('h3', {}, '💡 Tips'),
     el('ul', { className: 'tips' }, ...r.tips.map((t) => el('li', {}, t))),
@@ -128,7 +140,7 @@ function almanac() {
           const r = store.data.roles[id];
           return el('div', { className: 'alm', style: { opacity: n && r.minPlayers > n ? 0.45 : 1 } },
             el('div', { className: 'ico' }, r.icon),
-            el('div', {}, el('span', { className: 'min' }, `${r.minPlayers}+ players`), el('b', {}, r.name), el('small', {}, r.ability), el('small', { className: 'wake' }, wakeText(r))),
+            el('div', {}, el('span', { className: 'min' }, `${r.minPlayers}+ players`), el('b', {}, r.name), el('small', {}, r.ability), el('small', { className: 'wake' }, wakeText(r)), r.system ? el('small', { className: 'sys-line' }, `⚡ ${r.system.icon} ${r.system.name}: ${r.system.text}`) : null),
           );
         })),
       );
@@ -154,7 +166,7 @@ export function howToPlay() {
       el('li', {}, el('b', {}, 'Dawn: '), 'the Captain (or ARIA) tells the story of who died.'),
       el('li', {}, el('b', {}, 'Explore: '), 'walk the ship or press M (🚀 Rooms) to teleport into any room. Only people in the same room hear your chat, so meet someone in a room for a private talk. Do tasks and look out of the Observation Deck windows for clues.'),
       el('li', {}, el('b', {}, 'Emergency meeting: '), 'everyone returns to the bridge to share information.'),
-      el('li', {}, el('b', {}, 'Nominations: '), 'each living player may nominate once per day, and each player may be nominated once. The nominator accuses, the nominee defends, then the vote goes clockwise around the table. Raise your hand before the clock hand reaches you!'),
+      el('li', {}, el('b', {}, 'Nominations: '), 'press ☝️ Nominate to put someone up for the airlock (each living player nominates once per day; each player can be nominated once). The nominator accuses, the nominee defends, and everyone votes ✋ YES or 🙅 NO at the same time (keys Y / N). You can change your vote until the count; not voting counts as NO. Then the clock hand sweeps round the table revealing every vote.'),
       el('li', {}, el('b', {}, 'Dusk: '), 'the player with the most votes (at least half the living, no tie) is airlocked.'),
     ),
     el('h3', {}, '👻 Death'),
