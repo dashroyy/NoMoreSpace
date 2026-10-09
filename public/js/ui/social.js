@@ -74,29 +74,33 @@ function toggleClaim(open = $('claim-menu').hidden) {
   $('claim-menu').hidden = !open || !canClaim();
   if (!$('claim-menu').hidden) {
     pickedRole = store.state.claims?.[store.state.you.id]?.role ?? null;
+    draftText = null;
     renderClaimMenu();
   }
 }
 
+let draftText = null;
 function renderClaimMenu() {
   const menu = $('claim-menu');
   const roles = store.data.roles;
   const mine = store.state.claims?.[store.state.you.id];
   const groups = ['crew', 'drifter', 'saboteur', 'parasite'];
-  const text = el('input', { maxLength: 60, placeholder: 'Add a note (e.g. "I learned Bea is the Medic")', value: mine?.text || '' });
+  if (draftText == null) draftText = mine?.text || '';
+  const text = el('input', { maxLength: 60, placeholder: 'Add a note (optional), e.g. "I learned Bea is the Medic"', value: draftText });
+  text.addEventListener('input', () => (draftText = text.value));
   clear(menu,
     el('div', { className: 'rooms-head' }, el('b', {}, '📣 Claim a role'), el('button', { className: 'small ghost', onclick: () => toggleClaim(false) }, '✕')),
     el('div', { className: 'hint' }, 'Tell everyone which role you are. It shows by your seat and in the day log. You can lie!'),
+    el('div', { className: 'claim-post' },
+      text,
+      el('button', { className: 'primary claim-send', onclick: () => postClaim(pickedRole, text.value) }, pickedRole ? `📣 Claim ${roles[pickedRole].name}` : '📣 Post note'),
+      mine ? el('button', { className: 'ghost small', onclick: () => postClaim(null, '') }, 'Take back') : null,
+    ),
     ...groups.map((type) => el('div', { className: 'pick-row' },
       ...Object.keys(roles).filter((id) => roles[id].type === type).map((id) =>
-        el('button', { className: `small ${pickedRole === id ? 'primary' : ''}`, title: roles[id].ability, onclick: () => { pickedRole = pickedRole === id ? null : id; renderClaimMenu(); } }, `${roles[id].icon} ${roles[id].name}`),
+        el('button', { className: `small ${pickedRole === id ? 'on' : ''}`, title: roles[id].ability, onclick: () => { pickedRole = pickedRole === id ? null : id; renderClaimMenu(); } }, `${roles[id].icon} ${roles[id].name}`),
       ),
     )),
-    text,
-    el('div', { className: 'row' },
-      el('button', { className: 'primary', onclick: () => postClaim(pickedRole, text.value) }, pickedRole ? `📣 Claim ${roles[pickedRole].name}` : '📣 Post note'),
-      mine ? el('button', { className: 'ghost', onclick: () => postClaim(null, '') }, 'Take back my claim') : null,
-    ),
   );
 }
 
@@ -104,7 +108,9 @@ function postClaim(roleId, text) {
   send('claim', { role: roleId, text })
     .then(() => {
       sfx('click');
+      draftText = null;
       $('claim-menu').hidden = true;
+      toast(roleId ? `📣 You now claim to be the ${store.data.roles[roleId].name}.` : '📣 Claim updated.', 'info', 3000);
     })
     .catch((e) => problem(e.message));
 }

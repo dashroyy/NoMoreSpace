@@ -222,7 +222,7 @@ kbd {
 
 .toasts { position: fixed; z-index: 9; top: 72px; left: 50%; transform: translateX(-50%); display: grid; gap: 6px; pointer-events: none; width: min(560px, calc(100% - 32px)); }
 body.phase-night .toasts { top: auto; bottom: 18px; }
-body.phase-dawn .toasts, body.phase-dusk .toasts { top: auto; bottom: 80px; }
+body.phase-dawn .toasts, body.phase-dusk .toasts, body.phase-lastwords .toasts { top: auto; bottom: 80px; }
 body.screen-home .toasts { display: none; }
 .toast { padding: 9px 14px; border-radius: 10px; background: rgba(6, 10, 24, 0.9); border: 1px solid var(--line); text-align: center; animation: drop 0.3s ease-out; font-size: 0.92rem; }
 .toast.death { border-color: var(--danger); color: #ffc2cc; }
@@ -481,6 +481,8 @@ body.blackout .minimap { opacity: 0.35; }
 /* ---------- Social: whispers, claims, day log, last words ---------- */
 .whisper-card { position: absolute; right: 10px; bottom: 76px; z-index: 8; padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; max-width: 320px; border-color: rgba(108, 240, 255, 0.6); box-shadow: 0 0 22px rgba(108, 240, 255, 0.3); }
 .action.claim { border-color: rgba(155, 227, 107, 0.55); }
+.claim-post { display: flex; gap: 6px; align-items: center; margin: 8px 0; flex-wrap: wrap; }
+.claim-post input { flex: 1; min-width: 180px; }
 .seat .claim-tag { position: absolute; bottom: -2px; right: -6px; font-size: 0.8rem; filter: drop-shadow(0 0 3px #000); }
 .daylog input[type=search] { width: 100%; margin: 6px 0 10px; }
 .log-list { margin: 4px 0 10px; padding-left: 18px; display: flex; flex-direction: column; gap: 4px; font-size: 0.86rem; }

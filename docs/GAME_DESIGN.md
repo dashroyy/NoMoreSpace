@@ -174,6 +174,14 @@ Players with an ability choose targets on their screen. If they don't choose in 
 - One airlocking per day at most.
 - **Dead players** stay at the table as ghosts. They can talk and get **one ghost vote** for the rest of the game.
 
+### 💬 Talking online: whispers, claims and the day log
+- **Whisper requests:** in the 🚀 Rooms menu, tap a player to ask for a private chat. They get a pop-up; if they accept, the server finds an **empty room** and beams you both there.
+- **📣 Claims (C):** say publicly which role you are (truthfully or not), with an optional note. Your claim shows as a small icon by your seat on the bridge table and goes into the day log. You can change or take it back any time.
+- **📰 Day log (L, or the role card tab):** a searchable record of everything the whole table has seen: every nomination with its votes and **who voted YES**, airlockings, deaths at dawn, gunshots, clues and claims.
+
+### 🎤 Last words
+When someone is going out of the airlock, dusk starts with a **spotlight on them and 15 seconds for last words**. Whatever they type appears in the big cloud bubble for everyone. They (or the host/Captain) can cut it short with **I'm done**.
+
 ## 5. Lies, glitches and registration
 - **Glitched** (Hacker) and **drunk** (Space Drunk) players receive **false information**. ARIA writes believable false info automatically; the Captain can rewrite it.
 - **Stowaway** may register as evil (even as the Parasite) to the Scanner, Engineer, Navigator, Security Chief, Coroner, Black Box and Gunner.
@@ -198,6 +206,9 @@ The Command Station has six tabs:
 | ⚠️ **Danger** | Hand over to ARIA, end the game for either team, **reset everything** |
 
 **Death animations:** airlocked · consumed by tentacles · spaghettified · abducted by UFO · melted · confetti explosion · frozen solid · turned into a rubber duck · floated away · fainted dramatically · shot.
+
+### 🎉 Ship events and sound stingers
+The Command Station's ☁️ Story tab also has pure-fun buttons with no effect on the rules: **🪐 zero gravity** (everyone floats for 25 s), **🪩 disco mode** (the lights cycle colours), **🚨 red alert** and **🎉 confetti storm**, plus sound stingers everyone hears: sad trombone, drumroll, air horn, crickets, kazoo and a gasp. There are also four new death animations: 🎈 inflated and popped, 🪩 danced to death, 🐜 shrank to nothing and 🚀 rocketed into space.
 
 ## 7. Tasks, the Observation Array and window clues
 There are 11 rooms, each with a task console and a quick minigame:
@@ -278,6 +289,16 @@ When the game ends, ARIA plays back the ship's black box:
 4. **Day replays:** nominations, Gunner shots, Sentinel zaps and airlockings.
 5. **Finale:** *"THE CREW ESCAPES!"* (the black hole collapses, confetti, the crew bounces) or *"NO MORE SPACE"* (the black hole swallows the stage, red lights, the Parasite grows huge).
 6. **Summary** of every role, then **Watch again** or **Back to the docking bay**.
+
+### 🏅 Awards and unlocks
+The end screen hands out silly **awards** from what actually happened: 🎭 Best Liar (the evil player with the fewest YES votes against them), 🕵️ Sharpest Eye (most votes to airlock evil), 🤦 Wrong Every Time, 👀 Most Suspicious, ☝️ Trigger Happy, 🗣️ Chatterbox, 🤐 Strong Silent Type, 🛠️ Hardest Worker and 🦆 Talked to the Ducks (hallucinated).
+
+Playing also **unlocks cosmetics**, tracked in your browser (no account needed): 🏆 Laurels (win 3 games), 🦑 Tentacles (win on the evil team), 🤡 Jester cap (play the Holo-Jester), 🛸 Mini UFO (play 5 games) and a 🐋 space whale pet (win 2 games with the crew). Locked items show a 🔒 and how to earn them.
+
+## 9b. Behind the scenes
+- **Phones:** when a phone wakes up after the screen was off, the game reconnects straight away and shows "Reconnecting…" until it's back.
+- **Play stats:** every finished game adds one line (no names) to `data/stats.jsonl` on the server. See the summary at **/stats** (win rates by player count, average length, how often each role is dealt and survives).
+- **🐞 Report a bug:** a button on the title screen and in the role card's How to play tab sends a description plus recent browser errors to `data/reports.jsonl` on the server.
 
 ## 10. Ideas for later
 - Travellers (players who join mid-game), as in BotC

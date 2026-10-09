@@ -22,7 +22,7 @@ import { clearNotebook } from './ui/notebook.js';
 import { initVoice, toggleVoice, voiceEnabled } from './voice.js';
 
 const SEAT_KEY = 'nms-seat';
-const MOODS = { lobby: 'calm', night: 'night', dawn: 'day', roam: 'day', meeting: 'day', nominations: 'tense', dusk: 'tense', ended: 'calm' };
+const MOODS = { lobby: 'calm', night: 'night', dawn: 'day', roam: 'day', meeting: 'day', nominations: 'tense', lastwords: 'tense', dusk: 'tense', ended: 'calm' };
 
 function loadSeat() {
   try {
@@ -188,7 +188,7 @@ function route(state) {
   document.body.classList.toggle('screen-lobby', screen === 'lobby');
   document.body.classList.toggle('screen-game', screen === 'game');
   document.body.classList.toggle('is-captain', isCaptain());
-  for (const ph of ['lobby', 'night', 'dawn', 'roam', 'meeting', 'nominations', 'dusk', 'ended']) document.body.classList.toggle(`phase-${ph}`, state.phase === ph);
+  for (const ph of ['lobby', 'night', 'dawn', 'roam', 'meeting', 'nominations', 'lastwords', 'dusk', 'ended']) document.body.classList.toggle(`phase-${ph}`, state.phase === ph);
   $('screen-home').hidden = true;
   $('screen-lobby').hidden = screen !== 'lobby';
   $('hud').hidden = false;

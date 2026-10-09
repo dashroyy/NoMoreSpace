@@ -166,3 +166,18 @@ From then on, every push or merge to `main` runs the tests, and if they pass, th
 | HTTPS error | `journalctl -u caddy -n 50`; check Cloudflare SSL mode is **Full (strict)** |
 | Is the game alive? | Visit `https://nomorespace.online/health` |
 | Server feels slow | `htop` (install with `apt install htop`), and look at memory |
+
+## Play stats and bug reports
+The game keeps two small files in `data/` next to the app on your server. Deploys never touch this folder.
+
+- **Stats:** open `https://nomorespace.online/stats` in a browser for a summary of finished games (who wins, how long games take, how each role does). Use it to spot balance problems.
+- **Bug reports:** players can press 🐞 Report a bug. To read the reports, log in to your droplet and run:
+  ```
+  tail -n 20 /home/nomorespace/app/data/reports.jsonl
+  ```
+  Or, to read them in a browser, add a secret password to the service: `sudo systemctl edit nomorespace`, add
+  ```
+  [Service]
+  Environment=NMS_ADMIN_TOKEN=pick-a-long-secret
+  ```
+  then `sudo systemctl restart nomorespace` and open `https://nomorespace.online/reports?token=pick-a-long-secret`.

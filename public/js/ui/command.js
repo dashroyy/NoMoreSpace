@@ -16,6 +16,7 @@ const NEXT_LABEL = {
   roam: () => '🚨 Call the emergency meeting',
   meeting: () => '☝️ Open nominations',
   nominations: () => '🌇 Close nominations → dusk',
+  lastwords: () => '🚪 Cut the last words short → airlock',
   dusk: (s) => (s.winner ? '🏁 Finish' : '🌙 Begin the night'),
 };
 
