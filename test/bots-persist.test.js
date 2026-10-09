@@ -146,3 +146,34 @@ test('games survive a restart: save, then restore mid-game', () => {
   // stale saves are ignored
   assert.deepStrictEqual(persist.deserialize(text, now + 60 * 60_000), []);
 });
+
+test('robots do tasks, use ship systems, and as ghosts bet and haunt', () => {
+  const totals = { tasks: 0, systems: 0, haunts: 0, bets: 0 };
+  for (let k = 0; k < 6; k++) {
+    const { g, host, room } = shipWithBots(8, { pace: 0.2 });
+    g.start(host.id, 1000);
+    const api = quietApi();
+    api.haunt = () => totals.haunts++;
+    play(g, room, api);
+    totals.tasks += Object.values(g.stats.tasks).reduce((a, b) => a + b, 0);
+    totals.systems += Object.values(g.stats.systems).reduce((a, b) => a + b, 0);
+    totals.bets += Object.keys(g.predictions).length;
+  }
+  assert.ok(totals.tasks > 10, `tasks done: ${totals.tasks}`);
+  assert.ok(totals.systems > 0, `ship systems used: ${totals.systems}`);
+  assert.ok(totals.bets > 0, `ghost bets: ${totals.bets}`);
+  assert.ok(totals.haunts > 0, `haunts: ${totals.haunts}`);
+});
+
+test('public ships: the host lists a ship; practice ships stay private', () => {
+  const { g, host } = shipWithBots(3);
+  assert.throws(() => g.setPublic(g.players[1].id, true), /Only the host/);
+  g.setPublic(host.id, true);
+  assert.ok(g.viewFor(host.id).isPublic);
+  const line = g.listing();
+  assert.deepStrictEqual(Object.keys(line).sort(), ['code', 'mode', 'people', 'phase', 'robots', 'round', 'seats', 'shipName', 'watching']);
+  assert.strictEqual(line.robots, 3);
+  assert.strictEqual(line.people, 1);
+  g.practice = true;
+  assert.throws(() => g.setPublic(host.id, true), /private/);
+});

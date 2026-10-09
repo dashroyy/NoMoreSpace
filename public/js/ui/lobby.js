@@ -57,7 +57,13 @@ export function renderLobby(state) {
       }, open ? label : `🔒 ${label.replace(/^\S+ /, '')}`);
     };
     clear($('pick-hat'), ...data.hats.map((h) => chip(h, mine.hat === h, HAT_LABELS[h] || h, () => setLook({ hat: h }))));
-    clear($('pick-visor'), ...Object.entries(data.visors).map(([id, hex]) => el('button', { className: `swatch ${mine.visor === id ? 'selected' : ''}`, style: { background: hex }, title: id, onclick: () => setLook({ visor: id }) })));
+    clear($('pick-visor'), ...Object.entries(data.visors).map(([id, hex]) => {
+      const open = isUnlocked(id);
+      return el('button', {
+        className: `swatch ${mine.visor === id ? 'selected' : ''} ${open ? '' : 'locked'}`, style: { background: hex }, title: open ? id : `🔒 ${UNLOCKS[id].hint}`,
+        onclick: () => (open ? setLook({ visor: id }) : problem(`🔒 ${UNLOCKS[id].label}: ${UNLOCKS[id].hint} to unlock it.`)),
+      }, open ? '' : '🔒');
+    }));
     clear($('pick-pet'), ...data.pets.map((p) => chip(p, mine.pet === p, PET_LABELS[p] || p, () => setLook({ pet: p }))));
   }
 
@@ -107,6 +113,9 @@ export function renderLobby(state) {
     el('div', { className: 'hint' }, enough ? `${n} players: ${counts}${n <= 4 ? ' (Short Haul: quick game)' : ''}` : `Need at least ${data.minPlayers} players to launch.`),
     roleToggle,
     picking ? rolePicker(state, n) : null,
+    state.practice ? null : el('label', { className: 'check', title: 'Anyone can find this ship under "Public ships" on the title screen and join.' },
+      el('input', { type: 'checkbox', checked: !!state.isPublic, onchange: (e) => send('public', { on: e.target.checked }).catch((er) => problem(er.message)) }),
+      '📢 Open to the public (strangers can find and join)'),
     el('button', { className: 'secondary', onclick: () => send('shuffle-seats').catch((e) => problem(e.message)) }, '🔀 Shuffle seats'),
     // robot crewmates fill empty seats
     el('div', { className: 'row robot-row' },

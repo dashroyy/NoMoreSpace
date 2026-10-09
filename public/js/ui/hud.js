@@ -3,7 +3,7 @@
 import { $, el, clear, formatTime, problem, toast } from '../util.js';
 import { store, send, serverNow, player, isCaptain, suitHex } from '../store.js';
 import { sfx } from '../audio.js';
-import { ROOMS, CORRIDORS } from '../world/layout.js';
+import { ROOMS, CORRIDORS, roomOutline } from '../world/layout.js';
 import { blackHoleProgress } from '../world/world.js';
 import { canTeleport, teleportTo } from './rooms.js';
 import { renderVote, openNominate, votesTodayList } from './vote.js';
@@ -58,6 +58,10 @@ export function initHud(w, { onRoleCard, onUse, onPuppetPick }) {
     if (k === 'r') onRoleCard();
     if (k === 'e' && !$('btn-use').hidden) onUse();
     if (k === 'q') toggleEmotes();
+    if (e.key === 'Tab') {
+      e.preventDefault();
+      toggleBigMap();
+    }
     if (k === 'c' && !$('btn-claim').hidden) $('btn-claim').click();
     if (k === 'l') onRoleCard('log');
     if (k === ' ' && !$('btn-hand').hidden) {
@@ -68,6 +72,10 @@ export function initHud(w, { onRoleCard, onUse, onPuppetPick }) {
   buildEmoteMenu();
   setInterval(tick, 250);
   setInterval(drawMinimap, 200);
+  $('map-expand').addEventListener('click', () => toggleBigMap(true));
+  $('bigmap-close').addEventListener('click', () => toggleBigMap(false));
+  $('bigmap-canvas').addEventListener('click', bigMapClick);
+  window.addEventListener('keydown', (e) => e.key === 'Escape' && !$('bigmap').hidden && toggleBigMap(false));
   // click a room on the map to teleport there
   $('minimap').addEventListener('click', (e) => {
     const c = $('minimap');
@@ -264,11 +272,19 @@ const BOUNDS = { x0: -50, x1: 54, z0: -36, z1: 50 };
 function drawMinimap() {
   const canvas = $('minimap');
   if (!world || $('hud').hidden || getComputedStyle(canvas).display === 'none') return;
+  drawMap(canvas, false);
+}
+
+// Draw the station: rooms, corridors, tasks still to do and where everyone is.
+// big: the full-screen map (Tab) with room names, cut corners and player names.
+function drawMap(canvas, big) {
   const g = canvas.getContext('2d');
   const W = canvas.width;
   const H = canvas.height;
-  const sx = (x) => ((x - BOUNDS.x0) / (BOUNDS.x1 - BOUNDS.x0)) * (W - 10) + 5;
-  const sz = (z) => ((z - BOUNDS.z0) / (BOUNDS.z1 - BOUNDS.z0)) * (H - 10) + 5;
+  const pad = big ? 24 : 5;
+  const sx = (x) => ((x - BOUNDS.x0) / (BOUNDS.x1 - BOUNDS.x0)) * (W - pad * 2) + pad;
+  const sz = (z) => ((z - BOUNDS.z0) / (BOUNDS.z1 - BOUNDS.z0)) * (H - pad * 2) + pad;
+  const k = big ? 2.6 : 1; // sizes scale up on the big map
   g.clearRect(0, 0, W, H);
   g.fillStyle = 'rgba(80,100,160,0.35)';
   for (const [x0, z0, x1, z1] of CORRIDORS) g.fillRect(sx(x0), sz(z0), sx(x1) - sx(x0), sz(z1) - sz(z0));
@@ -276,50 +292,111 @@ function drawMinimap() {
     const [x0, z0, x1, z1] = r.rect;
     const here = world.room === r.id;
     g.fillStyle = here ? 'rgba(108,240,255,0.35)' : 'rgba(120,140,200,0.25)';
-    g.fillRect(sx(x0), sz(z0), sx(x1) - sx(x0), sz(z1) - sz(z0));
+    if (big) {
+      // the real module shape, with its corners cut off
+      g.beginPath();
+      roomOutline(r.rect).forEach(([x, z], i) => (i ? g.lineTo(sx(x), sz(z)) : g.moveTo(sx(x), sz(z))));
+      g.closePath();
+      g.fill();
+      g.strokeStyle = `#${r.light.toString(16).padStart(6, '0')}`;
+      g.globalAlpha = 0.7;
+      g.lineWidth = 2;
+      g.stroke();
+      g.globalAlpha = 1;
+      g.fillStyle = '#e6ecff';
+      g.font = "16px 'Silkscreen', monospace";
+      g.textAlign = 'center';
+      g.fillText(r.name.toUpperCase(), sx((x0 + x1) / 2), sz(z0) + 22);
+      g.textAlign = 'start';
+    } else g.fillRect(sx(x0), sz(z0), sx(x1) - sx(x0), sz(z1) - sz(z0));
     if (r.task && !world.doneTasks.has(r.task) && store.state?.phase === 'roam') {
       g.fillStyle = '#ffd27a';
       g.beginPath();
-      g.arc(sx((x0 + x1) / 2), sz((z0 + z1) / 2), 2.5, 0, Math.PI * 2);
+      g.arc(sx((x0 + x1) / 2), sz((z0 + z1) / 2) + (big ? 18 : 0), 2.5 * k, 0, Math.PI * 2);
       g.fill();
     }
   }
-  // everyone else, as small dots in their suit colour
+  // everyone else, as dots in their suit colour (with a letter, and on the big map their name)
   const players = store.state?.players || [];
   if (['lobby', 'roam'].includes(store.state?.phase) && !world.blackout) {
     for (const [id, p] of Object.entries(world.whereabouts())) {
       if (id === world.myId) continue;
-      const pl = p.phantom ? { cosmetics: p.phantom.avatar.look, alive: true } : players.find((x) => x.id === (world.disguise?.[id] || id));
+      const pl = p.phantom ? { cosmetics: p.phantom.avatar.look, alive: true, name: p.phantom.name || '?' } : players.find((x) => x.id === (world.disguise?.[id] || id));
       g.globalAlpha = pl && !pl.alive ? 0.45 : 1;
       g.fillStyle = pl ? suitHex(pl) : '#fff';
       g.beginPath();
-      g.arc(sx(p.x), sz(p.z), 5, 0, Math.PI * 2);
+      g.arc(sx(p.x), sz(p.z), 5 * (big ? 1.8 : 1), 0, Math.PI * 2);
       g.fill();
       if (pl) {
         g.fillStyle = inkFor(suitHex(pl));
-        g.font = "bold 7px 'Silkscreen', sans-serif";
+        g.font = `bold ${big ? 12 : 7}px 'Silkscreen', sans-serif`;
         g.textAlign = 'center';
         g.textBaseline = 'middle';
         g.fillText(initial(pl.name), sx(p.x), sz(p.z) + 0.5);
+        if (big) outlined(g, `${pl.name}${pl.alive ? '' : ' 👻'}`, sx(p.x), sz(p.z) + 21, "18px 'VT323', monospace", '#ffffff');
         g.textAlign = 'start';
         g.textBaseline = 'alphabetic';
       }
     }
     g.globalAlpha = 1;
   }
-  if (!isCaptain()) {
+  if (!isCaptain() && !store.state?.you?.isSpectator) {
     g.strokeStyle = '#fff';
-    g.lineWidth = 1.5;
+    g.lineWidth = 1.5 * (big ? 1.5 : 1);
     g.fillStyle = '#6cf0ff';
     g.beginPath();
-    g.arc(sx(world.local.x), sz(world.local.z), 4, 0, Math.PI * 2);
+    g.arc(sx(world.local.x), sz(world.local.z), 4 * (big ? 2 : 1), 0, Math.PI * 2);
     g.fill();
     g.stroke();
+    if (big) outlined(g, 'YOU', sx(world.local.x), sz(world.local.z) + 22, "14px 'Silkscreen', monospace", '#6cf0ff');
   }
-  const room = ROOMS.find((r) => r.id === world.room);
-  g.fillStyle = '#cfd6ff';
-  g.font = '9px Silkscreen, monospace';
-  g.fillText(room ? room.name : 'Corridor', 6, H - 6);
+  if (!big) {
+    const room = ROOMS.find((r) => r.id === world.room);
+    g.fillStyle = '#cfd6ff';
+    g.font = '9px Silkscreen, monospace';
+    g.fillText(room ? room.name : 'Corridor', 6, H - 6);
+  }
+}
+
+// Centred text with a dark edge, so names stay readable over the coloured rooms.
+function outlined(g, text, x, y, font, color) {
+  g.save();
+  g.font = font;
+  g.textAlign = 'center';
+  g.textBaseline = 'middle';
+  g.lineWidth = 4;
+  g.strokeStyle = 'rgba(0,0,0,0.85)';
+  g.strokeText(text, x, y);
+  g.fillStyle = color;
+  g.fillText(text, x, y);
+  g.restore();
+}
+
+// ---------- the full-screen map (Tab) ----------
+let bigMapTimer = null;
+export function toggleBigMap(open = $('bigmap').hidden) {
+  const box = $('bigmap');
+  box.hidden = !open;
+  clearInterval(bigMapTimer);
+  if (!open) return;
+  const draw = () => drawMap($('bigmap-canvas'), true);
+  draw();
+  bigMapTimer = setInterval(draw, 200);
+}
+
+function bigMapClick(e) {
+  const c = $('bigmap-canvas');
+  const b = c.getBoundingClientRect();
+  const pad = 24;
+  const px = ((e.clientX - b.left) / b.width) * c.width;
+  const pz = ((e.clientY - b.top) / b.height) * c.height;
+  const x = ((px - pad) / (c.width - pad * 2)) * (BOUNDS.x1 - BOUNDS.x0) + BOUNDS.x0;
+  const z = ((pz - pad) / (c.height - pad * 2)) * (BOUNDS.z1 - BOUNDS.z0) + BOUNDS.z0;
+  const room = ROOMS.find(({ rect: [x0, z0, x1, z1] }) => x >= x0 && x <= x1 && z >= z0 && z <= z1);
+  if (room && canTeleport()) {
+    teleportTo(room.id);
+    toggleBigMap(false);
+  }
 }
 
 function initial(name) {

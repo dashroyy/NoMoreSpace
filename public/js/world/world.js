@@ -9,6 +9,7 @@ import { PartyFx } from './party-fx.js';
 import { moveWithCollision, roomAt, roomById, walkable, seatPosition, TASK_STATIONS, SPAWN, DRAWING_SLOTS } from './layout.js';
 
 const SEATED = ['dawn', 'meeting', 'nominations', 'lastwords', 'dusk'];
+export const CAMERA_ZOOM = { close: 0.72, normal: 1, far: 1.3 };
 // The ship's lighting mood for each phase: a colour to tint the room lights toward, and how much.
 const MOODS = {
   night: { color: 0x2c3cff, amount: 0.45 },
@@ -24,8 +25,9 @@ export const NEAR_RADIUS = 7; // same as the server: proximity chat distance
 const TELEPORT_COOLDOWN = 2.5; // seconds
 
 export class World {
-  constructor(container, data, { onSendPos, onNearTask, onStep } = {}) {
+  constructor(container, data, { onSendPos, onNearTask, onStep, onDuckBump } = {}) {
     this.data = data;
+    this.onDuckBump = onDuckBump;
     this.onSendPos = onSendPos;
     this.onNearTask = onNearTask;
     this.onStep = onStep;
@@ -58,7 +60,13 @@ export class World {
     this.camPos = new THREE.Vector3(0, 30, 30);
     this._want = new THREE.Vector3(); // scratch vectors (no per-frame allocations)
     this._offset = new THREE.Vector3();
-    this.zoom = 1;
+    // camera options (Settings): default zoom and whether the screen shakes
+    let zoomPref = 'normal';
+    try {
+      zoomPref = localStorage.getItem('nms-zoom') || 'normal';
+      this.noShake = localStorage.getItem('nms-shake') === 'off';
+    } catch {}
+    this.zoom = CAMERA_ZOOM[zoomPref] || 1;
 
     this.hemi = new THREE.HemisphereLight(0x9aa8ff, 0x2a1830, 1.6);
     this.scene.add(this.hemi);
@@ -466,6 +474,15 @@ export class World {
       this.local.r += diff * Math.min(1, dt * 12);
     }
     this.local.moving = moving;
+    // bumping into the docking-bay duck (counted for an unlockable)
+    const duck = this.fx.duck;
+    if (moving && this.phase === 'lobby' && duck?.visible && Math.hypot(duck.position.x - this.local.x, duck.position.z - this.local.z) < 1.35) {
+      const now = performance.now();
+      if (now - (this.lastBump || 0) > 900) {
+        this.lastBump = now;
+        this.onDuckBump?.();
+      }
+    }
     me.root.position.set(this.local.x, 0, this.local.z);
     me.root.rotation.y = this.local.r;
     me.moving = moving;
@@ -631,7 +648,13 @@ export class World {
   }
 
   rumble(seconds = 1.6) {
-    this.shake = seconds;
+    if (!this.noShake) this.shake = seconds;
+  }
+
+  // Settings: 'close' | 'normal' | 'far', and camera shake on/off.
+  setCamera({ zoom, shake } = {}) {
+    if (zoom) this.zoom = CAMERA_ZOOM[zoom] || 1;
+    if (shake != null) this.noShake = !shake;
   }
 
   // ---------------------------------------------------------------------------

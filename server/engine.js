@@ -76,6 +76,7 @@ class Game {
     // the evening's running scores, kept across rematches (by player name)
     this.season = { games: 0, rows: {} };
     this.spectators = []; // late friends watching until the next rematch: { id, token, name, connected }
+    this.isPublic = false; // listed in "Join a public ship" on the title screen
     this.resetState();
   }
 
@@ -1572,6 +1573,28 @@ class Game {
     this.shipName = clean || st.shipName(this.random);
   }
 
+  // The host can list the ship publicly, so people without a group can join.
+  setPublic(byId, on) {
+    this.requireController(byId);
+    if (this.practice) throw new Error('Practice ships are private.');
+    this.isPublic = !!on;
+  }
+
+  // One line for the public ships list (no secrets).
+  listing() {
+    return {
+      code: this.code,
+      shipName: this.shipName,
+      phase: this.phase,
+      mode: this.mode,
+      people: this.players.filter((p) => !p.isBot && p.connected).length,
+      robots: this.players.filter((p) => p.isBot).length,
+      seats: this.players.length,
+      watching: this.spectators.filter((s) => s.connected).length,
+      round: this.season.games + 1,
+    };
+  }
+
   // Back to the docking bay with the same crew, seats and suits. Once a game
   // is over anyone can call it; mid-game only the host or Captain.
   rematch(byId, now = Date.now()) {
@@ -1924,6 +1947,7 @@ class Game {
       bestLastWords: this.phase === 'ended' ? this.bestLastWords() : null,
       replayId: this.phase === 'ended' ? this.replayId : null,
       practice: !!this.practice,
+      isPublic: !!this.isPublic,
       systems: this.systemsView(),
       ready: [...this.ready],
       readyNeeded: this.readyVoters().length,
@@ -1981,6 +2005,7 @@ class Game {
       prediction: this.predictions[pid] || null,
       deathGuess: this.phase === 'night' ? this.deathGuesses[pid] || null : null,
       lastGuess: this.lastGuess[pid] || null,
+      guesses: this.guessScore[pid] || 0,
       haunts: !p.alive && this.phase !== 'ended' ? { left: this.hauntsLeft(p) } : null,
       tasksDone: this.tasksDone[pid] || [],
       drew: this.drawings.some((d) => d.author === pid && d.night === this.night && !d.published),

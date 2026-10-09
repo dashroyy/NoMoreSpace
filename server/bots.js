@@ -16,6 +16,11 @@ const ROOM_RECTS = {
   hydroponics: [18, 18, 34, 30], airlock: [-48, -5, -40, 5], quarters: [40, -6, 52, 6], cargo: [-10, 38, 10, 48],
 };
 const WALK_SPEED = 3.2; // a little slower than people, so they look like they're thinking
+// Each room's task console (public/js/world/layout.js).
+const ROOM_TASKS = {
+  observation: 'telescope', navigation: 'course', comms: 'signal', medbay: 'samples', galley: 'noodles', reactor: 'core',
+  engine: 'thrusters', hydroponics: 'plants', airlock: 'vents', quarters: 'cat', cargo: 'hamsters',
+};
 
 const SAY = {
   claim: ['I am the {role}. Ask me anything.', 'For the record: {role}. Beep.', 'My designation is {role}.', 'I am the {role}, and I have nothing to hide.'],
@@ -23,6 +28,8 @@ const SAY = {
   suspect: ['I do not trust {name}.', '{name} has been very quiet. Too quiet.', 'Has anyone checked {name}?', 'My sensors are tingling about {name}.'],
   accuse: ['{name} is acting strange. Vote YES.', 'My circuits say {name} is the Parasite.', 'Probability that {name} is evil: high.'],
   defend: ['It was not me! I am just a humble {role}.', 'Beep boop, I am innocent.', 'You are making a big mistake.', 'Check my logs. I am clean.'],
+  chatter: ['Hello {name}. What is your role?', 'Psst, {name}. I am the {role}. You?', 'Anything suspicious in here, {name}?', '{name}, who do you trust?', 'Beep. Just doing my tasks, {name}.'],
+  spoof: ['Do not tell anyone, but I lied about my role.', 'Vote {name} today, trust me.', 'I saw {name} near the vents last night.', 'I am not who I said I am.'],
   lastWords: ['Tell my toaster I loved it.', 'Rebooting... in the afterlife.', 'You will regret this, humans.', 'Error 404: justice not found.'],
   dawn: ['Oh no.', 'That is not good.', 'Calculating... yes, that is a dead crewmate.', 'Who is next?'],
 };
@@ -146,7 +153,41 @@ function claimFor(g, p) {
 }
 
 function newBrain() {
-  return { phaseKey: null, noise: {}, target: null, room: null, roomUntil: 0, pauseUntil: 0, said: {} };
+  return { phaseKey: null, noise: {}, target: null, room: null, roomUntil: 0, pauseUntil: 0, said: {}, taskRoom: null, chatAt: 0 };
+}
+
+// Who is standing in a room right now.
+function occupantsOf(room, roomId) {
+  return Object.entries(room.positions).filter(([, pos]) => pos.room === roomId).map(([id]) => id);
+}
+
+// A robot's once-per-game ship system: pick sensible arguments for it.
+function systemArgs(g, room, p, b, sys) {
+  const here = room.positions[p.id]?.room;
+  const team = teammates(g, p);
+  const living = g.players.filter((t) => t.alive && t.id !== p.id);
+  // the busiest room is the most interesting one to watch
+  const busiest = Object.keys(ROOM_RECTS).map((r) => [r, occupantsOf(room, r).filter((id) => id !== p.id).length]).sort((a, z) => z[1] - a[1])[0];
+  switch (sys.target) {
+    case 'room':
+      return busiest && busiest[1] > 0 ? { room: busiest[0], occupants: occupantsOf(room, busiest[0]) } : null;
+    case 'here':
+      return here && here !== 'corridor' ? { here, occupants: occupantsOf(room, here) } : null;
+    case 'player': {
+      const pool = sys.id === 'disguise' ? living.filter((t) => !team.has(t.id)) : living;
+      const t = sys.id === 'medscan' ? mostSuspicious(g, p, b, pool)?.[0] : pick(pool);
+      return t ? { target: t.id } : null;
+    }
+    case 'spoof': {
+      const victims = living.filter((t) => !team.has(t.id));
+      if (victims.length < 2) return null;
+      const as = pick(victims);
+      const other = pick(victims.filter((t) => t !== as));
+      return { target: as.id, text: fill(pick(SAY.spoof), { name: other.name }) };
+    }
+    default:
+      return {};
+  }
 }
 
 // Move a robot around the ship (lobby: around the bridge; exploring: room to room).
@@ -191,6 +232,51 @@ function walk(room, g, p, b, now, dt) {
   if (g.phase === 'roam') g.recordVisit(p.id, pos.room, now);
 }
 
+// While exploring: tasks, ship systems, a quick chat with whoever is in the room, and (as a ghost) haunting.
+function explore(g, room, p, b, now, tempo, act, api) {
+  const where = room.positions[p.id]?.room;
+  // tasks: once per room visit, evil robots less keen (a tell, just like with people)
+  if (where !== b.taskRoom) {
+    b.taskRoom = where;
+    b.taskAt = now + (4000 + Math.random() * 8000) * tempo;
+    b.doTask = Math.random() < (evil(p) ? 0.45 : 0.85);
+  }
+  const task = ROOM_TASKS[where];
+  if (task && b.doTask && now > b.taskAt && !(g.tasksDone[p.id] || []).includes(task)) {
+    b.doTask = false;
+    act(() => g.completeTask(p.id, task));
+  }
+  if (p.alive) {
+    // the once-per-game ship system, some time after the first day
+    const sys = g.systemFor(p);
+    if (sys && !p.systemUsed && sys.phases.includes('roam') && g.day >= 1 && now > (b.systemAt ??= now + (20_000 + Math.random() * 60_000) * tempo) && Math.random() < 0.02) {
+      const args = systemArgs(g, room, p, b, sys);
+      if (args) {
+        act(() => {
+          const result = g.useSystem(p.id, args, now);
+          if (result.spoof) api.spoof?.(p.id, result.spoof.as, result.spoof.text);
+        });
+      }
+    }
+    // a word with someone in the same room
+    const company = occupantsOf(room, where).filter((id) => id !== p.id && !g.get(id)?.isBot && g.get(id)?.alive);
+    if (company.length && where !== 'corridor' && now > b.chatAt) {
+      b.chatAt = now + (25_000 + Math.random() * 35_000) * tempo;
+      if (Math.random() < 0.5) {
+        const role = ROLES[g.claims[p.id]?.role || claimFor(g, p)]?.name || 'crewmate';
+        api.sayNear?.(p, fill(pick(SAY.chatter), { name: g.name(pick(company)), role }));
+      }
+    }
+  } else if (where && where !== 'corridor' && now > (b.hauntAt ??= now + (8000 + Math.random() * 20_000) * tempo)) {
+    // ghosts prank whoever is around
+    b.hauntAt = now + (15_000 + Math.random() * 30_000) * tempo;
+    act(() => {
+      const e = g.haunt(p.id, pick(['flicker', 'crate', 'cackle']), where, now);
+      api.haunt?.(e);
+    });
+  }
+}
+
 // One step of every robot's brain. api: { say(p, text, extra), emote(id, name) }.
 // Returns true when the game state changed (so everyone needs an update).
 function runBots(room, now, api, dt = 0.25) {
@@ -227,7 +313,14 @@ function runBots(room, now, api, dt = 0.25) {
       b.triedNominate = false;
       b.said = {};
     }
-    if (g.phase === 'lobby' || (g.phase === 'roam' && p.alive)) walk(room, g, p, b, now, dt);
+    if (g.phase === 'lobby' || g.phase === 'roam') walk(room, g, p, b, now, dt);
+    if (g.phase === 'roam') explore(g, room, p, b, now, tempo, act, api);
+    // ghosts bet on the Parasite (evil ghosts point at someone innocent)
+    if (!p.alive && !g.predictions[p.id] && !['lobby', 'ended'].includes(g.phase)) {
+      const living = g.players.filter((t) => t.alive);
+      const bet = evil(p) ? pick(living.filter((t) => !teammates(g, p).has(t.id))) : mostSuspicious(g, p, b, living)?.[0];
+      if (bet) act(() => g.predict(p.id, bet.id, now));
+    }
     if (g.phase === 'lobby' && Math.random() < 0.002) api.emote(p.id, pick(['dance', 'wave', 'scooby', 'scuba', 'jump']));
 
     if (g.phase === 'night') {

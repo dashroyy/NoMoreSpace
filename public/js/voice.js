@@ -30,6 +30,23 @@ function meter(id, stream) {
   }
 }
 
+// Overall voice chat volume (the Settings slider), 0..1.
+let voiceLevel = 1;
+try {
+  const v = parseFloat(localStorage.getItem('nms-vol-voice'));
+  if (Number.isFinite(v)) voiceLevel = Math.max(0, Math.min(1, v));
+} catch {}
+export function getVoiceVolume() {
+  return voiceLevel;
+}
+export function setVoiceVolume(value) {
+  voiceLevel = Math.max(0, Math.min(1, Number(value) || 0));
+  try {
+    localStorage.setItem('nms-vol-voice', String(voiceLevel));
+  } catch {}
+  updateVolumes();
+}
+
 // Your own volume for each player (mute a loud mic, or turn someone down). Just for you.
 const userVolume = new Map(); // id -> 0..1
 export function peerVolume(id) {
@@ -175,6 +192,6 @@ function updateVolumes() {
       const d = Math.hypot(pos[id].x - mine.x, pos[id].z - mine.z);
       volume = Math.max(0, Math.min(1, 1 - (d - 2.5) / (HEAR_RADIUS - 2.5)));
     } else if (phase === 'roam' && !pos[id]) volume = 1; // the Captain speaks over the intercom
-    peer.audio.volume = volume * peerVolume(id);
+    peer.audio.volume = volume * peerVolume(id) * voiceLevel;
   }
 }

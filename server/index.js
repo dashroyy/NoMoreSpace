@@ -98,14 +98,25 @@ const server = http.createServer((req, res) => {
     return;
   }
   // play stats for balancing (no names), and bug reports for the owner
+  // the owner's dashboard: a readable page over /stats (and /reports with the admin token)
+  if (url.pathname === '/dashboard') {
+    sendFile(res, PUBLIC_DIR, 'dashboard.html', 'no-cache');
+    return;
+  }
   if (url.pathname === '/stats') {
     res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' });
-    res.end(JSON.stringify(records.statsSummary(), null, 2));
+    const live = [...rooms.values()];
+    res.end(JSON.stringify({
+      ...records.statsSummary(),
+      live: { ships: live.length, people: live.reduce((n, r) => n + r.game.players.filter((p) => p.connected && !p.isBot).length, 0), playing: live.filter((r) => !['lobby', 'ended'].includes(r.game.phase)).length },
+    }, null, 2));
     return;
   }
   if (url.pathname === '/reports') {
     const token = process.env.NMS_ADMIN_TOKEN;
-    if (!token || url.searchParams.get('token') !== token) {
+    // the token can come as ?token=... or (from the dashboard, kept out of server logs) an Authorization: Bearer header
+    const given = url.searchParams.get('token') || String(req.headers.authorization || '').replace(/^Bearer\s+/i, '');
+    if (!token || given !== token) {
       res.writeHead(403, { 'Content-Type': 'text/plain' });
       res.end('Set NMS_ADMIN_TOKEN on the server and pass ?token=... (or read data/reports.jsonl).');
       return;
@@ -204,6 +215,55 @@ function isCaptain(room, id) {
   return room.game.captain?.id === id;
 }
 
+// Proximity chat: who hears a message, and delivering it (people and robots both use this).
+// Who hears a message from this player right now, by phase and position.
+function hearersOf(room, g, speakerId) {
+  if (['lobby', 'ended', 'dawn', 'meeting', 'nominations', 'lastwords', 'dusk'].includes(g.phase)) return { channel: 'all', ids: [...g.players.map((p) => p.id), ...g.spectators.map((s) => s.id)] };
+  // Exploring: only players in the same room or close by hear you.
+  const mine = room.positions[speakerId];
+  const ids = g.players
+    .filter((p) => {
+      const pos = room.positions[p.id];
+      if (p.id === speakerId) return true;
+      if (!mine || !pos) return false;
+      const theirLock = g.activeLockdown(pos.room);
+      if (theirLock && !theirLock.allowed.includes(speakerId)) return false; // sealed rooms keep sound out too
+      // corridors are long, so there only distance counts
+      return (pos.room === mine.room && pos.room !== 'corridor') || Math.hypot(pos.x - mine.x, pos.z - mine.z) < NEAR_RADIUS;
+    })
+    .map((p) => p.id);
+  // a sealed room: only the people locked inside hear each other
+  const lock = mine && g.activeLockdown(mine.room);
+  if (lock) return { channel: 'near', ids: ids.filter((id) => lock.allowed.includes(id) || id === speakerId), room: mine.room };
+  return { channel: 'near', ids, room: mine?.room };
+}
+
+// Send a public (non-secret-channel) message, handling disguises, blackouts and eavesdroppers.
+function deliver(room, g, speakerId, message, { spoofedBy = null } = {}) {
+  const now = Date.now();
+  const { channel, ids, room: where } = hearersOf(room, g, spoofedBy || speakerId);
+  message.channel = channel;
+  if (channel === 'near') {
+    const as = g.disguiseOf(speakerId, now);
+    if (as) message.name = g.get(as).name;
+    if (g.blackout(now)) message.name = '???';
+  }
+  const heard = new Set(ids).size - 1;
+  for (const id of new Set(ids)) personSocket(room, id)?.emit('chat', message);
+  // the Comms Officer's intercept: words without names
+  if (channel === 'near' && where && where !== 'corridor') {
+    for (const id of g.listeners(where, now)) {
+      if (!ids.includes(id)) personSocket(room, id)?.emit('chat', { ...message, from: null, name: `🎧 ${ROOM_NAMES[where]}`, channel: 'intercept' });
+    }
+  }
+  // the Captain hears everything, and sees through tricks
+  if (g.captain) {
+    const real = spoofedBy ? `${g.get(spoofedBy).name} as ${message.name}` : message.name !== g.get(speakerId)?.name && g.get(speakerId) ? `${g.get(speakerId).name} as ${message.name}` : message.name;
+    personSocket(room, g.captain.id)?.emit('chat', { ...message, name: real });
+  }
+  return heard;
+}
+
 io.on('connection', (socket) => {
   let room = null;
   let me = null; // person id (player or captain)
@@ -265,6 +325,16 @@ io.on('connection', (socket) => {
     seat(r, person);
   });
   on('add-bot', () => game().addBot(me));
+  on('public', ({ on: value }) => game().setPublic(me, value));
+  // the public ships list for the title screen
+  on('list-public', () => {
+    const ships = [...rooms.values()]
+      .filter((r) => r.game.isPublic && !r.game.practice && r.sockets.size > 0)
+      .map((r) => r.game.listing())
+      .sort((a, b) => (b.phase === 'lobby') - (a.phase === 'lobby') || b.people - a.people) // open lobbies first, then the busiest
+      .slice(0, 30);
+    return { ships };
+  }, { update: false });
   on('remove-bots', () => game().removeBots(me));
 
   on('join', ({ code, name, token, look }) => {
@@ -406,53 +476,6 @@ io.on('connection', (socket) => {
     io.to(room.code).emit('emote', { id: me, emote });
   }, { update: false });
 
-  // Who hears a message from this player right now, by phase and position.
-  function hearersOf(g, speakerId) {
-    if (['lobby', 'ended', 'dawn', 'meeting', 'nominations', 'lastwords', 'dusk'].includes(g.phase)) return { channel: 'all', ids: [...g.players.map((p) => p.id), ...g.spectators.map((s) => s.id)] };
-    // Exploring: only players in the same room or close by hear you.
-    const mine = room.positions[speakerId];
-    const ids = g.players
-      .filter((p) => {
-        const pos = room.positions[p.id];
-        if (p.id === speakerId) return true;
-        if (!mine || !pos) return false;
-        const theirLock = g.activeLockdown(pos.room);
-        if (theirLock && !theirLock.allowed.includes(speakerId)) return false; // sealed rooms keep sound out too
-        // corridors are long, so there only distance counts
-        return (pos.room === mine.room && pos.room !== 'corridor') || Math.hypot(pos.x - mine.x, pos.z - mine.z) < NEAR_RADIUS;
-      })
-      .map((p) => p.id);
-    // a sealed room: only the people locked inside hear each other
-    const lock = mine && g.activeLockdown(mine.room);
-    if (lock) return { channel: 'near', ids: ids.filter((id) => lock.allowed.includes(id) || id === speakerId), room: mine.room };
-    return { channel: 'near', ids, room: mine?.room };
-  }
-
-  // Send a public (non-secret-channel) message, handling disguises, blackouts and eavesdroppers.
-  function deliver(g, speakerId, message, { spoofedBy = null } = {}) {
-    const now = Date.now();
-    const { channel, ids, room: where } = hearersOf(g, spoofedBy || speakerId);
-    message.channel = channel;
-    if (channel === 'near') {
-      const as = g.disguiseOf(speakerId, now);
-      if (as) message.name = g.get(as).name;
-      if (g.blackout(now)) message.name = '???';
-    }
-    const heard = new Set(ids).size - 1;
-    for (const id of new Set(ids)) personSocket(room, id)?.emit('chat', message);
-    // the Comms Officer's intercept: words without names
-    if (channel === 'near' && where && where !== 'corridor') {
-      for (const id of g.listeners(where, now)) {
-        if (!ids.includes(id)) personSocket(room, id)?.emit('chat', { ...message, from: null, name: `🎧 ${ROOM_NAMES[where]}`, channel: 'intercept' });
-      }
-    }
-    // the Captain hears everything, and sees through tricks
-    if (g.captain) {
-      const real = spoofedBy ? `${g.get(spoofedBy).name} as ${message.name}` : message.name !== g.get(speakerId)?.name && g.get(speakerId) ? `${g.get(speakerId).name} as ${message.name}` : message.name;
-      personSocket(room, g.captain.id)?.emit('chat', { ...message, name: real });
-    }
-    return heard;
-  }
 
   on('chat', ({ text, channel }) => {
     const g = game();
@@ -506,7 +529,7 @@ io.on('connection', (socket) => {
       message.lastWords = true;
       g.noteLastWords(me, clean);
     }
-    const heard = deliver(g, me, message);
+    const heard = deliver(room, g, me, message);
     return { heard, channel: message.channel };
   }, { update: false });
 
@@ -583,7 +606,7 @@ io.on('connection', (socket) => {
     const result = g.useSystem(me, { room: chosen, target, text, here, occupants }, Date.now());
     if (result.spoof) {
       const as = g.get(result.spoof.as);
-      deliver(g, as.id, { from: as.id, name: as.name, text: result.spoof.text, at: Date.now(), ghost: !as.alive }, { spoofedBy: me });
+      deliver(room, g, as.id, { from: as.id, name: as.name, text: result.spoof.text, at: Date.now(), ghost: !as.alive }, { spoofedBy: me });
     }
     return {};
   });
@@ -693,6 +716,20 @@ setInterval(() => {
 
 function botApi(room) {
   return {
+    // proximity chat while exploring (only people nearby hear it)
+    sayNear(p, text) {
+      if (room.game.phase !== 'roam') return;
+      room.game.noteChat(p.id);
+      deliver(room, room.game, p.id, { from: p.id, name: p.name, text, at: Date.now(), ghost: !p.alive });
+    },
+    // the Hacker's fake message, sent as someone else
+    spoof(byId, asId, text) {
+      const as = room.game.get(asId);
+      if (as) deliver(room, room.game, as.id, { from: as.id, name: as.name, text, at: Date.now(), ghost: !as.alive }, { spoofedBy: byId });
+    },
+    haunt(e) {
+      io.to(room.code).emit('haunt', e);
+    },
     say(p, text, extra = {}) {
       const g = room.game;
       if (!['dawn', 'meeting', 'nominations', 'lastwords', 'dusk', 'lobby', 'ended'].includes(g.phase)) return;

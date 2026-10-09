@@ -295,7 +295,10 @@ When the game ends, ARIA plays back the ship's black box:
 ### 🏅 Awards and unlocks
 The end screen hands out silly **awards** from what actually happened: 🎭 Best Liar (the evil player with the fewest YES votes against them), 🕵️ Sharpest Eye (most votes to airlock evil), 🤦 Wrong Every Time, 👀 Most Suspicious, ☝️ Trigger Happy, 🗣️ Chatterbox, 🤐 Strong Silent Type, 🛠️ Hardest Worker and 🦆 Talked to the Ducks (hallucinated).
 
-Playing also **unlocks cosmetics**, tracked in your browser (no account needed): 🏆 Laurels (win 3 games), 🦑 Tentacles (win on the evil team), 🤡 Jester cap (play the Holo-Jester), 🛸 Mini UFO (play 5 games) and a 🐋 space whale pet (win 2 games with the crew). Locked items show a 🔒 and how to earn them.
+Playing also **unlocks cosmetics**, tracked in your browser (no account needed): 🏆 Laurels (win 3 games), 🦑 Tentacles (win on the evil team), 🤡 Jester cap (play the Holo-Jester), 🛸 Mini UFO (play 5 games), a 🐋 space whale pet (win 2 games with the crew), a 🔮 crystal ball hat (5 right "who dies tonight?" guesses), the 🟣 psychic visor (as a ghost, bet on the real Parasite 3 times) and a 🐤 rubber duck pet (bump the docking-bay duck 50 times). Locked items show a 🔒 and how to earn them.
+
+### 👤 Your profile
+**👤 Profile** (title screen and docking bay) shows your record from this browser: games, wins, wins with each team, your win streak, favourite role, right guesses, ghost bets, duck bumps, every award you've won, and a progress bar for each unlockable.
 
 ## 9a. Playing with friends: the party touches
 
@@ -347,10 +350,17 @@ Small details borrowed from the best party games (Among Us, Jackbox, Town of Sal
 
 ### 🤖 Robot crewmates and practice
 - **Robots fill empty seats:** in the lobby the host can **🤖 Add a robot** (or remove them all). Robots have names and bios, wander the ship, make sensible night choices for their role, **claim a role at the meeting** (evil robots bluff, and sometimes invent fake clues), **share what their role told them**, nominate whoever they suspect most, vote, give last words and press Ready, so they never hold the humans up. Good robots read their own clues (scans, neighbour counts, Black Box results, "one of two" hints) and give half-weight to clues others share; evil robots know their team (in games of 7+, like any evil player) and don't always vote together. Their timing follows the pace setting. In all-robot test games the crew wins about a third of the time.
+- **Robots play the whole game, not just the meetings:** they walk to rooms and **do the tasks** there (good robots almost always, evil ones about half the time, to blend in), **use their ship system** once a game (a Comms robot intercepts a room, a Spoofer robot sends a fake message, and so on), and chat with humans who are in the same room. Dead robots keep playing too: they wander as ghosts, **bet on the Parasite** (evil ghosts bet on an innocent to mislead) and **haunt** the living.
 - **🎓 Practice with robots** (title screen): you and six robots, at a quick pace, with the first-game tips switched on.
+
+### 🌐 Public ships
+The host can tick **📢 Open to the public** in the docking bay. The ship then shows up under **🌐 Public ships** on the title screen, with its name, phase, number of people and robots, so anyone short of a group can board. Ships in the docking bay are listed first; games already running are joined as a spectator (who joins the crew at the next rematch). Practice ships are always private.
 
 ### 🔮 Who dies tonight?
 At night everyone (alive or dead) can guess who the Parasite will strike, or that nobody will die. A right guess is a point on the season scoreboard, and the best guesser wins **🔮 Clairvoyant**. Everyone sees the same card, so it gives nothing away; the Parasite can guess too, but its guesses never count.
+
+### 🗺️ The full map
+Press **Tab** (or ⛶ on the minimap; on phones it's a button in the corner) for a big station map with room names, everyone's position and name, and your tasks. Click a room to teleport there, exactly like the minimap. Tab or Esc closes it.
 
 ### 🦆 The docking-bay duck
 While waiting in the lobby, a giant rubber duck in a space helmet sits on the bridge. Walk (or run) into it to bump it around; it bounces off the walls and the table. The server moves it, so everyone sees the same duck.
@@ -362,7 +372,9 @@ The end screen draws every YES vote of the game as an arrow from voter to nomine
 Every finished game gets a link (**🔗 Copy replay link** on the end screen) that replays the end-game reveal for anyone, even people who weren't there.
 
 ### ⚙️ Settings
-One panel (⚙️ in the top bar, or on the title screen) for sound, music, read aloud, voice chat, **text size (S / M / L / XL)**, the old-screen scanline effect, graphics quality, and showing the new-player tips again. Number keys **1–9** fire emotes straight away (the numbers are shown in the emote menu).
+One panel (⚙️ in the top bar, or on the title screen) for sound, music, read aloud, voice chat, **separate volume sliders for music, effects and voice**, **💬 sound captions**, **text size (S / M / L / XL)**, **camera distance (close / normal / far)**, **camera shake** on or off, the old-screen scanline effect, graphics quality, and showing the new-player tips again. Number keys **1–9** fire emotes straight away (the numbers are shown in the emote menu).
+
+**Sound captions** show the sounds that matter as short text in the corner (🚨 emergency meeting, 💀 a death, ⏳ the 10-second warning, 🚪 the airlock…), for deaf and hard-of-hearing players and anyone playing muted. They show even with the sound off.
 
 ### 🔄 Restarts
 Updating the game no longer ends games in progress: players get a 20-second "ship systems rebooting" warning, the server saves every game, and everyone is reconnected to the same seat when it comes back (see the hosting guide).

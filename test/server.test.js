@@ -270,6 +270,37 @@ test('whisper requests beam both players into an empty room; claims, bug reports
   const stats = await (await fetch(`${base}/stats`)).json();
   assert.ok(stats.games >= 1);
   assert.strictEqual((await fetch(`${base}/reports`)).status, 403, 'reports need the admin token');
+  // the owner's dashboard: the page, live counts and role names in /stats, and the token as a Bearer header
+  assert.strictEqual((await fetch(`${base}/dashboard`)).status, 200);
+  assert.strictEqual(typeof stats.live.people, 'number');
+  assert.ok(Object.values(stats.roles).every((r) => r.name && 'icon' in r && r.wins <= r.dealt));
+  process.env.NMS_ADMIN_TOKEN = 'sekrit';
+  try {
+    assert.strictEqual((await fetch(`${base}/reports`, { headers: { Authorization: 'Bearer nope' } })).status, 403);
+    const res = await fetch(`${base}/reports`, { headers: { Authorization: 'Bearer sekrit' } });
+    assert.strictEqual(res.status, 200);
+    assert.ok((await res.json()).some((r) => r.text === 'The duck stole my vote'));
+  } finally {
+    delete process.env.NMS_ADMIN_TOKEN;
+  }
+});
+
+test('public ships: only the host can open a ship, and strangers find it in the list', async () => {
+  const { host, players, code } = await makeShip(2);
+  const stranger = await connect();
+  const before = await call(stranger, 'list-public');
+  assert.ok(before.ok && !before.ships.some((s) => s.code === code), 'ships are private by default');
+  assert.strictEqual((await call(players[1], 'public', { on: true })).ok, false, 'only the host decides');
+  assert.ok((await call(host, 'public', { on: true })).ok);
+  await waitFor(() => latest(players[1]).isPublic === true);
+  const mine = (await call(stranger, 'list-public')).ships.find((s) => s.code === code);
+  assert.ok(mine, 'listed');
+  assert.strictEqual(mine.phase, 'lobby');
+  assert.strictEqual(mine.people, 2);
+  assert.ok((await call(stranger, 'join', { code, name: 'Stranger' })).ok);
+  await waitFor(() => latest(host).players.length === 3);
+  assert.ok((await call(host, 'public', { on: false })).ok);
+  assert.ok(!(await call(stranger, 'list-public')).ships.some((s) => s.code === code), 'closed again');
 });
 
 test('Captain mode: only the Captain controls the game and sees the manifest', async () => {

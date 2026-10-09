@@ -20,11 +20,11 @@ const SUITS = {
   teal: '#127a7a',
 };
 
-const HATS = ['none', 'party', 'antenna', 'crown', 'halo', 'tophat', 'catears', 'chef', 'flower', 'headphones', 'propeller', 'horns', 'bow', 'cone', 'beanie', 'cowboy', 'laurel', 'tentacles', 'jester', 'saucer'];
-const VISORS = { gold: '#f2b84b', sky: '#7cc7ff', mirror: '#c9d3e6', mint: '#7af0c1', rose: '#ff8fb1', void: '#141420' };
-const PETS = ['none', 'cat', 'duck', 'drone', 'alien', 'hamster', 'jelly', 'whale'];
+const HATS = ['none', 'party', 'antenna', 'crown', 'halo', 'tophat', 'catears', 'chef', 'flower', 'headphones', 'propeller', 'horns', 'bow', 'cone', 'beanie', 'cowboy', 'laurel', 'tentacles', 'jester', 'saucer', 'crystal'];
+const VISORS = { gold: '#f2b84b', sky: '#7cc7ff', mirror: '#c9d3e6', mint: '#7af0c1', rose: '#ff8fb1', void: '#141420', psychic: '#b46bff' };
+const PETS = ['none', 'cat', 'duck', 'drone', 'alien', 'hamster', 'jelly', 'whale', 'rubberduck'];
 // Earned by playing (tracked in each player's browser): see public/js/progress.js
-const UNLOCKABLE = { hats: ['laurel', 'tentacles', 'jester', 'saucer'], pets: ['whale'] };
+const UNLOCKABLE = { hats: ['laurel', 'tentacles', 'jester', 'saucer', 'crystal'], pets: ['whale', 'rubberduck'], visors: ['psychic'] };
 
 function defaults(taken = []) {
   const suit = Object.keys(SUITS).find((s) => !taken.includes(s)) || 'white';

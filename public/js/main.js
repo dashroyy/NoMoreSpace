@@ -26,6 +26,10 @@ import { speak } from './tts.js';
 import { openWiki } from './ui/wiki.js';
 import { initSettings } from './ui/settings.js';
 import { initSession, renderSession } from './ui/session.js';
+import { initCaptions } from './ui/captions.js';
+import { openProfile } from './ui/profile.js';
+import { openPublicShips } from './ui/publicships.js';
+import { recordKick } from './progress.js';
 import { initVoice, toggleVoice, voiceEnabled } from './voice.js';
 
 const SEAT_KEY = 'nms-seat';
@@ -58,6 +62,13 @@ async function boot() {
     onSendPos: (p) => socket.emit('pos', p),
     onNearTask: (taskId) => setUsePrompt(taskId ? store.data.tasks[taskId].name : null),
     onStep: () => sfx('step'),
+    onDuckBump: () => {
+      sfx('pop');
+      const unlocked = recordKick();
+      if (!unlocked.length) return;
+      toast(`🎁 Unlocked for your spacesuit: ${unlocked.join(', ')}!`, 'info', 8000);
+      if (store.state?.phase === 'lobby') renderLobby(store.state); // show it in the wardrobe straight away
+    },
   });
   window.__world = world; // handy for debugging in the console
   world.serverNow = serverNow;
@@ -93,6 +104,9 @@ async function boot() {
   initExtras(world);
   initSettings({ moods: MOODS });
   initSession();
+  initCaptions();
+  for (const id of ['home-profile', 'lobby-profile']) $(id).addEventListener('click', () => openProfile());
+  $('home-public').addEventListener('click', () => openPublicShips({ look: savedLook }));
   for (const id of ['home-wiki', 'lobby-wiki', 'btn-wiki']) $(id).addEventListener('click', () => openWiki());
   initHud(world, {
     onRoleCard: (tab) => openRoleCard(typeof tab === 'string' ? tab : 'role'),

@@ -253,7 +253,7 @@ function ghosts() {
 
 function controls() {
   const keys = [
-    ['W A S D', 'move (or the joystick on phones)'], ['M', 'rooms: teleport'], ['E', 'use a task console'], ['R', 'role card & notebook'],
+    ['W A S D', 'move (or the joystick on phones)'], ['M', 'rooms: teleport'], ['Tab', 'full station map'], ['E', 'use a task console'], ['R', 'role card & notebook'],
     ['C', 'claim a role'], ['X', 'your ship system'], ['Q', 'emotes (try the 🐶 Scooby and 🤿 Scuba dances!)'], ['Y / N', 'vote yes / no'],
     ['Enter', 'chat'], ['@name + Tab', 'mention a player'], ['Mouse wheel', 'zoom'],
   ];

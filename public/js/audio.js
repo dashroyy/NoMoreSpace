@@ -23,6 +23,41 @@ try {
 } catch {}
 
 const MUSIC_LEVEL = 0.65;
+const SFX_LEVEL = 0.6;
+const AMBIENT_LEVEL = 0.35;
+
+// Volume sliders (0..1), remembered in this browser.
+const volumes = { music: 1, sfx: 1 };
+for (const k of Object.keys(volumes)) {
+  try {
+    const v = parseFloat(localStorage.getItem(`nms-vol-${k}`));
+    if (Number.isFinite(v)) volumes[k] = Math.max(0, Math.min(1, v));
+  } catch {}
+}
+
+export function getVolume(kind) {
+  return volumes[kind] ?? 1;
+}
+
+export function setVolume(kind, value) {
+  if (!(kind in volumes)) return;
+  volumes[kind] = Math.max(0, Math.min(1, Number(value) || 0));
+  try {
+    localStorage.setItem(`nms-vol-${kind}`, String(volumes[kind]));
+  } catch {}
+  if (!ctx) return;
+  if (kind === 'music') musicBus.gain.setTargetAtTime(musicOn ? MUSIC_LEVEL * volumes.music : 0, ctx.currentTime, 0.1);
+  else {
+    sfxBus.gain.setTargetAtTime(SFX_LEVEL * volumes.sfx, ctx.currentTime, 0.1);
+    ambientBus.gain.setTargetAtTime(AMBIENT_LEVEL * volumes.sfx, ctx.currentTime, 0.1);
+  }
+}
+
+// Someone listening for sound effects (the sound captions), even when sound is off.
+let sfxListener = null;
+export function onSfx(fn) {
+  sfxListener = fn;
+}
 
 export function soundEnabled() {
   return enabled;
@@ -45,7 +80,7 @@ export function setMusic(on) {
   try {
     localStorage.setItem('nms-music', on ? 'on' : 'off');
   } catch {}
-  if (musicBus) musicBus.gain.setTargetAtTime(on ? MUSIC_LEVEL : 0, ctx.currentTime, 0.4);
+  if (musicBus) musicBus.gain.setTargetAtTime(on ? MUSIC_LEVEL * volumes.music : 0, ctx.currentTime, 0.4);
 }
 
 // A big, dark hall: a few seconds of decaying noise used as a reverb.
@@ -81,18 +116,18 @@ export function unlockAudio() {
   reverbSend.connect(reverb);
 
   sfxBus = ctx.createGain();
-  sfxBus.gain.value = 0.6;
+  sfxBus.gain.value = SFX_LEVEL * volumes.sfx;
   sfxBus.connect(master);
   const sfxVerb = ctx.createGain();
   sfxVerb.gain.value = 0.18;
   sfxBus.connect(sfxVerb).connect(reverb);
 
   ambientBus = ctx.createGain();
-  ambientBus.gain.value = 0.35;
+  ambientBus.gain.value = AMBIENT_LEVEL * volumes.sfx;
   ambientBus.connect(master);
 
   musicBus = ctx.createGain();
-  musicBus.gain.value = musicOn ? MUSIC_LEVEL : 0;
+  musicBus.gain.value = musicOn ? MUSIC_LEVEL * volumes.music : 0;
   musicBus.connect(master);
   musicBus.connect(reverbSend);
 
@@ -676,6 +711,9 @@ const SOUNDS = {
 };
 
 export function sfx(name) {
+  try {
+    sfxListener?.(name);
+  } catch {}
   if (!ctx || !enabled) return;
   try {
     SOUNDS[name]?.();

@@ -136,9 +136,9 @@ export const HAT_LABELS = {
   none: 'None', party: '🥳 Party', antenna: '📡 Antenna', crown: '👑 Crown', halo: '😇 Halo', tophat: '🎩 Top hat', catears: '🐱 Cat ears',
   chef: '👨‍🍳 Chef', flower: '🌼 Flower', headphones: '🎧 Headphones', propeller: '🚁 Propeller', horns: '🤘 Horns', bow: '🎀 Bow',
   cone: '🚧 Cone', beanie: '🧢 Beanie', cowboy: '🤠 Cowboy',
-  laurel: '🏆 Laurels', tentacles: '🦑 Tentacles', jester: '🤡 Jester cap', saucer: '🛸 Mini UFO',
+  laurel: '🏆 Laurels', tentacles: '🦑 Tentacles', jester: '🤡 Jester cap', saucer: '🛸 Mini UFO', crystal: '🔮 Crystal ball',
 };
-export const PET_LABELS = { none: 'None', cat: '🐈 Cat', duck: '🦆 Duck', drone: '🛸 Drone', alien: '👽 Alien', hamster: '🐹 Hamster', jelly: '🪼 Jelly', whale: '🐋 Space whale' };
+export const PET_LABELS = { none: 'None', cat: '🐈 Cat', duck: '🦆 Duck', drone: '🛸 Drone', alien: '👽 Alien', hamster: '🐹 Hamster', jelly: '🪼 Jelly', whale: '🐋 Space whale', rubberduck: '🐤 Rubber duck' };
 
 function buildHat(id) {
   const g = new THREE.Group();
@@ -287,6 +287,13 @@ function buildHat(id) {
       dome.userData.bob = true;
       break;
     }
+    case 'crystal': {
+      // a glowing crystal ball on a little gold stand
+      add(new THREE.CylinderGeometry(0.12, 0.16, 0.08, 12), 0xc9a24a, 0, 0.02, 0, { metalness: 0.8, roughness: 0.3 });
+      const ball = add(new THREE.SphereGeometry(0.15, 18, 14), 0xb46bff, 0, 0.2, 0, { emissive: 0x7a3cff, emissiveIntensity: 1.4, transparent: true, opacity: 0.85 });
+      ball.userData.bob = true;
+      break;
+    }
     case 'cowboy': {
       const brim = add(new THREE.CylinderGeometry(0.45, 0.45, 0.03, 24), 0x8b5a2b, 0, 0, 0);
       brim.scale.z = 0.8;
@@ -351,6 +358,14 @@ function buildPet(id) {
       add(new THREE.SphereGeometry(0.14, 12, 10), 0xc68a4f, 0, 0.13, 0).scale.set(1, 0.9, 1.25);
       for (const s of [-1, 1]) add(new THREE.SphereGeometry(0.04, 6, 5), 0xe8b48a, s * 0.08, 0.25, 0.08);
       add(new THREE.SphereGeometry(0.025, 6, 5), 0x111111, 0, 0.16, 0.18);
+      break;
+    }
+    case 'rubberduck': {
+      // a little rubber duck (like the big one in the docking bay)
+      add(new THREE.SphereGeometry(0.17, 12, 10), 0xffd93b, 0, 0.17, 0).scale.set(1, 0.82, 1.2);
+      add(new THREE.SphereGeometry(0.11, 10, 8), 0xffd93b, 0, 0.33, 0.12);
+      add(new THREE.ConeGeometry(0.045, 0.11, 8), 0xff8a1a, 0, 0.32, 0.25).rotation.x = Math.PI / 2;
+      for (const s of [-1, 1]) add(new THREE.SphereGeometry(0.02, 6, 5), 0x111111, s * 0.05, 0.36, 0.21);
       break;
     }
     case 'jelly': {

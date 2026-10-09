@@ -176,7 +176,8 @@ Every finished game is saved to `data/replays/` (the newest 500 are kept), and t
 ## Play stats and bug reports
 The game keeps two small files in `data/` next to the app on your server. Deploys never touch this folder.
 
-- **Stats:** open `https://nomorespace.online/stats` in a browser for a summary of finished games (who wins, how long games take, how each role does). Use it to spot balance problems.
+- **Dashboard:** open `https://nomorespace.online/dashboard` for a readable page: how many ships and people are online right now, crew win rate by player count (amber bars point at balance problems), games per day, a sortable table of every role (how often it's dealt, how often its team wins, how often it survives), the last 10 games, and the bug reports (paste your admin token, see below). It refreshes every 30 seconds.
+- **Stats:** the same numbers as raw JSON are at `https://nomorespace.online/stats`.
 - **Bug reports:** players can press 🐞 Report a bug. To read the reports, log in to your droplet and run:
   ```
   tail -n 20 /home/nomorespace/app/data/reports.jsonl
@@ -186,4 +187,4 @@ The game keeps two small files in `data/` next to the app on your server. Deploy
   [Service]
   Environment=NMS_ADMIN_TOKEN=pick-a-long-secret
   ```
-  then `sudo systemctl restart nomorespace` and open `https://nomorespace.online/reports?token=pick-a-long-secret`.
+  then `sudo systemctl restart nomorespace` and paste the secret into the 🐞 box on `/dashboard` (or open `https://nomorespace.online/reports?token=pick-a-long-secret`).

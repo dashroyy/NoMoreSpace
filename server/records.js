@@ -7,6 +7,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const { ROLES, teamOf } = require('./roles');
 
 const DATA_DIR = process.env.NMS_DATA_DIR || path.join(__dirname, '..', 'data');
 const STATS_FILE = path.join(DATA_DIR, 'stats.jsonl');
@@ -78,6 +79,7 @@ function statsSummary() {
   const pct = (a, b) => (b ? Math.round((a / b) * 100) : null);
   const byPlayers = {};
   const roles = {};
+  const perDay = {};
   let minutes = 0;
   let crewWins = 0;
   for (const g of games) {
@@ -90,9 +92,12 @@ function statsSummary() {
     }
     minutes += g.minutes || 0;
     for (const r of g.roles || []) {
-      roles[r] ||= { dealt: 0, survived: 0 };
+      roles[r] ||= { dealt: 0, survived: 0, wins: 0, name: ROLES[r]?.name || r, icon: ROLES[r]?.icon || '', type: ROLES[r]?.type || '' };
       roles[r].dealt += 1;
+      if (ROLES[r] && teamOf(r) === g.winner) roles[r].wins += 1;
     }
+    const day = String(g.at || '').slice(0, 10);
+    if (day) perDay[day] = (perDay[day] || 0) + 1;
     for (const r of g.survivors || []) if (roles[r]) roles[r].survived += 1;
   }
   for (const v of Object.values(byPlayers)) v.crewWinPercent = pct(v.crewWins, v.games);
@@ -103,6 +108,14 @@ function statsSummary() {
     byPlayerCount: byPlayers,
     roles,
     recent: games.slice(-10),
+    perDay: Object.fromEntries(Object.entries(perDay).sort().slice(-21)),
+    replays: (() => {
+      try {
+        return fs.readdirSync(REPLAY_DIR).length;
+      } catch {
+        return 0;
+      }
+    })(),
   };
 }
 

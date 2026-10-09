@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex" />
+    <title>Ship's Log · No More Space</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Silkscreen&family=VT323&display=swap" rel="stylesheet" />
+    <style>
+      /* The owner's dashboard: a readable view of /stats (and /reports with the admin token). */
+      :root {
+        --bg: #04050c;
+        --panel: #0b1022;
+        --line: rgba(120, 220, 255, 0.18);
+        --ink: #dff9ff;
+        --muted: #8a92b8;
+        --accent: #6cf0ff;
+        --amber: #ffb547;
+        --good: #7af0c1;
+        --evil: #c77dff;
+        --bad: #ff6b8b;
+      }
+      * { box-sizing: border-box; }
+      body { margin: 0; background: var(--bg); color: var(--ink); font: 20px/1.3 'VT323', ui-monospace, monospace; }
+      main { max-width: 1100px; margin: 0 auto; padding: 18px 16px 60px; }
+      h1, h2 { font-family: 'Silkscreen', monospace; font-weight: 400; text-transform: uppercase; letter-spacing: 0.06em; }
+      h1 { font-size: 1.3rem; color: var(--accent); margin: 0; }
+      h2 { font-size: 0.85rem; color: var(--accent); margin: 0 0 10px; }
+      header { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
+      header .when { color: var(--muted); flex: 1; }
+      button, input { font: inherit; color: inherit; }
+      button { background: rgba(108, 240, 255, 0.08); border: 1px solid var(--line); padding: 3px 12px; cursor: pointer; }
+      button:hover { border-color: var(--accent); }
+      input { background: #060a18; border: 1px solid var(--line); padding: 3px 8px; min-width: 0; }
+      .grid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); }
+      .card { background: var(--panel); border: 1px solid var(--line); padding: 12px 14px; }
+      .wide { grid-column: 1 / -1; }
+      .tiles { display: grid; gap: 8px; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); }
+      .tile { border: 1px solid var(--line); padding: 8px 10px; }
+      .tile b { display: block; font-family: 'Silkscreen', monospace; font-weight: 400; font-size: 1.5rem; color: var(--amber); }
+      .tile span { color: var(--muted); }
+      .tile.live b { color: var(--good); }
+      .hint { color: var(--muted); }
+      .bars { display: grid; gap: 4px; }
+      .bar { display: grid; grid-template-columns: 90px 1fr 110px; gap: 8px; align-items: center; white-space: nowrap; }
+      .track { position: relative; height: 18px; background: rgba(255, 255, 255, 0.06); }
+      .track i { position: absolute; inset: 0 auto 0 0; }
+      .track .half { position: absolute; left: 50%; top: -3px; bottom: -3px; border-left: 1px dashed rgba(255, 255, 255, 0.4); }
+      .ok i { background: var(--good); }
+      .off i { background: var(--amber); }
+      .cols { display: flex; align-items: flex-end; gap: 3px; height: 140px; padding-top: 16px; }
+      .col { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; min-width: 0; }
+      .col i { width: 100%; background: linear-gradient(180deg, var(--accent), #3fb8ff); min-height: 2px; }
+      .col small { font-size: 0.75rem; color: var(--muted); white-space: nowrap; }
+      .col em { font-style: normal; font-size: 0.8rem; }
+      table { width: 100%; border-collapse: collapse; }
+      th, td { text-align: left; padding: 3px 6px; border-bottom: 1px solid rgba(255, 255, 255, 0.06); }
+      th { color: var(--muted); font-weight: 400; cursor: pointer; user-select: none; white-space: nowrap; }
+      th:hover { color: var(--accent); }
+      td.n, th.n { text-align: right; }
+      td:first-child { white-space: nowrap; }
+      .crew { color: var(--accent); }
+      .infiltrators { color: var(--evil); }
+      .scroll { overflow-x: auto; }
+      .report { border-top: 1px solid var(--line); padding: 8px 0; }
+      .report pre { white-space: pre-wrap; word-break: break-word; color: var(--muted); font: 15px/1.3 ui-monospace, monospace; margin: 4px 0 0; max-height: 160px; overflow: auto; }
+      .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+      .error { color: var(--bad); }
+      @media (max-width: 560px) { .bar { grid-template-columns: 76px 1fr 90px; } body { font-size: 18px; } }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <h1>🛰️ Ship's Log</h1>
+        <span class="when" id="when">Loading…</span>
+        <button id="refresh">🔄 Refresh</button>
+        <a href="/" style="color: var(--accent)">← Back to the game</a>
+      </header>
+      <div id="app" class="grid"></div>
+    </main>
+    <script>
+      const app = document.getElementById('app');
+      const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+      const pct = (a, b) => (b ? Math.round((a / b) * 100) : null);
+      const ago = (iso) => {
+        const s = Math.max(0, (Date.now() - new Date(iso)) / 1000);
+        if (s < 90) return 'just now';
+        if (s < 5400) return `${Math.round(s / 60)} min ago`;
+        if (s < 129600) return `${Math.round(s / 3600)} h ago`;
+        return `${Math.round(s / 86400)} days ago`;
+      };
+      let roleSort = { key: 'dealt', dir: -1 };
+      let last = null;
+
+      function tile(big, label, cls = '') {
+        return `<div class="tile ${cls}"><b>${esc(big ?? '–')}</b><span>${esc(label)}</span></div>`;
+      }
+
+      // Crew win % by number of players: green when it is 40-60% (balanced), amber otherwise.
+      function balance(s) {
+        const rows = Object.entries(s.byPlayerCount).sort((a, b) => a[0] - b[0]);
+        if (!rows.length) return '<p class="hint">No finished games yet.</p>';
+        return `<div class="bars">${rows.map(([n, v]) => {
+          const p = v.crewWinPercent ?? 0;
+          const cls = v.games < 5 || (p >= 40 && p <= 60) ? 'ok' : 'off';
+          return `<div class="bar ${cls}"><span>${esc(n)} players</span><div class="track"><i style="width:${p}%"></i><span class="half"></span></div><span>${p}% <span class="hint">of ${v.games}</span></span></div>`;
+        }).join('')}</div><p class="hint">Crew wins / games. The dashed line is 50%. Amber means it may need balancing (once there are 5+ games).</p>`;
+      }
+
+      function perDay(s) {
+        const days = Object.entries(s.perDay || {});
+        if (!days.length) return '<p class="hint">No games yet.</p>';
+        const max = Math.max(...days.map(([, n]) => n));
+        const every = Math.ceil(days.length / 7); // date labels on a few bars only, so they never overlap
+        return `<div class="cols">${days.map(([d, n], i) => `<div class="col" title="${esc(d)}: ${n} games"><em>${n}</em><i style="height:${(n / max) * 100}%"></i><small>${(days.length - 1 - i) % every ? '&nbsp;' : esc(d.slice(5))}</small></div>`).join('')}</div>`;
+      }
+
+      function roles(s) {
+        const list = Object.entries(s.roles).map(([id, r]) => ({ id, ...r, win: pct(r.wins, r.dealt), live: pct(r.survived, r.dealt), team: ['saboteur', 'parasite'].includes(r.type) ? 'infiltrators' : 'crew' }));
+        if (!list.length) return '<p class="hint">No roles dealt yet.</p>';
+        const { key, dir } = roleSort;
+        list.sort((a, b) => (typeof a[key] === 'string' ? a[key].localeCompare(b[key]) : (a[key] ?? -1) - (b[key] ?? -1)) * dir);
+        const th = (k, label, n) => `<th data-sort="${k}" class="${n ? 'n' : ''}">${label}${key === k ? (dir < 0 ? ' ▾' : ' ▴') : ''}</th>`;
+        return `<div class="scroll"><table><thead><tr>${th('name', 'Role')}${th('type', 'Type')}${th('dealt', 'Dealt', 1)}${th('win', 'Team won', 1)}${th('live', 'Survived', 1)}</tr></thead><tbody>${list.map((r) =>
+          `<tr><td class="${r.team}">${esc(r.icon)} ${esc(r.name)}</td><td class="hint">${esc(r.type)}</td><td class="n">${r.dealt}</td><td class="n">${r.win ?? '–'}%</td><td class="n">${r.live ?? '–'}%</td></tr>`).join('')}</tbody></table></div>
+          <p class="hint">"Team won": how often that role's team won the game. Click a heading to sort.</p>`;
+      }
+
+      function recent(s) {
+        if (!s.recent.length) return '<p class="hint">No games yet.</p>';
+        return `<div class="scroll"><table><thead><tr><th>When</th><th class="n">Players</th><th>Mode</th><th>Winner</th><th class="n">Days</th><th class="n">Minutes</th></tr></thead><tbody>${s.recent.slice().reverse().map((g) =>
+          `<tr><td>${esc(ago(g.at))}</td><td class="n">${g.players}</td><td>${esc(g.mode || '')}</td><td class="${esc(g.winner)}">${g.winner === 'crew' ? '😇 Crew' : g.winner ? '😈 Evil' : '–'}</td><td class="n">${g.days ?? '–'}</td><td class="n">${g.minutes ?? '–'}</td></tr>`).join('')}</tbody></table></div>`;
+      }
+
+      function reportsCard() {
+        return `<section class="card wide"><h2>🐞 Bug reports</h2>
+          <div class="row"><input id="token" type="password" placeholder="Admin token (NMS_ADMIN_TOKEN)" autocomplete="off" /><button id="load-reports">Show reports</button></div>
+          <p class="hint">The token stays in this tab only. Set NMS_ADMIN_TOKEN on the server to turn this on.</p>
+          <div id="reports"></div></section>`;
+      }
+
+      function render(s) {
+        last = s;
+        const token = document.getElementById('token')?.value || '';
+        const reportsHtml = document.getElementById('reports')?.innerHTML || '';
+        app.innerHTML = `
+          <section class="card wide"><h2>Right now</h2><div class="tiles">
+            ${tile(s.live?.ships ?? 0, 'ships open', 'live')}${tile(s.live?.people ?? 0, 'people online', 'live')}${tile(s.live?.playing ?? 0, 'games in progress', 'live')}
+            ${tile(s.games, 'games finished')}${tile(s.crewWinPercent == null ? '–' : `${s.crewWinPercent}%`, 'crew win rate')}${tile(s.averageMinutes ?? '–', 'average minutes')}${tile(s.replays ?? 0, 'replays saved')}
+          </div></section>
+          <section class="card"><h2>⚖️ Crew wins by player count</h2>${balance(s)}</section>
+          <section class="card"><h2>📅 Games per day</h2>${perDay(s)}</section>
+          <section class="card wide"><h2>🎭 Roles</h2>${roles(s)}</section>
+          <section class="card wide"><h2>🕹️ Recent games</h2>${recent(s)}</section>
+          ${reportsCard()}`;
+        document.getElementById('token').value = token;
+        document.getElementById('reports').innerHTML = reportsHtml;
+        document.getElementById('load-reports').onclick = loadReports;
+        document.getElementById('token').onkeydown = (e) => e.key === 'Enter' && loadReports();
+        for (const th of app.querySelectorAll('th[data-sort]')) {
+          th.onclick = () => {
+            const k = th.dataset.sort;
+            roleSort = { key: k, dir: roleSort.key === k ? -roleSort.dir : k === 'name' || k === 'type' ? 1 : -1 };
+            render(last);
+          };
+        }
+        document.getElementById('when').textContent = `Updated ${new Date().toLocaleTimeString()} · refreshes every 30 s`;
+      }
+
+      async function load() {
+        try {
+          const res = await fetch('/stats', { cache: 'no-store' });
+          render(await res.json());
+        } catch (e) {
+          document.getElementById('when').innerHTML = `<span class="error">Could not load /stats: ${esc(e.message)}</span>`;
+        }
+      }
+
+      async function loadReports() {
+        const box = document.getElementById('reports');
+        const token = document.getElementById('token').value.trim();
+        if (!token) return void (box.innerHTML = '<p class="error">Type the admin token first.</p>');
+        try {
+          sessionStorage.setItem('nms-admin-token', token);
+        } catch {}
+        box.innerHTML = '<p class="hint">Loading…</p>';
+        try {
+          const res = await fetch('/reports', { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' });
+          if (!res.ok) return void (box.innerHTML = `<p class="error">${esc(await res.text())}</p>`);
+          const list = (await res.json()).slice().reverse();
+          box.innerHTML = list.length
+            ? `<p class="hint">${list.length} reports, newest first.</p>${list.map((r) => `<div class="report"><b>${esc(ago(r.at))}</b> <span class="hint">${r.game ? `ship ${esc(r.game.code)}, ${esc(r.game.phase)}, day ${esc(r.game.day)}, ${esc(r.game.players)} players` : 'not in a game'}</span><div>${esc(r.text)}</div>${r.info || r.errors?.length ? `<pre>${esc([r.info, ...(r.errors || [])].filter(Boolean).join('\n'))}</pre>` : ''}</div>`).join('')}`
+            : '<p class="hint">No bug reports. 🎉</p>';
+        } catch (e) {
+          box.innerHTML = `<p class="error">${esc(e.message)}</p>`;
+        }
+      }
+
+      document.getElementById('refresh').onclick = load;
+      load().then(() => {
+        try {
+          const saved = sessionStorage.getItem('nms-admin-token');
+          if (saved) {
+            document.getElementById('token').value = saved;
+            loadReports();
+          }
+        } catch {}
+      });
+      setInterval(load, 30000);
+    </script>
+  </body>
+</html>

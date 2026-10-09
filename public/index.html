@@ -53,6 +53,8 @@
         <button id="home-wiki" class="wiki-cta">📖 New here? Read the Ship's Wiki</button>
         <div class="home-buttons">
           <button id="home-practice" class="small">🎓 Practice with robots</button>
+          <button id="home-public" class="small">🌐 Public ships</button>
+          <button id="home-profile" class="small ghost">👤 Profile</button>
           <button id="home-settings" class="small ghost">⚙️ Settings</button>
         </div>
         <div class="home-audio">
@@ -103,6 +105,7 @@
         <div id="lobby-wait" class="hint"></div>
         <div id="lobby-season" hidden></div>
         <button id="lobby-wiki" class="small">📖 Ship's Wiki: learn the roles</button>
+        <button id="lobby-profile" class="small ghost">👤 Your profile</button>
         <button id="lobby-leave" class="small ghost">Leave ship</button>
       </div>
     </section>
@@ -156,6 +159,12 @@
       </aside>
 
       <canvas id="minimap" class="minimap" width="180" height="150" title="Click a room to teleport there"></canvas>
+      <button id="map-expand" class="map-expand small" title="Full map (Tab)">⛶</button>
+      <div id="bigmap" class="bigmap card" hidden>
+        <div class="bigmap-head"><h3>🗺️ Station map</h3><span class="hint">Click a room to teleport · Tab or Esc to close</span><button id="bigmap-close" class="small ghost">✕</button></div>
+        <canvas id="bigmap-canvas" width="1040" height="860"></canvas>
+      </div>
+      <div id="captions" class="captions" aria-live="polite"></div>
 
       <div id="use-prompt" class="use-prompt" hidden></div>
 
