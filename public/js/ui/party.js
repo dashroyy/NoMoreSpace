@@ -226,8 +226,8 @@ function showRecap(state) {
   card.classList.remove('out');
   clearTimeout(showRecap.t);
   clearTimeout(showRecap.t2);
-  showRecap.t = setTimeout(() => card.classList.add('out'), 7500);
-  showRecap.t2 = setTimeout(() => (card.hidden = true), 8200);
+  showRecap.t = setTimeout(() => card.classList.add('out'), 20000);
+  showRecap.t2 = setTimeout(() => (card.hidden = true), 20700);
 }
 
 // ---------------------------------------------------------------------------

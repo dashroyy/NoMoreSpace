@@ -333,6 +333,9 @@ function runBots(room, now, api, dt = 0.25) {
         const living = g.players.filter((t) => t.alive && t.id !== p.id);
         act(() => g.setDeathGuess(p.id, Math.random() < 0.2 || !living.length ? 'none' : pick(living).id));
       }
+      // done for the night: ready to wake up (once their choice is in)
+      const chosen = !prompt || g.choices[p.id] || g.draft;
+      if (chosen && !g.ready.has(p.id) && now > b.readyAt) act(() => g.setReady(p.id, true));
       continue;
     }
 
@@ -340,6 +343,8 @@ function runBots(room, now, api, dt = 0.25) {
       b.said.dawn = true;
       api.say(p, pick(SAY.dawn));
     }
+    // robots read the dawn story at a human's pace, then are ready for the day
+    if (g.phase === 'dawn' && !g.ready.has(p.id) && now > b.readyAt + 8000 * tempo) act(() => g.setReady(p.id, true));
 
     // claims and sharing information at the emergency meeting
     if (g.phase === 'meeting' && p.alive && now > b.actAt && !b.said.meeting) {

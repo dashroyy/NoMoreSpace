@@ -569,10 +569,60 @@ test('when every connected player is ready, the day moves on early', () => {
   p.slice(0, 5).forEach((x) => g.setReady(x.id, true));
   g.nominate(p[0].id, p[1].id, 4000);
   assert.strictEqual(g.ready.size, 0, 'a nomination is worth talking about');
-  assert.throws(() => {
-    g.beginNight(5000);
-    g.setReady(p[0].id, true);
-  }, /Nothing to hurry/);
+  g.nomination = null;
+  g.phase = 'dusk';
+  assert.throws(() => g.setReady(p[0].id, true), /Nothing to hurry/);
+});
+
+test('the night only ends early when everyone has chosen AND is ready; the timer is the backstop', () => {
+  const { g, p, role } = setup(['parasite', 'hacker', 'engineer', 'comms', 'scanner', 'medic', 'marine']);
+  g.beginNight(1000);
+  const early = 1000 + g.dur('nightMin') + 1;
+  for (const [pid] of Object.entries(g.prompts)) g.choices[pid] = g.prompts[pid].choose === 2 ? [p[0].id, p[1].id] : [p[1].id];
+  assert.ok(g.allChosen());
+  assert.strictEqual(g.tick(early), false, 'everyone chose, but nobody said they were ready: the night goes on');
+  p.slice(0, 6).forEach((x) => g.setReady(x.id, true));
+  assert.strictEqual(g.tick(early), false, 'one player is still painting');
+  g.setReady(p[6].id, true);
+  assert.strictEqual(g.tick(early), true, 'all ready: dawn comes early');
+  assert.ok(g.draft);
+
+  // and if somebody never presses Ready, the (longer) timer still ends the night
+  const second = setup(['parasite', 'hacker', 'engineer', 'comms', 'scanner', 'medic', 'marine']);
+  second.g.beginNight(1000);
+  assert.ok(second.g.dur('nightMax') >= 150_000, 'a roomy night');
+  assert.strictEqual(second.g.tick(1000 + second.g.dur('nightMax') - 1), false);
+  assert.strictEqual(second.g.tick(1000 + second.g.dur('nightMax') + 1), true);
+});
+
+test('dawn lasts long enough to read, and everyone ready skips the rest of it', () => {
+  const { g, p } = setup(['parasite', 'hacker', 'engineer', 'comms', 'scanner', 'medic', 'marine']);
+  g.beginNight(1000);
+  g.resolveNight(1000);
+  g.applyDraft(2000);
+  assert.strictEqual(g.phase, 'dawn');
+  assert.ok(g.dur('dawn') >= 24_000, 'at least 24 seconds at dawn');
+  p.slice(0, 6).forEach((x) => g.setReady(x.id, true));
+  assert.strictEqual(g.tick(3000), false);
+  g.setReady(p[6].id, true);
+  assert.strictEqual(g.tick(3000), true);
+  assert.strictEqual(g.phase, 'roam');
+});
+
+test('a drawing that arrives just as the night ends is still pinned up; much later it is refused', () => {
+  const { g, p } = setup(['parasite', 'hacker', 'engineer', 'comms', 'scanner', 'medic', 'marine']);
+  const png = 'data:image/png;base64,AAAA';
+  g.beginNight(1000);
+  g.submitDrawing(p[0].id, png, false, 1500);
+  assert.strictEqual(g.drawings[0].published, false, 'drawn at night: shown at dawn');
+  g.resolveNight(1000);
+  g.applyDraft(2000);
+  assert.ok(g.drawings[0].published);
+  const late = g.submitDrawing(p[1].id, png, true, 2500);
+  assert.ok(late.published, 'late but within the grace period: straight onto the wall');
+  assert.throws(() => g.submitDrawing(p[2].id, png, false, 2000 + 20_000), /only draw at night/);
+  g.beginRoam(2000);
+  assert.throws(() => g.submitDrawing(p[2].id, png, false, 2600), /only draw at night/, 'not once the day has begun');
 });
 
 test('Captain mode: readiness does not skip ahead unless auto-advance is on', () => {

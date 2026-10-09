@@ -11,7 +11,8 @@ import { claimTag, updateClaimButton } from './social.js';
 import { badgeFor } from './notebook.js';
 
 const DAY_PHASES = ['roam', 'meeting', 'nominations'];
-const READY_LABEL = { roam: 'Ready for the meeting', meeting: 'Ready for nominations', nominations: 'No more nominations' };
+const READY_PHASES = ['dawn', ...DAY_PHASES]; // (the night has its own Ready button, in the night panel)
+const READY_LABEL = { dawn: 'Ready for the day', roam: 'Ready for the meeting', meeting: 'Ready for nominations', nominations: 'No more nominations' };
 
 const PHASE_NAMES = {
   lobby: 'Docked', night: 'Night', dawn: 'Dawn', roam: 'Explore', meeting: 'Meeting', nominations: 'Nominations', lastwords: 'Last words', dusk: 'Dusk', ended: 'Mission over',
@@ -139,7 +140,7 @@ export function renderHud(state) {
   updateClaimButton(state);
   // everyone ready = skip the rest of this part of the day
   const readyBtn = $('btn-ready');
-  readyBtn.hidden = !you.id || you.isCaptain || !DAY_PHASES.includes(state.phase) || !!nom;
+  readyBtn.hidden = !you.id || you.isCaptain || !READY_PHASES.includes(state.phase) || !!nom;
   if (!readyBtn.hidden) {
     // players away from the keyboard count as ready
     const count = `${new Set([...(state.ready || []), ...(state.afk || [])]).size}/${state.readyNeeded || 0}`;
@@ -210,7 +211,7 @@ export function renderRing() {
       p.ghostVote ? el('span', { className: 'ghostvote', title: 'Has a ghost vote' }) : null,
       badge ? el('span', { className: `nb-badge ${badge.trust}`, title: badge.title }, badge.text) : null,
       state.afk?.includes(p.id) ? el('span', { className: 'afk-badge', title: 'Away from keyboard (counts as ready)' }, '💤')
-        : DAY_PHASES.includes(state.phase) && state.ready?.includes(p.id) && !nom ? el('span', { className: 'ready-tick', title: 'Ready to move on' }, '✓') : null,
+        : READY_PHASES.includes(state.phase) && state.ready?.includes(p.id) && !nom ? el('span', { className: 'ready-tick', title: 'Ready to move on' }, '✓') : null,
     );
     const seat = el('button', { className: cls.join(' '), dataset: { id: p.id }, style: { left: `${x}px`, top: `${y}px` }, title: `${p.name}${p.bio ? ` (is ${p.bio})` : ''}${p.alive ? '' : ' (dead)'}${p.nominated ? ' · nominated today' : ''}${p.nominatedSomeone ? ' · has nominated' : ''}` },
       nom && nom.hands[p.id] && (nom.locked[p.id] || p.id === you.id) ? el('span', { className: 'hand' }, '✋') : null,

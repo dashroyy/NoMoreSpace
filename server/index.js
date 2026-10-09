@@ -465,7 +465,7 @@ io.on('connection', (socket) => {
   on('shoot', ({ target }) => game().gunnerShot(me, target));
   on('task', ({ task }) => game().completeTask(me, task));
   on('drawing', ({ data, signed }) => {
-    game().submitDrawing(me, data, signed);
+    game().submitDrawing(me, data, signed, Date.now());
   });
 
   on('emote', ({ emote }) => {

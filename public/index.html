@@ -222,7 +222,7 @@
         <div class="card night-draw">
           <div class="draw-head">
             <h3>🎨 Paint the ship walls</h3>
-            <span class="hint">Your drawing appears somewhere on the ship tomorrow.</span>
+            <span class="hint">Your drawing appears somewhere on the ship tomorrow. Whatever you've drawn is pinned up for you when the night ends.</span>
           </div>
           <canvas id="draw-canvas" width="320" height="240"></canvas>
           <div class="draw-tools" id="draw-tools"></div>
@@ -245,6 +245,11 @@
           <div id="evil-log" class="chat-log"></div>
           <form id="evil-form" class="chat-form"><input id="evil-input" maxlength="200" placeholder="Whisper to your team…" autocomplete="off" /></form>
         </div>
+      </div>
+      <!-- the night ends when everyone is ready (or when the timer runs out) -->
+      <div class="night-footer" id="night-footer">
+        <button id="night-ready" class="primary">🌙 I'm done: ready for dawn</button>
+        <span class="hint" id="night-ready-note"></span>
       </div>
     </section>
 

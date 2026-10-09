@@ -342,6 +342,7 @@ export class World {
       st.screenMat.emissiveIntensity = done ? 0.2 : 1.4;
       st.ring.visible = !done;
       st.icon.visible = !done;
+      st.beam.visible = !done;
     }
   }
 

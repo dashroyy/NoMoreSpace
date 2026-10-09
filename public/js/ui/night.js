@@ -1,6 +1,6 @@
 // Night: the action card for roles that wake, the drawing pad for everyone.
-import { $, el, clear, problem } from '../util.js';
-import { store, send, role, suitHex } from '../store.js';
+import { $, el, clear, problem, toast, formatTime } from '../util.js';
+import { store, send, role, suitHex, serverNow } from '../store.js';
 import { sfx } from '../audio.js';
 
 const INSTRUCTIONS = {
@@ -14,6 +14,56 @@ const INSTRUCTIONS = {
 
 let chosen = [];
 let lastNight = null;
+let dirty = false; // something has been drawn that is not pinned up yet
+let lastAutoPin = 0;
+
+// ---------------------------------------------------------------------------
+// "I'm done": the night ends when everyone is ready (or when the timer runs out)
+// ---------------------------------------------------------------------------
+
+function renderReady(state) {
+  const you = state.you;
+  const btn = $('night-ready');
+  const needsChoice = !!(you.alive && you.prompt && !you.prompt.done) || !!(you.blackbox && !you.blackbox.done);
+  const count = `${new Set([...(state.ready || []), ...(state.afk || [])]).size}/${state.readyNeeded || 0}`;
+  btn.disabled = needsChoice;
+  btn.classList.toggle('on', !!you.ready);
+  btn.textContent = needsChoice ? '🌙 Make your choice first' : you.ready ? `✓ Ready for dawn ${count} (tap to wait)` : `🌙 I'm done: ready for dawn ${count}`;
+  updateNightNote();
+}
+
+function updateNightNote() {
+  const state = store.state;
+  const note = $('night-ready-note');
+  if (!note || !state || state.phase !== 'night') return;
+  const left = state.phaseEndsAt ? Math.max(0, state.phaseEndsAt - serverNow()) : null;
+  const wait = left == null ? '' : ` Dawn comes by itself in ${formatTime(left)}.`;
+  note.textContent = state.you?.ready ? `Waiting for everyone else.${wait}` : `When everyone is ready, dawn comes early.${wait}`;
+}
+
+// Pin whatever is on the canvas. auto: nobody pressed the button (the night is ending, or they pressed Ready).
+function pinDrawing(auto = false) {
+  const canvas = $('draw-canvas');
+  if (!canvas || !dirty) return Promise.resolve(false);
+  dirty = false;
+  return send('drawing', { data: canvas.toDataURL('image/png'), signed: $('draw-signed').checked })
+    .then(() => {
+      sfx('chime');
+      $('draw-send').textContent = 'Pinned! (send again to replace)';
+      if (auto) toast('🎨 Your drawing was pinned to the wall for you.', 'info', 4000);
+      return true;
+    })
+    .catch((e) => {
+      dirty = true; // try again
+      if (!auto) problem(e.message);
+      return false;
+    });
+}
+
+// The night just ended: a drawing still not pinned is sent straight away (the server takes it for a few seconds more).
+export function flushDrawing() {
+  return pinDrawing(true);
+}
 
 function nightNote(r, state) {
   if (!r) return 'Sleep tight.';
@@ -33,6 +83,7 @@ export function renderNight(state) {
     resetDrawing();
   }
   if (!you || you.isCaptain) return;
+  renderReady(state);
   const r = role(you.role);
 
   if (you.blackbox && !you.blackbox.done) {
@@ -121,6 +172,7 @@ export function initDrawing() {
   };
   canvas.addEventListener('pointerdown', (e) => {
     drawing = true;
+    dirty = true;
     last = pos(e);
     canvas.setPointerCapture(e.pointerId);
     g.fillStyle = pen.color;
@@ -146,19 +198,33 @@ export function initDrawing() {
   canvas.addEventListener('pointercancel', stop);
   $('draw-clear').addEventListener('click', resetDrawing);
   $('draw-send').addEventListener('click', () => {
-    const data = canvas.toDataURL('image/png');
-    send('drawing', { data, signed: $('draw-signed').checked })
-      .then(() => {
-        sfx('chime');
-        $('draw-send').textContent = 'Pinned! (send again to replace)';
-      })
-      .catch((e) => problem(e.message));
+    dirty = true;
+    pinDrawing(false);
   });
+
+  // Ready: pin the drawing first (readying may be the very thing that ends the night)
+  $('night-ready').addEventListener('click', async () => {
+    const up = !store.state?.you?.ready;
+    if (up) await pinDrawing(true);
+    send('ready', { on: up }).then(() => sfx(up ? 'lock' : 'click')).catch((e) => problem(e.message));
+  });
+
+  // In the last few seconds, anyone who has started drawing gets their picture pinned automatically
+  setInterval(() => {
+    const state = store.state;
+    updateNightNote();
+    if (!dirty || state?.phase !== 'night' || !state.phaseEndsAt || state.paused) return;
+    if (state.phaseEndsAt - serverNow() < 6000 && Date.now() - lastAutoPin > 2000) {
+      lastAutoPin = Date.now();
+      pinDrawing(true);
+    }
+  }, 500);
 }
 
 function resetDrawing() {
   const canvas = $('draw-canvas');
   if (!canvas) return;
+  dirty = false;
   const g = canvas.getContext('2d');
   g.fillStyle = BG;
   g.fillRect(0, 0, canvas.width, canvas.height);

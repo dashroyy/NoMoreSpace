@@ -234,9 +234,13 @@ export function buildShip(scene, space) {
     const icon = makeTextSprite('🛠️', { size: 64, scale: 0.008 });
     icon.position.y = 1.7;
     g.add(icon);
+    // a faint column of light in the room's colour, so an unfinished console is easy to spot from across the room
+    const beam = add(g, new THREE.CylinderGeometry(0.4, 0.75, 3.6, 16, 1, true), new THREE.MeshBasicMaterial({
+      color: room?.light || 0x6cf0ff, transparent: true, opacity: 0.17, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide,
+    }), 0, 1.8, 0);
     g.userData.dynamic = true;
     ship.add(g);
-    stations[taskId] = { group: g, ring, screenMat, icon, room: room?.id };
+    stations[taskId] = { group: g, ring, screenMat, icon, beam, room: room?.id };
   }
 
   // ---------- bridge: table, hologram, seats ----------

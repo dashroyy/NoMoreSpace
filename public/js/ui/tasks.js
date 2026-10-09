@@ -47,40 +47,50 @@ function loop(fn) {
 }
 
 const GAMES = {
-  // Engine: stop the needle in the green zone 3 times.
+  // Engine: stop the needle in the green zone 3 times. (Friendly: a wide zone,
+  // a slow needle, and a miss only costs you one step, not all of them.)
   thrusters(area, status, done, fail) {
     const [c, g] = canvasGame(area, 420, 140);
+    const HALF = 0.13; // the green zone is a quarter of the gauge wide
     let x = 0;
     let dir = 1;
     let hits = 0;
     let zone = 0.6;
+    let flash = 0; // >0 flashes the gauge green, <0 red, fading to 0
     const btn = el('button', { className: 'primary big', onclick: press }, 'FIRE ⏎');
     area.append(btn);
-    status.textContent = 'Stop the needle in the green zone. 3 times.';
+    status.textContent = 'Press FIRE (or Enter / Space) when the needle is in the green zone. 3 times.';
     function press() {
-      if (Math.abs(x - zone) < 0.07) {
+      if (Math.abs(x - zone) < HALF) {
         hits++;
+        flash = 1;
         sfx('blip');
-        zone = 0.2 + Math.random() * 0.6;
+        // the next zone is somewhere else, so it is never already under the needle
+        do zone = 0.2 + Math.random() * 0.6;
+        while (Math.abs(zone - x) < 0.25);
         if (hits >= 3) done();
+        else status.textContent = hits === 2 ? 'One more!' : 'Nice! Two more.';
       } else {
-        hits = 0;
-        fail('Missed! The thrusters cough. Start again.');
+        hits = Math.max(0, hits - 1);
+        flash = -1;
+        fail(hits ? 'Just missed! Wait for the green and try again.' : 'Missed! Wait for the green and try again.');
       }
     }
     const key = (e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), press());
     window.addEventListener('keydown', key);
     const stop = loop((dt) => {
-      x += dir * dt * (0.7 + hits * 0.35);
+      x += dir * dt * (0.4 + hits * 0.08);
       if (x > 1 || x < 0) dir *= -1;
       x = Math.max(0, Math.min(1, x));
-      g.fillStyle = '#081020';
+      flash -= Math.sign(flash) * dt * 2.5;
+      if (Math.abs(flash) < 0.05) flash = 0;
+      g.fillStyle = flash > 0 ? `rgb(8, ${16 + 50 * flash | 0}, 32)` : flash < 0 ? `rgb(${16 + 60 * -flash | 0}, 16, 32)` : '#081020';
       g.fillRect(0, 0, 420, 140);
-      g.fillStyle = 'rgba(80,255,140,0.35)';
-      g.fillRect(20 + (zone - 0.07) * 380, 30, 0.14 * 380, 80);
+      g.fillStyle = 'rgba(80,255,140,0.45)';
+      g.fillRect(20 + (zone - HALF) * 380, 30, HALF * 2 * 380, 80);
       g.strokeStyle = '#6cf0ff';
       g.strokeRect(20, 30, 380, 80);
-      g.fillStyle = '#ff7a3a';
+      g.fillStyle = Math.abs(x - zone) < HALF ? '#ffffff' : '#ff7a3a'; // the needle lights up when it is in the zone
       g.fillRect(20 + x * 380 - 3, 20, 6, 100);
       g.fillStyle = '#cfd6ff';
       g.font = '20px VT323, monospace';

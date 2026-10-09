@@ -268,3 +268,10 @@ input[type='range'] { flex: 1; padding: 0; height: 22px; accent-color: var(--amb
 .ship-main { flex: 1; min-width: 0; }
 .ship-main b { margin-right: 8px; }
 .ship-main .code { font-family: var(--font-title); font-size: 0.75rem; color: var(--accent); letter-spacing: 0.1em; }
+
+/* ---------- Night: the "I'm done" bar (the night ends when everyone is ready) ---------- */
+.night-footer { position: sticky; bottom: 0; z-index: 2; display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 8px 16px; max-width: 1100px; margin: 18px auto 0; padding: 10px 14px; background: rgba(6, 4, 22, 0.94); border: 1px solid rgba(185, 164, 255, 0.45); }
+.night-footer button { min-width: 250px; }
+.night-footer button.on { border-color: var(--good); }
+.night-footer .hint { text-align: center; }
+@media (max-width: 560px) { .night-footer button { min-width: 0; width: 100%; } }

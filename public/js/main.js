@@ -7,7 +7,7 @@ import { initChat, addChat, updateChatVisibility, clearChat, systemLine } from '
 import { initModal, openRoleCard, refreshRoleCard } from './ui/rolecard.js';
 import { initHud, renderHud, setUsePrompt, phaseBanner } from './ui/hud.js';
 import { initLobby, renderLobby, resetLobbyPicks } from './ui/lobby.js';
-import { initDrawing, renderNight } from './ui/night.js';
+import { initDrawing, renderNight, flushDrawing } from './ui/night.js';
 import { openTask } from './ui/tasks.js';
 import { initCommand, renderCommand } from './ui/command.js';
 import { initRooms } from './ui/rooms.js';
@@ -298,6 +298,7 @@ function onPhaseChange(state, prev, world, reveal) {
       hideStory();
       break;
     case 'dawn': {
+      flushDrawing(); // a picture still being drawn as the night ended
       sfx('dawn');
       // every night the ship drifts closer to the black hole
       world.rumble(1.8);
@@ -306,7 +307,7 @@ function onPhaseChange(state, prev, world, reveal) {
       const dawn = state.dawn;
       if (dawn) {
         const names = dawn.deaths.map((d) => player(d.id)?.name).filter(Boolean);
-        showStory(dawn.story, names.map((n) => `💀 ${n}`), 4000 + dawn.story.length * 45);
+        showStory(dawn.story, names.map((n) => `💀 ${n}`), 9000 + dawn.story.length * 60); // up for most of the dawn
         if (dawn.deaths.length) {
           setTimeout(() => sfx('death'), 1200);
           world.playDeaths(dawn.deaths);
@@ -320,6 +321,7 @@ function onPhaseChange(state, prev, world, reveal) {
       break;
     }
     case 'roam':
+      hideStory(); // (the dawn story is still up if everyone was ready early)
       sfx('chime');
       phaseBanner('🔦 Explore the ship', 'Press M (🚀 Rooms) to teleport. Only people in your room hear you.', 5000);
       systemLine('🔦 Explore time! Press M or tap 🚀 Rooms to teleport into a room. Only people in the same room can read your chat, so meet up with someone for a private talk.');
@@ -440,7 +442,7 @@ function showStory(text, chips = [], ms = 8000, author = null, read = true) {
   clear($('story-deaths'), ...chips.map((c) => el('span', {}, c)));
   $('story').hidden = false;
   clearTimeout(showStory.t);
-  showStory.t = setTimeout(hideStory, Math.min(20000, ms));
+  showStory.t = setTimeout(hideStory, Math.min(28000, ms));
 }
 
 function hideStory() {

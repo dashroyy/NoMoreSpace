@@ -13,6 +13,10 @@ const cosmetics = require('./cosmetics');
 const { TASKS } = require('./tasks');
 
 const DAY_PHASES = ['roam', 'meeting', 'nominations'];
+// Ready buttons also work at night (to end it) and at dawn (to skip the story).
+const READY_PHASES = ['night', 'dawn', ...DAY_PHASES];
+// A drawing that is still being sent as the night ends is still pinned up if it arrives within this long.
+const DRAWING_GRACE_MS = 8000;
 const TARGET_RULE = { hacker: 'alive', jester: 'alive', medic: 'alive', parasite: 'alive', scanner: 'any', droid: 'any', blackbox: 'any' };
 const DEATH_ANIMS = ['airlock', ...st.NIGHT_ANIMS, 'fainted', 'shot'];
 const HAUNTS = ['flicker', 'crate', 'cackle']; // a ghost's harmless pranks
@@ -224,10 +228,10 @@ class Game {
   dur(kind) {
     const alive = this.aliveCount();
     const seconds = {
-      nightMin: 40,
-      nightMax: 110,
+      nightMin: 10, // the earliest everyone-ready can end the night
+      nightMax: 150, // the night ends by itself after this, ready or not
       blackbox: 40,
-      dawn: 10 + 4 * (this.dawn?.deaths.length || 0),
+      dawn: 24 + 6 * (this.dawn?.deaths.length || 0), // time to read the story, watch the deaths and see the recap
       roam: clamp(alive * 25, 100, 360) + (this.day === 1 ? 90 : 0),
       meeting: clamp(alive * 12, 60, 180),
       nominations: clamp(alive * 30, 150, 420),
@@ -1369,7 +1373,7 @@ class Game {
   // "any more nominations?". When everyone still connected agrees, the ship
   // skips the rest of that part of the day (autopilot, or a Captain with auto-advance on).
   setReady(pid, on) {
-    if (!DAY_PHASES.includes(this.phase)) throw new Error('Nothing to hurry along right now.');
+    if (!READY_PHASES.includes(this.phase)) throw new Error('Nothing to hurry along right now.');
     if (!this.get(pid)) throw new Error('Only players can do that.');
     if (on) this.ready.add(pid);
     else this.ready.delete(pid);
@@ -1626,14 +1630,16 @@ class Game {
     return { charge: this.charge, needed: this.chargeNeeded() };
   }
 
-  submitDrawing(pid, data, signed) {
-    if (this.phase !== 'night') throw new Error('You can only draw at night.');
+  submitDrawing(pid, data, signed, now = Date.now()) {
+    // a drawing the player's screen sent as the night ended is still pinned up (straight onto the wall)
+    const late = this.phase === 'dawn' && this.dawn?.night === this.night && now - this.phaseStartedAt < DRAWING_GRACE_MS;
+    if (this.phase !== 'night' && !late) throw new Error('You can only draw at night.');
     if (!this.get(pid)) throw new Error('Not on this ship.');
     if (typeof data !== 'string' || !data.startsWith('data:image/png;base64,') || data.length > 200_000) {
       throw new Error('That drawing is too big.');
     }
     this.drawings = this.drawings.filter((d) => d.author !== pid);
-    const drawing = { id: randomId(6), author: pid, data, signed: !!signed, night: this.night, published: false };
+    const drawing = { id: randomId(6), author: pid, data, signed: !!signed, night: this.night, published: late };
     this.drawings.push(drawing);
     if (this.drawings.length > 15) this.drawings.shift();
     return drawing;
@@ -1808,7 +1814,7 @@ class Game {
       case 'night': {
         if (!this.draft) {
           const minDone = now >= this.phaseStartedAt + this.dur('nightMin');
-          if (due || (auto && minDone && this.allChosen())) {
+          if (due || (auto && minDone && this.allChosen() && this.everyoneReady())) {
             this.resolveNight(now);
             return true;
           }
@@ -1826,7 +1832,7 @@ class Game {
         return false;
       }
       case 'dawn':
-        if (!due) return false;
+        if (!(due || (auto && this.everyoneReady()))) return false;
         if (this.winner) this.end(now);
         else this.beginRoam(now);
         return true;

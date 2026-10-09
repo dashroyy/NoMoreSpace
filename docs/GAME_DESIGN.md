@@ -151,18 +151,20 @@ Everyone "sleeps" and the 3D ship goes dark. In this order:
 
 Players with an ability choose targets on their screen. If they don't choose in time, ARIA chooses for them.
 
-**Nobody is bored at night.** Everyone gets a **drawing pad**. Pictures appear on easels around the ship the next morning (anonymous unless you sign them). Infiltrators who know each other also get a **secret night chat**.
+**Nobody is bored at night.** Everyone gets a **drawing pad**. Pictures appear on easels around the ship the next morning (anonymous unless you sign them). Infiltrators who know each other also get a **secret night chat**. Anything you have started drawing is **pinned up for you automatically** when the night ends (in the last 6 seconds, when you press Ready, and even if it arrives just after dawn begins), so nothing is lost.
+
+**The night ends when everyone is ready.** Everyone has a **🌙 I'm done: ready for dawn** button under the night panel (it shows how many are ready). Dawn comes early once everyone has made their choice and is ready; otherwise it comes by itself after 2½ minutes. Robots press it for themselves, and players who are away count as ready, so nobody can hold the game up for long.
 
 ### ☀️ Day
 | Part | What happens | Default length |
 |---|---|---|
-| **Dawn** | The Captain's (or ARIA's) story of the night appears in a **cloud bubble**; deaths play their **death animations** at the bridge table | ~10 s + 4 s per death |
+| **Dawn** | The Captain's (or ARIA's) story of the night appears in a **cloud bubble** (it stays up for most of the dawn), with the "Previously on…" recap; deaths play their **death animations** at the bridge table. A **Ready for the day** button lets everyone skip ahead once they have read it | ~24 s + 6 s per death |
 | **Explore** | Walk the ship. **Proximity chat** (text and voice): only players in the same room (or within a few steps; in corridors only distance counts) hear you, which recreates BotC's private conversations. Press **M** / tap **🚀 Rooms** (or click a room on the map) to **teleport** into any room; the list shows who is in each room, and a line above the chat says exactly who can hear you. Do **tasks**, look for **clues**, find the **drawings** | 25 s per living player (+90 s on day 1) |
 | **Emergency meeting** | Everyone's pulled back to their seats on the bridge. Open discussion | 12 s per living player |
 | **Nominations** | Press **☝️ Nominate** (or click a seat) and pick a player. The **nominator accuses (20 s)**, the **nominee defends (20 s)**, then **everyone votes at once (15 s)**, and the **vote clock** sweeps round the table revealing each vote | 30 s per living player |
 | **Dusk** | The player "on the block" is **airlocked** | ~9 s |
 
-**Ready to move on:** while exploring, in the meeting and during nominations (between votes), everyone has a **⏭️ Ready** button. When every connected player is ready, the ship moves on without waiting for the timer, like a Storyteller asking "any more nominations?". A new nomination resets everyone's readiness. In Captain mode the Command Station shows who is ready, and readiness only skips ahead when auto-advance is on.
+**Ready to move on:** at dawn, while exploring, in the meeting and during nominations (between votes), everyone has a **⏭️ Ready** button. When every connected player is ready, the ship moves on without waiting for the timer, like a Storyteller asking "any more nominations?". A new nomination resets everyone's readiness. In Captain mode the Command Station shows who is ready, and readiness only skips ahead when auto-advance is on.
 
 ### Nominations & voting (BotC rules, built for playing online)
 - Each *living* player may nominate **once per day**; each player may be nominated **once per day**.
@@ -215,7 +217,7 @@ There are 11 rooms, each with a task console and a quick minigame:
 
 | Room | Task |
 |---|---|
-| Engine Room | Calibrate the Thrusters (timing) |
+| Engine Room | Calibrate the Thrusters (timing: a wide green zone, a slow needle, and a miss only costs one step). The console stands just inside the north gate, in the open |
 | Reactor | Stabilise the Core (memory sequence) |
 | Medbay | Analyse Alien Samples (matching pairs) |
 | Hydroponics | Water the Moon Plants |

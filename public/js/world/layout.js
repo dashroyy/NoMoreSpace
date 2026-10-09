@@ -75,8 +75,10 @@ function inRoom(rect, x, z, pad) {
   return dx0 + dz0 >= min && dx1 + dz0 >= min && dx0 + dz1 >= min && dx1 + dz1 >= min;
 }
 
-// Corridors only shrink across their width so they join up with the rooms at each end.
-const CORRIDOR_WALKABLE = CORRIDORS.map(([x0, z0, x1, z1]) => (x1 - x0 < z1 - z0 ? [x0 + R, z0, x1 - R, z1] : [x0, z0 + R, x1, z1 - R]));
+// Corridors shrink across their width, and reach R into the room at each end.
+// (A room's floor stops R short of its walls, so without that overlap there
+// would be a strip of nowhere in every gate, and nobody could walk through.)
+const CORRIDOR_WALKABLE = CORRIDORS.map(([x0, z0, x1, z1]) => (x1 - x0 < z1 - z0 ? [x0 + R, z0 - R, x1 - R, z1 + R] : [x0 - R, z0 + R, x1 + R, z1 - R]));
 
 export function walkable(x, z) {
   return ROOMS.some((r) => inRoom(r.rect, x, z, R)) || CORRIDOR_WALKABLE.some(([x0, z0, x1, z1]) => x >= x0 && x <= x1 && z >= z0 && z <= z1);
@@ -115,7 +117,7 @@ export const TASK_STATIONS = {
   samples: { x: -30, z: 4 },
   noodles: { x: 30, z: 4 },
   core: { x: -26, z: 24 },
-  thrusters: { x: 6, z: 28 },
+  thrusters: { x: -3, z: 21.5 }, // out in the open, just inside the north gate: in view as soon as you walk in from the bridge
   plants: { x: 28, z: 26 },
   vents: { x: -46, z: 0 },
   cat: { x: 48, z: 3 },
