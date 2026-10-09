@@ -1,7 +1,8 @@
 // Builds the ship: floors, walls with doorways, windows, room props, task
 // consoles, the bridge table and the easels where night drawings appear.
 import * as THREE from 'three';
-import { ROOMS, CORRIDORS, TASK_STATIONS, DRAWING_SLOTS, TABLE_RADIUS, seatPosition, wallSegments } from './layout.js';
+import { ROOMS, CORRIDORS, TASK_STATIONS, DRAWING_SLOTS, TABLE_RADIUS, seatPosition, wallSegments, chamferOf, roomOutline, cornerWalls } from './layout.js';
+import { buildExterior } from './station.js';
 import { buildDecor } from './decor.js';
 import { makeTextSprite } from './avatar.js';
 
@@ -98,34 +99,88 @@ export function buildShip(scene, space) {
   const stations = {};
   const all = [...ROOMS.map((r) => r.rect), ...CORRIDORS];
 
-  // ---------- floors ----------
-  for (const rect of all) {
+  // ---------- floors and hull ----------
+  // Rooms are station modules: octagonal decks sitting on rounded hull pods.
+  const hullMat = m(0x39415a, { metalness: 0.7, roughness: 0.45 });
+  const hullDarkMat = m(0x1a1f30, { metalness: 0.6, roughness: 0.5, side: THREE.DoubleSide });
+  const ribMat = m(0x8790ab, { metalness: 0.85, roughness: 0.3 });
+  for (const room of ROOMS) {
+    const [x0, z0, x1, z1] = room.rect;
+    const outline = roomOutline(room.rect);
+    // shapes are drawn as (x, -z) and turned flat with rotateX(-90°), so they face up
+    const shape = new THREE.Shape(outline.map(([x, z]) => new THREE.Vector2(x, -z)));
+    const tex = panel.clone();
+    tex.repeat.set(0.5, 0.5); // shape UVs are in world units: one panel every 2 m
+    tex.needsUpdate = true;
+    const floorGeo = new THREE.ShapeGeometry(shape);
+    floorGeo.rotateX(-Math.PI / 2);
+    add(ship, floorGeo, m(room.floor, { map: tex, roughness: 0.85 }), 0, 0, 0);
+    // the pod: a bevelled slab under the deck, so the room looks like a rounded module from outside
+    const hullGeo = new THREE.ExtrudeGeometry(shape, { depth: 1.1, bevelEnabled: true, bevelThickness: 0.45, bevelSize: 0.55, bevelSegments: 4, curveSegments: 4 });
+    hullGeo.rotateX(-Math.PI / 2);
+    // extruded shapes have no index; give them one so all the pods merge into a single draw call
+    hullGeo.setIndex([...Array(hullGeo.attributes.position.count).keys()]);
+    hullGeo.computeBoundingBox();
+    add(ship, hullGeo, hullMat, 0, -0.06 - hullGeo.boundingBox.max.y, 0); // its top sits just under the deck
+    // a glowing deck ring in the middle of each module (around the table on the bridge)
+    const cx = (x0 + x1) / 2;
+    const cz = (z0 + z1) / 2;
+    const ringR = room.id === 'bridge' ? 7.6 : Math.min(x1 - x0, z1 - z0) * 0.32;
+    add(ship, new THREE.RingGeometry(ringR - 0.08, ringR, 48), glowMat(room.light, 0.6), cx, 0.012, cz, [-Math.PI / 2, 0, 0]);
+  }
+  // Corridors are pressurised tubes: a flat deck inside a round hull with ribs every couple of metres.
+  for (const rect of CORRIDORS) {
     const [x0, z0, x1, z1] = rect;
-    const room = ROOMS.find((r) => r.rect === rect);
     const w = x1 - x0;
     const d = z1 - z0;
+    const alongX = w > d;
+    const len = alongX ? w : d;
+    const width = alongX ? d : w;
+    const cx = (x0 + x1) / 2;
+    const cz = (z0 + z1) / 2;
     const tex = panel.clone();
     tex.repeat.set(w / 2, d / 2);
     tex.needsUpdate = true;
-    const floor = add(ship, new THREE.PlaneGeometry(w, d), m(room ? room.floor : 0x262c44, { map: tex, roughness: 0.85 }), (x0 + x1) / 2, 0, (z0 + z1) / 2, [-Math.PI / 2, 0, 0]);
-    floor.receiveShadow = false;
-    // hull underside, so the ship looks solid from above the edges
-    add(ship, new THREE.BoxGeometry(w, 0.6, d), m(0x0b0d16), (x0 + x1) / 2, -0.31, (z0 + z1) / 2);
+    add(ship, new THREE.PlaneGeometry(w, d), m(0x262c44, { map: tex, roughness: 0.85 }), cx, 0, cz, [-Math.PI / 2, 0, 0]);
+    // the lower half of the tube hull hangs beneath the deck
+    // (the half-turn picked so the half-pipe ends up underneath once laid along the corridor)
+    const tube = new THREE.CylinderGeometry(width / 2 + 0.35, width / 2 + 0.35, len, 20, 1, true, alongX ? Math.PI : -Math.PI / 2, Math.PI);
+    add(ship, tube, hullDarkMat, cx, -0.05, cz, alongX ? [0, 0, Math.PI / 2] : [Math.PI / 2, 0, 0]);
+    // ribs: thin arches over the corridor (see-through, so nobody is hidden)
+    for (let u = 1.2; u < len - 0.6; u += 2.2) {
+      const px = alongX ? x0 + u : cx;
+      const pz = alongX ? cz : z0 + u;
+      const rib = new THREE.TorusGeometry(width / 2 + 0.2, 0.07, 6, 20, Math.PI);
+      add(ship, rib, ribMat, px, 0.05, pz, alongX ? [0, Math.PI / 2, 0] : [0, 0, 0]).scale.set(1, 1.75, 1); // tall enough to walk under
+    }
   }
 
   // ---------- walls & windows ----------
+  // A wall: a slab with a rounded rail along the top and a glowing trim line.
+  const wallPiece = (ax, az, bx, bz, h, mat, trimMat) => {
+    const len = Math.hypot(bx - ax, bz - az);
+    const angle = -Math.atan2(bz - az, bx - ax);
+    const mx = (ax + bx) / 2;
+    const mz = (az + bz) / 2;
+    add(ship, new THREE.BoxGeometry(len + 0.1, h, 0.3), mat, mx, h / 2, mz, [0, angle, 0]);
+    add(ship, new THREE.CylinderGeometry(0.17, 0.17, len + 0.1, 10), mat, mx, h, mz, [0, angle, Math.PI / 2]);
+    add(ship, new THREE.BoxGeometry(len, 0.05, 0.06), trimMat, mx, h + 0.18, mz, [0, angle, 0]);
+  };
   for (const rect of all) {
     const room = ROOMS.find((r) => r.rect === rect);
     const trimMat = glowMat(room ? room.light : 0x4a6cff, 0.9);
-    for (const seg of wallSegments(rect, all.filter((o) => o !== rect))) {
+    if (room) {
+      // the cut-off corners
+      for (const c of cornerWalls(rect)) wallPiece(c.a[0], c.a[1], c.b[0], c.b[1], c.south ? LOW_WALL_H : WALL_H, c.south ? lowWallMat : wallMat, trimMat);
+    }
+    for (const seg of wallSegments(rect, all.filter((o) => o !== rect), room ? chamferOf(rect) : 0)) {
       const len = seg.to - seg.from;
       const low = seg.side === 'south';
       const h = low ? LOW_WALL_H : WALL_H;
       const mid = (seg.from + seg.to) / 2;
       const [x, z] = seg.axis === 'x' ? [mid, seg.fixed] : [seg.fixed, mid];
-      const [sx, sz] = seg.axis === 'x' ? [len + 0.3, 0.3] : [0.3, len + 0.3];
-      add(ship, new THREE.BoxGeometry(sx, h, sz), low ? lowWallMat : wallMat, x, h / 2, z);
-      add(ship, new THREE.BoxGeometry(sx * (seg.axis === 'x' ? 1 : 0.5), 0.05, sz * (seg.axis === 'z' ? 1 : 0.5)), trimMat, x, h + 0.03, z);
+      if (seg.axis === 'x') wallPiece(seg.from, seg.fixed, seg.to, seg.fixed, h, low ? lowWallMat : wallMat, trimMat);
+      else wallPiece(seg.fixed, seg.from, seg.fixed, seg.to, h, low ? lowWallMat : wallMat, trimMat);
 
       // Windows on the north walls of rooms look out into space.
       if (room && seg.side === 'north' && len > 3) {
@@ -232,12 +287,33 @@ export function buildShip(scene, space) {
     return { group: g, art };
   });
 
+  // ---------- hatches: a round frame where each corridor meets a room ----------
+  const hatchMat = m(0x5a6584, { metalness: 0.85, roughness: 0.3 });
+  const hatchGlow = glowMat(0xffb547, 1.3);
+  for (const [x0, z0, x1, z1] of CORRIDORS) {
+    const alongX = x1 - x0 > z1 - z0;
+    const width = alongX ? z1 - z0 : x1 - x0;
+    const ends = alongX ? [[x0, (z0 + z1) / 2], [x1, (z0 + z1) / 2]] : [[(x0 + x1) / 2, z0], [(x0 + x1) / 2, z1]];
+    for (const [hx, hz] of ends) {
+      const south = !alongX && hz === z0; // the frame on a room's south side would hide players: keep it low
+      const rot = alongX ? [0, Math.PI / 2, 0] : [0, 0, 0];
+      if (south) {
+        add(ship, new THREE.BoxGeometry(alongX ? 0.4 : width + 0.6, 0.18, alongX ? width + 0.6 : 0.4), hatchMat, hx, 0.09, hz);
+        continue;
+      }
+      add(ship, new THREE.TorusGeometry(width / 2 + 0.35, 0.16, 8, 24, Math.PI), hatchMat, hx, 0.05, hz, rot).scale.set(1, 1.6, 1);
+      add(ship, new THREE.TorusGeometry(width / 2 + 0.35, 0.04, 6, 24, Math.PI), hatchGlow, hx, 0.05, hz, rot).scale.set(1.05, 1.68, 1.05);
+    }
+  }
+
+  const exterior = buildExterior(ship);
   const decor = buildDecor(ship);
   mergeStatic(ship);
 
   return {
     group: ship,
     decor,
+    exterior,
     lights,
     flicker,
     stations,

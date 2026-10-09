@@ -4,7 +4,7 @@
 //
 // Placement uses a fixed random seed so every player sees the same ship.
 import * as THREE from 'three';
-import { ROOMS, CORRIDORS, TASK_STATIONS, wallSegments } from './layout.js';
+import { ROOMS, CORRIDORS, TASK_STATIONS, wallSegments, chamferOf } from './layout.js';
 
 function seeded(seed) {
   return () => {
@@ -227,7 +227,7 @@ export function buildDecor(ship) {
 
   for (const room of ROOMS) {
     const others = all.filter((o) => o !== room.rect);
-    for (const seg of wallSegments(room.rect, others)) {
+    for (const seg of wallSegments(room.rect, others, chamferOf(room.rect))) {
       if (seg.side === 'south' || seg.to - seg.from < 1.5) continue;
       const y = room.id === 'observation' && seg.side === 'north' ? 2.38 : 2.3;
       const sag = room.id === 'observation' && seg.side === 'north' ? 0.08 : 0.28;
@@ -252,7 +252,8 @@ export function buildDecor(ship) {
   }
   for (const room of ROOMS) {
     const [x0, z0, x1, z1] = room.rect;
-    const corners = [[x0 + 1.1, z0 + 1.2], [x1 - 1.1, z0 + 1.2], [x0 + 1.1, z1 - 1.1], [x1 - 1.1, z1 - 1.1]].filter(([x, z]) => !blocked(x, z));
+    const k = chamferOf(room.rect) * 0.5 + 1.3; // sit inside the angled corners
+    const corners = [[x0 + k, z0 + k], [x1 - k, z0 + k], [x0 + k, z1 - k], [x1 - k, z1 - k]].filter(([x, z]) => !blocked(x, z));
     const count = Math.min(corners.length, room.id === 'bridge' ? 0 : 2);
     for (let i = 0; i < count; i++) {
       const [x, z] = corners.splice(Math.floor(rnd() * corners.length), 1)[0];
@@ -270,8 +271,10 @@ export function buildDecor(ship) {
   // ---------- cobwebs in the top corners ----------
   for (const room of ROOMS) {
     const [x0, z0, x1] = room.rect;
-    if (rnd() < 0.75) add(ship, new THREE.PlaneGeometry(1.4, 1.4), webMat, x0 + 0.5, 1.85, z0 + 0.5, [0, Math.PI / 4, 0]);
-    if (rnd() < 0.5) add(ship, new THREE.PlaneGeometry(1.4, 1.4), webMat, x1 - 0.5, 1.85, z0 + 0.5, [0, -Math.PI / 4, 0]);
+    // on the angled back corners
+    const h = chamferOf(room.rect) / 2 + 0.25;
+    if (rnd() < 0.75) add(ship, new THREE.PlaneGeometry(1.4, 1.4), webMat, x0 + h, 1.85, z0 + h, [0, Math.PI / 4, 0]);
+    if (rnd() < 0.5) add(ship, new THREE.PlaneGeometry(1.4, 1.4), webMat, x1 - h, 1.85, z0 + h, [0, -Math.PI / 4, 0]);
   }
 
   // ---------- bunting across a few rooms ----------
@@ -299,13 +302,14 @@ export function buildDecor(ship) {
     const others = all.filter((o) => o !== room.rect);
     const trim = new THREE.MeshStandardMaterial({ color: room.light, emissive: room.light, emissiveIntensity: 1.4 });
 
-    // glowing pillars in the two back corners
-    for (const x of [x0 + 0.32, x1 - 0.32]) {
-      add(ship, new THREE.BoxGeometry(0.5, 2.5, 0.5), pillarMat, x, 1.25, z0 + 0.32);
-      add(ship, new THREE.BoxGeometry(0.06, 2.2, 0.06), trim, x + (x === x0 + 0.32 ? 0.27 : -0.27), 1.2, z0 + 0.6);
+    // round glowing pillars where the angled back corners meet the side walls
+    const c = chamferOf(room.rect);
+    for (const [px, pz] of [[x0 + 0.2, z0 + c], [x1 - 0.2, z0 + c], [x0 + c, z0 + 0.2], [x1 - c, z0 + 0.2]]) {
+      add(ship, new THREE.CylinderGeometry(0.24, 0.28, 2.5, 12), pillarMat, px, 1.25, pz);
+      add(ship, new THREE.CylinderGeometry(0.06, 0.06, 2.2, 6), trim, px, 1.2, pz + 0.22);
     }
 
-    for (const seg of wallSegments(room.rect, others)) {
+    for (const seg of wallSegments(room.rect, others, chamferOf(room.rect))) {
       const len = seg.to - seg.from;
       if (seg.side === 'south' || len < 2.5) continue;
       // twin pipes along the bottom of the walls

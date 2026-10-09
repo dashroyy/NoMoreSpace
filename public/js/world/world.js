@@ -385,6 +385,7 @@ export class World {
     this.updateCamera(dt);
     this.updateAmbience(dt, t);
     this.ship.decor.update(t, { night: this.night, progress: this.progress });
+    this.ship.exterior.update(t);
     this.updateBeams(dt);
     this.fx.update(dt, t);
     this.updateShipEvent(dt, t);

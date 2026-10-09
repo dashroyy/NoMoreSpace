@@ -38,15 +38,48 @@ export const CORRIDORS = [
 export const PLAYER_RADIUS = 0.45;
 const R = PLAYER_RADIUS;
 
-// Shrunk rectangles you can stand in (corridors only shrink across their width
-// so they join up with the rooms at each end).
-const WALKABLE = [
-  ...ROOMS.map(({ rect: [x0, z0, x1, z1] }) => [x0 + R, z0 + R, x1 - R, z1 - R]),
-  ...CORRIDORS.map(([x0, z0, x1, z1]) => (x1 - x0 < z1 - z0 ? [x0 + R, z0, x1 - R, z1] : [x0, z0 + R, x1, z1 - R])),
-];
+// Rooms are station modules with their corners cut off at 45° (octagons),
+// not plain boxes. This is how far each corner is cut back.
+export function chamferOf([x0, z0, x1, z1]) {
+  return Math.min(2.4, Math.min(x1 - x0, z1 - z0) * 0.2);
+}
+
+// The eight corners of a room's outline, clockwise from the north-west.
+export function roomOutline(rect) {
+  const [x0, z0, x1, z1] = rect;
+  const c = chamferOf(rect);
+  return [[x0 + c, z0], [x1 - c, z0], [x1, z0 + c], [x1, z1 - c], [x1 - c, z1], [x0 + c, z1], [x0, z1 - c], [x0, z0 + c]];
+}
+
+// The four cut-off corner walls: { a: [x, z], b: [x, z], south }
+export function cornerWalls(rect) {
+  const [x0, z0, x1, z1] = rect;
+  const c = chamferOf(rect);
+  return [
+    { a: [x0, z0 + c], b: [x0 + c, z0], south: false },
+    { a: [x1 - c, z0], b: [x1, z0 + c], south: false },
+    { a: [x1, z1 - c], b: [x1 - c, z1], south: true },
+    { a: [x0 + c, z1], b: [x0, z1 - c], south: true },
+  ];
+}
+
+// Inside a room, at least `pad` away from its walls (including the cut corners).
+function inRoom(rect, x, z, pad) {
+  const [x0, z0, x1, z1] = rect;
+  if (x < x0 + pad || x > x1 - pad || z < z0 + pad || z > z1 - pad) return false;
+  const min = chamferOf(rect) + pad * Math.SQRT2;
+  const dx0 = x - x0;
+  const dx1 = x1 - x;
+  const dz0 = z - z0;
+  const dz1 = z1 - z;
+  return dx0 + dz0 >= min && dx1 + dz0 >= min && dx0 + dz1 >= min && dx1 + dz1 >= min;
+}
+
+// Corridors only shrink across their width so they join up with the rooms at each end.
+const CORRIDOR_WALKABLE = CORRIDORS.map(([x0, z0, x1, z1]) => (x1 - x0 < z1 - z0 ? [x0 + R, z0, x1 - R, z1] : [x0, z0 + R, x1, z1 - R]));
 
 export function walkable(x, z) {
-  return WALKABLE.some(([x0, z0, x1, z1]) => x >= x0 && x <= x1 && z >= z0 && z <= z1);
+  return ROOMS.some((r) => inRoom(r.rect, x, z, R)) || CORRIDOR_WALKABLE.some(([x0, z0, x1, z1]) => x >= x0 && x <= x1 && z >= z0 && z <= z1);
 }
 
 export function roomAt(x, z) {
@@ -104,7 +137,8 @@ export const SPAWN = { x: 0, z: 7.5 };
 const EPS = 0.01;
 
 // Edges of a rectangle minus the parts where another rectangle joins it.
-export function wallSegments(rect, others) {
+// chamfer: trim this much off both ends of every edge (for rooms with cut corners).
+export function wallSegments(rect, others, chamfer = 0) {
   const [x0, z0, x1, z1] = rect;
   const edges = [
     { axis: 'x', fixed: z0, from: x0, to: x1, side: 'north' },
@@ -128,12 +162,15 @@ export function wallSegments(rect, others) {
       }
     }
     holes.sort((a, b) => a[0] - b[0]);
-    let cursor = e.from;
+    const start = e.from + chamfer;
+    const end = e.to - chamfer;
+    let cursor = start;
     for (const [a, b] of holes) {
-      if (a - cursor > EPS) out.push({ ...e, from: cursor, to: a });
-      cursor = Math.max(cursor, b);
+      const a2 = Math.min(Math.max(a, start), end);
+      if (a2 - cursor > EPS) out.push({ ...e, from: cursor, to: a2 });
+      cursor = Math.max(cursor, Math.min(b, end));
     }
-    if (e.to - cursor > EPS) out.push({ ...e, from: cursor, to: e.to });
+    if (end - cursor > EPS) out.push({ ...e, from: cursor, to: end });
   }
   return out;
 }
