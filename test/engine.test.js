@@ -500,3 +500,230 @@ test('setup table matches Blood on the Clocktower for 5-15 players', () => {
   assert.deepStrictEqual(DISTRIBUTION[10], [7, 0, 2, 1]);
   assert.deepStrictEqual(DISTRIBUTION[15], [9, 2, 3, 1]);
 });
+
+test('a dead Service Droid votes freely', () => {
+  const { g, p, role } = setup(['parasite', 'hacker', 'droid', 'comms', 'engineer', 'scanner']);
+  const droid = role('droid');
+  playNight(g, { [role('hacker').id]: [role('comms').id], [droid.id]: [role('comms').id], [role('scanner').id]: [role('comms').id, role('engineer').id] });
+  dawnToNominations(g);
+  g.kill(droid, 'captain');
+  const r = runVote(g, p[0], role('engineer'), [droid]);
+  assert.deepStrictEqual(r.ignored, []);
+  assert.ok(r.voters.includes(droid.id), 'ghost vote counts without the master');
+});
+
+test("the Hacker's glitch ends when the Hacker dies", () => {
+  // at night: killed by the Parasite, so the Engineer acting later gets true info
+  const { g, role } = setup(['parasite', 'hacker', 'engineer', 'comms', 'scanner', 'medic', 'marine']);
+  const hacker = role('hacker');
+  const engineer = role('engineer');
+  playNight(g, { [hacker.id]: [role('comms').id], [role('scanner').id]: [role('comms').id, role('medic').id] });
+  dawnToNominations(g);
+  g.beginDusk(3000);
+  g.beginNight(4000);
+  const d = playNight(g, { [hacker.id]: [engineer.id], [role('parasite').id]: [hacker.id], [role('medic').id]: [role('comms').id], [role('scanner').id]: [role('comms').id, role('medic').id] }, 5000);
+  assert.strictEqual(d.glitch, null);
+  assert.ok(d.messages.find((m) => m.to === engineer.id).truthful, 'Engineer info is true');
+  assert.ok(d.events.some((e) => e.k === 'unglitch'));
+
+  // by day: airlocking the Hacker unglitches their target straight away
+  const second = setup(['parasite', 'hacker', 'engineer', 'comms', 'scanner', 'medic', 'marine']);
+  const h2 = second.role('hacker');
+  playNight(second.g, { [h2.id]: [second.role('comms').id], [second.role('scanner').id]: [second.role('comms').id, second.role('medic').id] });
+  dawnToNominations(second.g);
+  assert.ok(second.g.glitch);
+  runVote(second.g, second.role('comms'), h2, second.g.players);
+  second.g.beginDusk(9000);
+  assert.ok(!h2.alive);
+  assert.strictEqual(second.g.glitch, null);
+});
+
+test('a dead Mimic stops seeing the manifest', () => {
+  const { g, role } = setup(['parasite', 'mimic', 'engineer', 'comms', 'scanner', 'medic', 'marine']);
+  const mimic = role('mimic');
+  assert.ok(g.viewFor(mimic.id).you.manifest);
+  g.kill(mimic, 'captain');
+  assert.strictEqual(g.viewFor(mimic.id).you.manifest, null);
+});
+
+test('when every connected player is ready, the day moves on early', () => {
+  const { g, p, role } = setup(['parasite', 'hacker', 'engineer', 'comms', 'scanner', 'medic', 'marine']);
+  playNight(g, { [role('hacker').id]: [role('comms').id], [role('scanner').id]: [role('comms').id, role('medic').id] });
+  g.applyDraft(2000);
+  g.beginRoam(2000);
+  assert.throws(() => g.setReady('nobody', true), /Only players/);
+  p.slice(0, 6).forEach((x) => g.setReady(x.id, true));
+  assert.strictEqual(g.tick(3000), false, 'one player still exploring');
+  p[6].connected = false; // they dropped out, so they no longer hold the ship up
+  assert.strictEqual(g.tick(3000), true);
+  assert.strictEqual(g.phase, 'meeting');
+  assert.strictEqual(g.ready.size, 0, 'readiness resets each phase');
+
+  g.beginNominations(4000);
+  p.slice(0, 5).forEach((x) => g.setReady(x.id, true));
+  g.nominate(p[0].id, p[1].id, 4000);
+  assert.strictEqual(g.ready.size, 0, 'a nomination is worth talking about');
+  assert.throws(() => {
+    g.beginNight(5000);
+    g.setReady(p[0].id, true);
+  }, /Nothing to hurry/);
+});
+
+test('Captain mode: readiness does not skip ahead unless auto-advance is on', () => {
+  const { g, p, captain, role } = setup(['parasite', 'hacker', 'engineer', 'comms', 'scanner', 'medic', 'marine'], { mode: 'captain' });
+  playNight(g, { [role('hacker').id]: [role('comms').id], [role('scanner').id]: [role('comms').id, role('medic').id] });
+  g.applyDraft(2000);
+  g.beginRoam(2000);
+  p.forEach((x) => g.setReady(x.id, true));
+  assert.strictEqual(g.tick(3000), false);
+  assert.strictEqual(g.viewFor(captain.id).ready.length, 7, 'the Captain sees who is ready');
+  g.setAutoAdvance(captain.id, true);
+  assert.strictEqual(g.tick(3000), true);
+  assert.strictEqual(g.phase, 'meeting');
+});
+
+// ---------------------------------------------------------------------------
+// Voting made for online play, and ⚡ ship systems
+// ---------------------------------------------------------------------------
+
+test('everyone votes at once: votes can change, stay secret, and the count starts early when all have voted', () => {
+  const { g, p } = setup(['comms', 'engineer', 'medic', 'hacker', 'parasite']);
+  playNight(g);
+  dawnToNominations(g);
+  g.nominate(p[0].id, p[3].id, 3000);
+  // votes can be cast during the speeches and changed
+  g.setHand(p[1].id, true);
+  g.setHand(p[1].id, false);
+  g.setHand(p[2].id, true);
+  assert.strictEqual(g.nomination.hands[p[1].id], false);
+  // other players can't see anyone's vote before the count, only who has voted
+  const view = g.viewFor(p[4].id);
+  assert.deepStrictEqual(view.nomination.hands, {});
+  assert.ok(view.nomination.cast.includes(p[2].id));
+  assert.strictEqual(g.viewFor(p[2].id).nomination.hands[p[2].id], true);
+  // skip the speeches, then everyone votes and the ballot closes without waiting
+  g.tickNomination(3000 + 100_000);
+  g.tickNomination(3000 + 200_000);
+  assert.strictEqual(g.nomination.stage, 'vote');
+  for (const v of [p[0], p[3], p[4]]) g.setHand(v.id, true);
+  g.tickNomination(3000 + 200_001);
+  assert.strictEqual(g.nomination.stage, 'count');
+  assert.throws(() => g.setHand(p[0].id, false), /counted/);
+  let t = 3000 + 200_001;
+  while (g.nomination) g.tickNomination((t += 1000));
+  assert.strictEqual(g.lastNomination.votes, 4);
+  assert.strictEqual(g.votesToday.length, 1);
+  assert.strictEqual(g.block.id, p[3].id);
+});
+
+test('ship systems: door logs, med-scan, sensor sweep, spoofs and duds for the Space Drunk', () => {
+  const { g, p, role } = setup(['archivist', 'medic', 'engineer', 'drunk', 'hacker', 'parasite'], { drunkAs: 'comms' });
+  playNight(g, { [role('hacker').id]: [role('medic').id] });
+  g.applyDraft(2000);
+  g.beginRoam(2000);
+  g.recordVisit(p[1].id, 'galley');
+  g.recordVisit(role('parasite').id, 'galley');
+  g.recordVisit(p[2].id, 'medbay');
+  // the real Archivist reads the true door log
+  g.useSystem(role('archivist').id, { room: 'galley' }, 2100);
+  assert.match(role('archivist').notes.at(-1).text, /Galley today: P1, P5/);
+  assert.throws(() => g.useSystem(role('archivist').id, { room: 'galley' }, 2200), /already used/);
+  // the Medic is glitched by the Hacker, so their scan is a dud (but still used up)
+  g.useSystem(role('medic').id, { target: role('engineer').id }, 2300);
+  assert.ok(role('medic').systemUsed);
+  // the Engineer counts the evil players standing in a room
+  g.useSystem(role('engineer').id, { room: 'galley', occupants: [p[1].id, role('parasite').id, role('hacker').id] }, 2400);
+  assert.match(role('engineer').notes.at(-1).text, /3 aboard, 2 evil/);
+  // the Space Drunk believes they are the Comms Officer: their intercept looks fine but hears nothing
+  assert.strictEqual(role('drunk').believed, 'comms');
+  g.useSystem(role('drunk').id, { room: 'medbay' }, 2500);
+  assert.match(role('drunk').notes.at(-1).text, /tap into the Medbay/);
+  assert.deepStrictEqual(g.listeners('medbay', 2600), []);
+  // the Hacker's spoof needs words, then hands the server a message to deliver
+  assert.throws(() => g.useSystem(role('hacker').id, { target: p[1].id, text: '   ' }, 2600), /fake message/);
+  const res = g.useSystem(role('hacker').id, { target: p[1].id, text: 'I am the Parasite lol' }, 2600);
+  assert.deepStrictEqual(res.spoof, { as: p[1].id, text: 'I am the Parasite lol' });
+  assert.ok(g.history.some((ch) => ch.events?.some((e) => e.k === 'system' && e.sys === 'spoof')));
+  // systems only work in the right phase, and never for the dead
+  g.beginMeeting(3000);
+  assert.throws(() => g.useSystem(role('parasite').id, {}, 3100), /exploring/);
+});
+
+test('ship systems: blackout hides door logs, disguises expire, lockdowns stop eavesdroppers', () => {
+  const { g, p, role } = setup(['comms', 'security', 'engineer', 'stowaway', 'mimic', 'parasite']);
+  playNight(g);
+  g.applyDraft(2000);
+  g.beginRoam(2000);
+  g.useSystem(role('parasite').id, {}, 2000);
+  assert.ok(g.blackout(2500));
+  g.recordVisit(p[0].id, 'cargo', 2500);
+  assert.ok(!g.visits.cargo, 'nothing is logged in the dark');
+  assert.throws(() => g.useSystem(role('engineer').id, { room: 'cargo', occupants: [] }, 2600), /sensors are dead/);
+  assert.ok(!g.blackout(2000 + 46_000));
+  g.useSystem(role('mimic').id, { target: role('comms').id }, 3000);
+  assert.strictEqual(g.disguiseOf(role('mimic').id, 3500), role('comms').id);
+  assert.strictEqual(g.disguiseOf(role('mimic').id, 3000 + 61_000), null);
+  // lockdown: only the people inside stay, and nobody can intercept the room
+  assert.throws(() => g.useSystem(role('security').id, { here: 'corridor' }, 4000), /Stand inside a room/);
+  g.useSystem(role('comms').id, { room: 'galley' }, 4000);
+  assert.deepStrictEqual(g.listeners('galley', 4100), [role('comms').id]);
+  g.useSystem(role('security').id, { here: 'galley', occupants: [role('security').id, p[2].id] }, 4100);
+  assert.deepStrictEqual(g.listeners('galley', 4200), []);
+  assert.deepStrictEqual(g.systemsView(4200).lockdowns[0].allowed, [role('security').id, p[2].id]);
+  // everything timed ends with the exploring phase
+  g.beginMeeting(5000);
+  assert.strictEqual(g.activeLockdown('galley', 5001), null);
+});
+
+test('clues drift past at a set moment while exploring, and only task-doers get a warning', () => {
+  const { g, p, role } = setup(['comms', 'engineer', 'medic', 'hacker', 'parasite']);
+  playNight(g);
+  g.charge = 999; // the Observation Array is full, so a clue comes tomorrow
+  g.applyDraft(2000);
+  assert.ok(g.clue, 'a clue is ready');
+  assert.strictEqual(g.viewFor(p[0].id).clue, null, 'nobody sees it before exploring');
+  g.beginRoam(10_000);
+  const { at, until } = g.clue;
+  const roam = g.dur('roam');
+  assert.ok(at >= 10_000 + roam * 0.3 && at <= 10_000 + roam * 0.65, 'arrives partway through exploring');
+  assert.strictEqual(until - at, 20_000);
+  assert.strictEqual(g.clueView(g.clue, at - 25_000), null, 'still secret 25s before');
+  assert.ok(g.clueView(g.clue, at - 15_000), 'sent 20s ahead so clients can get ready');
+  assert.strictEqual(g.clueView(g.clue, until + 1), null, 'gone afterwards');
+  // the server re-sends state when it appears and disappears
+  g.tick(at - 30_000);
+  assert.strictEqual(g.tick(at - 19_000), true);
+  // task-doers get the warning
+  g.completeTask(p[1].id, Object.keys(require('../server/tasks').TASKS)[0]);
+  assert.strictEqual(g.viewFor(p[1].id).you.clueWarning, true);
+  assert.strictEqual(g.viewFor(p[2].id).you.clueWarning, false);
+  assert.ok(role('parasite'));
+});
+
+test('the Holo-Jester makes one player see a fake clue (and things that are not there) for a day', () => {
+  const { g, p, role } = setup(['comms', 'engineer', 'medic', 'jester', 'parasite']);
+  const victim = role('engineer');
+  playNight(g, { [role('jester').id]: [victim.id] });
+  assert.ok(g.draft.events.some((e) => e.k === 'hallucinate' && e.t === victim.id && e.works));
+  g.applyDraft(2000);
+  assert.strictEqual(g.hallucination.id, victim.id);
+  g.beginRoam(10_000);
+  const at = g.hallucination.clue.at;
+  assert.ok(at, 'the fake clue is scheduled even with no real clue');
+  const seen = g.viewFor(victim.id);
+  assert.ok(seen.you.fx && seen.you.fx.seed != null, 'the victim gets hallucinations');
+  assert.strictEqual(g.viewFor(p[0].id).you.fx, null, 'nobody else does');
+  // only the victim sees the fake clue when it arrives
+  const realNow = Date.now;
+  Date.now = () => at + 1000;
+  try {
+    assert.ok(g.viewFor(victim.id).clue, 'victim sees a clue');
+    assert.strictEqual(g.viewFor(p[0].id).clue, null, 'others see nothing');
+  } finally {
+    Date.now = realNow;
+  }
+  // it wears off at night, and the Captain/Mimic manifest shows it
+  assert.ok(g.manifest().find((m) => m.id === victim.id).hallucinating);
+  g.beginNight(20_000);
+  assert.strictEqual(g.hallucination, null);
+});

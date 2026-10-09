@@ -5,6 +5,7 @@ import { sfx } from '../audio.js';
 
 const INSTRUCTIONS = {
   hacker: (n) => `Choose a player to glitch. Their ability malfunctions tonight and tomorrow.`,
+  jester: () => 'Choose a player to prank. All tomorrow they will see things that are not there: fake crewmates, a space whale, whispers from nobody… and a fake clue.',
   medic: () => 'Choose a player (not yourself) to shield from the Parasite tonight.',
   parasite: () => 'Choose a victim. (Choose yourself to jump hosts: you die and a Saboteur becomes the Parasite.)',
   scanner: () => 'Choose 2 players to scan for the Parasite.',

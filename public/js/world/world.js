@@ -3,9 +3,20 @@ import * as THREE from 'three';
 import { Avatar } from './avatar.js';
 import { buildShip } from './ship.js';
 import { SpaceCanvases, buildBackdrop } from './sky.js';
+import { Flyby } from './flyby.js';
+import { Hallucinations } from './hallucinate.js';
 import { moveWithCollision, roomAt, roomById, walkable, seatPosition, TASK_STATIONS, SPAWN, DRAWING_SLOTS } from './layout.js';
 
 const SEATED = ['dawn', 'meeting', 'nominations', 'dusk'];
+// The ship's lighting mood for each phase: a colour to tint the room lights toward, and how much.
+const MOODS = {
+  night: { color: 0x2c3cff, amount: 0.45 },
+  dawn: { color: 0xffc890, amount: 0.3 },
+  meeting: { color: 0xff2030, amount: 0.12 },
+  nominations: { color: 0xff3040, amount: 0.22 },
+  dusk: { color: 0xff7a3a, amount: 0.4 },
+};
+const ALARM_SECONDS = 5; // red alert pulse when an emergency meeting is called
 const SPEED = 5.5;
 export const NEAR_RADIUS = 7; // same as the server: proximity chat distance
 const TELEPORT_COOLDOWN = 2.5; // seconds
@@ -24,7 +35,12 @@ export class World {
     } catch {}
     this.lowFx = low === '1';
     this.renderer = new THREE.WebGLRenderer({ antialias: !this.lowFx, powerPreference: 'high-performance' });
-    this.renderer.setPixelRatio(this.lowFx ? 0.6 : Math.min(window.devicePixelRatio, matchMedia('(pointer: coarse)').matches ? 1.5 : 2));
+    // Adaptive resolution: drop the pixel ratio when frames get slow, raise it again when there is headroom.
+    this.maxRatio = this.lowFx ? 0.6 : Math.min(window.devicePixelRatio, matchMedia('(pointer: coarse)').matches ? 1.5 : 2);
+    this.minRatio = this.lowFx ? 0.6 : Math.max(0.6, this.maxRatio * 0.5);
+    this.ratio = this.maxRatio;
+    this.perf = { frames: 0, time: 0, calmWindows: 0 };
+    this.renderer.setPixelRatio(this.ratio);
     this.renderer.setSize(window.innerWidth, window.innerHeight);
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -38,6 +54,8 @@ export class World {
     this.camera.position.set(0, 30, 30);
     this.camTarget = new THREE.Vector3();
     this.camPos = new THREE.Vector3(0, 30, 30);
+    this._want = new THREE.Vector3(); // scratch vectors (no per-frame allocations)
+    this._offset = new THREE.Vector3();
     this.zoom = 1;
 
     this.hemi = new THREE.HemisphereLight(0x9aa8ff, 0x2a1830, 1.6);
@@ -72,6 +90,7 @@ export class World {
     this.nearTask = null;
     this.room = 'bridge';
     this.beams = [];
+    this.serverNow = () => Date.now(); // main.js swaps in the server clock
     this.teleportReadyAt = 0;
     this.progress = 0;
     this.night = false;
@@ -80,6 +99,11 @@ export class World {
     this.drawingSlots = new Map(); // id -> slot index
     this.doneTasks = new Set();
     this.clock = new THREE.Clock();
+    this.alarmUntil = 0;
+    this.moodColor = new THREE.Color();
+    this._tint = new THREE.Color();
+    for (const light of this.ship.lights) light.userData.color = light.color.clone();
+    this.hemiColor = this.hemi.color.clone();
 
     window.addEventListener('resize', () => this.resize());
     window.addEventListener('keydown', (e) => {
@@ -124,11 +148,13 @@ export class World {
         a.target = { x: start.x, z: start.z, r: seat.facing, m: 0 };
         this.avatars.set(p.id, a);
       }
-      if (JSON.stringify(a.look) !== JSON.stringify(p.cosmetics)) a.setLook(p.cosmetics);
+      // the Mimic's disguise: wear someone else's suit and name tag
+      const shown = (this.disguise?.[p.id] && state.players.find((x) => x.id === this.disguise[p.id])) || p;
+      if (JSON.stringify(a.look) !== JSON.stringify(shown.cosmetics)) a.setLook(shown.cosmetics);
       if (a.pet && !a.pet.parent) this.scene.add(a.pet);
       const labelColor = p.id === this.myId ? '#6cf0ff' : p.alive ? '#ffffff' : '#9aa0b8';
-      if (a.name !== p.name || a.labelColor !== labelColor) {
-        a.setName(p.name, labelColor);
+      if (a.name !== shown.name || a.labelColor !== labelColor) {
+        a.setName(shown.name, labelColor);
         a.labelColor = labelColor;
       }
       if (!p.alive && !a.ghost && !a.deathState && !a.pendingDeath) a.setGhost(true);
@@ -141,6 +167,8 @@ export class World {
         this.avatars.delete(id);
       }
     }
+    this.lastState = state;
+    for (const a of this.avatars.values()) if (a.label) a.label.visible = !this.blackout;
     this.playerCount = state.players.length;
     if (this.seatCount !== this.playerCount) {
       this.ship.setSeats(this.playerCount);
@@ -152,6 +180,7 @@ export class World {
     const prev = this.phase;
     this.phase = phase;
     this.setNight(phase === 'night');
+    if (phase === 'meeting' && prev !== 'meeting') this.alarmUntil = this.clock.elapsedTime + ALARM_SECONDS;
     if (SEATED.includes(phase) && !SEATED.includes(prev)) this.seatEveryone();
     if (phase === 'roam' && SEATED.includes(prev)) {
       // stand up next to your chair
@@ -171,7 +200,7 @@ export class World {
       for (const a of this.avatars.values()) {
         a.setGhost(false);
         a.deathState = null;
-        a.extras.clear();
+        a.clearExtras();
         a.body.visible = true;
       }
     }
@@ -200,12 +229,35 @@ export class World {
   }
 
   // Positions from the server: { id: [x, z, r, moving] }
+  // Updates arrive about 10 times a second, so we also estimate each player's
+  // velocity and glide them forward between updates instead of stuttering.
   applyPositions(packed) {
     if (SEATED.includes(this.phase) || this.phase === 'night') return;
+    const now = performance.now();
     for (const [id, [x, z, r, m]] of Object.entries(packed)) {
       if (id === this.myId) continue;
       const a = this.avatars.get(id);
-      if (a) a.target = { x, z, r, m };
+      if (!a) continue;
+      const prev = a.target;
+      if (!prev || prev.x !== x || prev.z !== z) {
+        const gap = (now - (a.movedAt || 0)) / 1000;
+        let vx = 0;
+        let vz = 0;
+        if (prev && m && gap > 0.03 && gap < 0.5) {
+          vx = (x - prev.x) / gap;
+          vz = (z - prev.z) / gap;
+          const speed = Math.hypot(vx, vz);
+          const max = SPEED * 1.3;
+          if (speed > max) {
+            vx *= max / speed;
+            vz *= max / speed;
+          }
+        }
+        a.vel = { x: vx, z: vz };
+        a.movedAt = now;
+      }
+      if (!m) a.vel = { x: 0, z: 0 };
+      a.target = { x, z, r, m };
     }
   }
 
@@ -246,14 +298,23 @@ export class World {
     for (const light of this.ship.lights) light.userData.base = 40 * (1 - p * 0.35);
   }
 
+  // The Holo-Jester's victim sees things that aren't there (see hallucinate.js).
+  setHallucination(fx, phase, onWhisper) {
+    this.hallucinations ||= new Hallucinations(this);
+    this.hallucinations.onWhisper = onWhisper;
+    this.hallucinations.set(fx, phase);
+  }
+
+  // Clues are objects drifting past outside the ship for a few seconds (see flyby.js).
   setClue(clue, players, roles) {
-    this.space.clue = clue;
-    this.space.colorOf = (id) => {
-      const p = players.find((x) => x.id === id);
-      return p ? this.data.suits[p.cosmetics.suit] : '#ffffff';
-    };
-    this.space.iconOf = (roleId) => roles[roleId]?.icon || '★';
-    this.space.last = -1;
+    this.flyby ||= new Flyby(this.scene);
+    this.flyby.set(clue, {
+      colorOf: (id) => {
+        const p = players.find((x) => x.id === id);
+        return p ? this.data.suits[p.cosmetics.suit] : '#ffffff';
+      },
+      iconOf: (roleId) => roles[roleId]?.icon || '★',
+    });
   }
 
   setDoneTasks(list) {
@@ -311,8 +372,10 @@ export class World {
     requestAnimationFrame(this.loop);
     if (this.lowFx && now - (this.lastFrame || 0) < 50) return;
     this.lastFrame = now;
-    const dt = Math.min(0.05, this.clock.getDelta());
+    const raw = this.clock.getDelta();
+    const dt = Math.min(0.05, raw);
     const t = this.clock.elapsedTime;
+    this.adaptResolution(raw);
     if (this.paused) return;
     this.updateLocal(dt);
     this.updateAvatars(dt, t);
@@ -320,9 +383,44 @@ export class World {
     this.updateAmbience(dt, t);
     this.ship.decor.update(t, { night: this.night, progress: this.progress });
     this.updateBeams(dt);
+    this.flyby?.update(this.serverNow(), t);
+    this.hallucinations?.update(dt, t);
+    // the big Observation Deck window (where clues appear) only needs repainting when it can be seen
+    this.space.bigVisible = this.phase === 'home' || this.phase === 'night' || this.spectator || this.camTarget.z < -12;
     this.space.update(t);
     this.backdrop.update(t);
     this.renderer.render(this.scene, this.camera);
+  }
+
+  // Every 2 seconds, compare the frame rate with the target and nudge the resolution.
+  adaptResolution(raw) {
+    if (this.lowFx || document.hidden || raw > 0.5) return; // capped, hidden, or a hiccup (tab switch)
+    const perf = this.perf;
+    perf.frames += 1;
+    perf.time += raw;
+    if (perf.time < 2) return;
+    const fps = perf.frames / perf.time;
+    perf.frames = 0;
+    perf.time = 0;
+    let next = this.ratio;
+    if (fps < 45 && this.ratio > this.minRatio) {
+      next = Math.max(this.minRatio, this.ratio - 0.2);
+      perf.calmWindows = 0;
+    } else if (fps > 57) {
+      // only climb back after a while, so the resolution doesn't bounce up and down
+      perf.calmWindows += 1;
+      if (perf.calmWindows >= 3 && this.ratio < this.maxRatio) {
+        next = Math.min(this.maxRatio, this.ratio + 0.1);
+        perf.calmWindows = 0;
+      }
+    } else {
+      perf.calmWindows = 0;
+    }
+    if (Math.abs(next - this.ratio) > 0.01) {
+      this.ratio = next;
+      this.renderer.setPixelRatio(next);
+      this.renderer.setSize(window.innerWidth, window.innerHeight);
+    }
   }
 
   updateLocal(dt) {
@@ -351,7 +449,10 @@ export class World {
     const moving = len > 0.05;
     if (moving) {
       const sp = (SPEED * Math.min(1, len)) / len;
-      [this.local.x, this.local.z] = moveWithCollision(this.local.x, this.local.z, dx * sp * dt, dz * sp * dt);
+      const [nx, nz] = moveWithCollision(this.local.x, this.local.z, dx * sp * dt, dz * sp * dt);
+      // sealed rooms: you can walk out, but not in
+      const into = roomAt(nx, nz);
+      if (!(into !== this.room && this.lockedOut(into))) [this.local.x, this.local.z] = [nx, nz];
       const want = Math.atan2(dx, dz);
       let diff = want - this.local.r;
       while (diff > Math.PI) diff -= Math.PI * 2;
@@ -397,15 +498,28 @@ export class World {
   }
 
   updateAvatars(dt, t) {
+    const now = performance.now();
+    const k = 1 - Math.exp(-dt * 12);
     for (const [id, a] of this.avatars) {
       if (id !== this.myId && a.target && !SEATED.includes(this.phase)) {
         const p = a.root.position;
-        const k = Math.min(1, dt * 10);
-        const dist = Math.hypot(a.target.x - p.x, a.target.z - p.z);
-        if (dist > 12) p.set(a.target.x, 0, a.target.z);
+        // where they probably are now: the last known spot, nudged along their velocity
+        let gx = a.target.x;
+        let gz = a.target.z;
+        if (a.vel && a.target.m) {
+          const ahead = Math.min(0.2, (now - a.movedAt) / 1000);
+          const px = gx + a.vel.x * ahead;
+          const pz = gz + a.vel.z * ahead;
+          if (walkable(px, pz)) {
+            gx = px;
+            gz = pz;
+          }
+        }
+        const dist = Math.hypot(gx - p.x, gz - p.z);
+        if (dist > 12) p.set(gx, 0, gz); // teleported
         else {
-          p.x += (a.target.x - p.x) * k;
-          p.z += (a.target.z - p.z) * k;
+          p.x += (gx - p.x) * k;
+          p.z += (gz - p.z) * k;
         }
         let diff = a.target.r - a.root.rotation.y;
         while (diff > Math.PI) diff -= Math.PI * 2;
@@ -415,6 +529,8 @@ export class World {
       } else if (id !== this.myId) {
         a.moving = false;
       }
+      // avatars far off-screen skip their animation work
+      if (this.phase === 'roam' && id !== this.myId && !a.deathState && Math.abs(a.root.position.x - this.camTarget.x) + Math.abs(a.root.position.z - this.camTarget.z) > 45) continue;
       a.update(dt, t);
     }
   }
@@ -424,34 +540,35 @@ export class World {
     const far = this.phase === 'home';
     this.scene.fog.near = far ? 150 : 40;
     this.scene.fog.far = far ? 500 : 120;
-    let target;
-    let offset;
+    const target = this._want;
+    const offset = this._offset;
     const z = this.zoom;
     if (this.phase === 'home') {
       // title screen: a slow orbit high above the ship, the black hole glowing below
       const a = this.clock.elapsedTime * 0.04;
-      target = new THREE.Vector3(0, -20, 6);
-      offset = new THREE.Vector3(Math.sin(a) * 70, 85, Math.cos(a) * 70);
+      target.set(0, -20, 6);
+      offset.set(Math.sin(a) * 70, 85, Math.cos(a) * 70);
     } else if (this.phase === 'night') {
-      target = new THREE.Vector3(0, 0, 4);
-      offset = new THREE.Vector3(Math.sin(this.clock.elapsedTime * 0.05) * 30, 70, 55);
+      target.set(0, 0, 4);
+      offset.set(Math.sin(this.clock.elapsedTime * 0.05) * 30, 70, 55);
     } else if (SEATED.includes(this.phase) || (this.spectator && !this.spectatorPos)) {
-      target = new THREE.Vector3(0, 0, -0.5);
-      offset = new THREE.Vector3(0, 19 * z, 14.5 * z);
+      target.set(0, 0, -0.5);
+      offset.set(0, 19 * z, 14.5 * z);
     } else if (this.spectator) {
-      target = new THREE.Vector3(this.spectatorPos.x, 0, this.spectatorPos.z);
-      offset = new THREE.Vector3(0, 26 * z, 19 * z);
+      target.set(this.spectatorPos.x, 0, this.spectatorPos.z);
+      offset.set(0, 26 * z, 19 * z);
     } else if (this.room === 'observation') {
-      // tilt up to look out of the big window, where the clues appear
-      target = new THREE.Vector3(this.local.x * 0.6, 1.5, Math.max(this.local.z - 5.5, -31));
-      offset = new THREE.Vector3(0, 7.5 * z, 9.5 * z);
+      // tilt up to look out of the big window, and out into space while a clue drifts past
+      const out = this.flyby?.live;
+      target.set(this.local.x * (out ? 0.3 : 0.6), out ? 0.5 : 1.5, out ? -40 : Math.max(this.local.z - 5.5, -31));
+      offset.set(0, (out ? 9 : 7.5) * z, (out ? 17 : 9.5) * z);
     } else {
-      target = new THREE.Vector3(this.local.x, 0, this.local.z - 0.8);
-      offset = new THREE.Vector3(0, 11.5 * z, 8.8 * z);
+      target.set(this.local.x, 0, this.local.z - 0.8);
+      offset.set(0, 11.5 * z, 8.8 * z);
     }
     const k = 1 - Math.exp(-dt * 4);
     this.camTarget.lerp(target, k);
-    this.camPos.lerp(target.clone().add(offset), k);
+    this.camPos.lerp(offset.add(target), k);
     this.camera.position.copy(this.camPos);
     // the ship shudders when the black hole pulls it closer
     if (this.shake > 0) {
@@ -466,14 +583,30 @@ export class World {
   updateAmbience(dt, t) {
     // flickering lights; the closer the black hole, the worse it gets
     const instability = 0.04 + this.progress * 0.25 + (this.night ? 0.2 : 0);
+    // the lighting mood: a phase tint, plus a red alert pulse when a meeting is called
+    const mood = MOODS[this.phase];
+    let amount = mood ? mood.amount : 0;
+    this.moodColor.setHex(mood ? mood.color : 0xffffff);
+    const alarm = t < this.alarmUntil;
+    if (alarm) {
+      this.moodColor.setHex(0xff1020);
+      amount = 0.6 + 0.4 * (0.5 + 0.5 * Math.sin(t * 9));
+    } else if (this.phase === 'nominations') {
+      amount += 0.06 * Math.max(0, Math.sin(t * 7)); // a faint heartbeat
+    }
+    const tintK = Math.min(1, dt * 4);
     for (const light of this.ship.lights) {
       const base = light.userData.base ?? 40;
       const isFlicker = this.ship.flicker.includes(light);
-      let target = base * (this.night ? 0.25 : 1);
+      let target = base * (this.night ? 0.25 : this.blackout ? 0.04 : alarm ? 1.25 : 1);
       if ((isFlicker || Math.random() < instability * 0.05) && Math.random() < instability) target *= Math.random() * 0.5;
       light.intensity += (target - light.intensity) * Math.min(1, dt * 15);
+      this._tint.copy(light.userData.color).lerp(this.moodColor, amount);
+      light.color.lerp(this._tint, alarm ? 1 : tintK);
     }
-    this.hemi.intensity = (this.night ? 0.35 : 1.6 - this.progress * 0.5) * (this.lowFx ? 1.5 : 1);
+    this._tint.copy(this.hemiColor).lerp(this.moodColor, amount * 0.6);
+    this.hemi.color.lerp(this._tint, alarm ? 1 : tintK);
+    this.hemi.intensity = (this.night ? 0.35 : this.blackout ? 0.18 : 1.6 - this.progress * 0.5) * (this.lowFx ? 1.5 : 1);
     this.ship.holo.rotation.y = t * 0.6;
     this.ship.disk.rotation.z = t * 1.5;
     const core = this.ship.group.userData.reactorCore;
@@ -494,12 +627,46 @@ export class World {
   // Teleporting and "who is where"
   // ---------------------------------------------------------------------------
 
+  // Ship systems that change the world: disguises, the blackout and sealed rooms.
+  // { disguise: { id: asId }, blackout: bool, lockdowns: [{ room, allowed }] }
+  setSystems({ disguise = {}, blackout = false, lockdowns = [] }) {
+    const key = JSON.stringify([disguise, blackout, lockdowns]);
+    if (key === this.systemsKey) return;
+    this.systemsKey = key;
+    this.disguise = disguise;
+    this.blackout = blackout;
+    this.lockdowns = lockdowns;
+    if (this.lastState) this.syncPlayers(this.lastState);
+    // a red force field over each sealed room
+    for (const m of this.lockMeshes || []) {
+      this.scene.remove(m);
+      m.geometry.dispose();
+      m.material.dispose();
+    }
+    this.lockMeshes = lockdowns.map(({ room }) => {
+      const [x0, z0, x1, z1] = roomById(room).rect;
+      const mesh = new THREE.Mesh(
+        new THREE.BoxGeometry(x1 - x0, 4.2, z1 - z0),
+        new THREE.MeshBasicMaterial({ color: 0xff2a4a, transparent: true, opacity: 0.12, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide }),
+      );
+      mesh.position.set((x0 + x1) / 2, 2.1, (z0 + z1) / 2);
+      this.scene.add(mesh);
+      return mesh;
+    });
+  }
+
+  // Is this room sealed against you?
+  lockedOut(roomId) {
+    return (this.lockdowns || []).some((l) => l.room === roomId && !l.allowed.includes(this.myId));
+  }
+
   // Beam yourself into a room. Returns a reason string if you can't right now.
   teleport(roomId) {
     if (!this.canMove()) return 'You can only teleport while exploring the ship.';
     const room = roomById(roomId);
     if (!room) return 'Unknown room.';
     if (this.room === roomId) return null;
+    if (this.lockedOut(roomId)) return `🔐 ${room.name} is in lockdown. Try again in a minute.`;
     const now = performance.now() / 1000;
     if (now < this.teleportReadyAt) return 'The teleporter is recharging…';
     this.teleportReadyAt = now + TELEPORT_COOLDOWN;
@@ -556,7 +723,19 @@ export class World {
       const p = id === this.myId ? this.local : a.target || a.root.position;
       out[id] = { room: roomAt(p.x, p.z), x: p.x, z: p.z };
     }
+    // to a hallucinating player, the imaginary crewmates are just as real
+    if (this.phase === 'roam') {
+      (this.hallucinations?.phantoms || []).forEach((ph, i) => {
+        const p = ph.avatar.root.position;
+        out[`~ph${i}`] = { room: roomAt(p.x, p.z), x: p.x, z: p.z, phantom: ph };
+      });
+    }
     return out;
+  }
+
+  // Display name for an id from whereabouts() (players or imaginary friends).
+  phantomName(id) {
+    return id.startsWith('~ph') ? this.hallucinations?.phantoms[Number(id.slice(3))]?.name : null;
   }
 
   // Who would hear you in proximity chat (same rules as the server).

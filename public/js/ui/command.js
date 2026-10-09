@@ -83,7 +83,10 @@ function control(s) {
       el('button', { onclick: () => act('add-time', { seconds: -30 }) }, '−30 s'),
       el('button', { onclick: () => act('pause') }, s.paused ? '▶ Resume' : '⏸ Pause'),
     ),
-    el('label', { className: 'check' }, el('input', { type: 'checkbox', checked: s.autoAdvance, onchange: (e) => act('auto', { on: e.target.checked }) }), 'Auto-advance when timers run out (ARIA helps)'),
+    el('label', { className: 'check' }, el('input', { type: 'checkbox', checked: s.autoAdvance, onchange: (e) => act('auto', { on: e.target.checked }) }), 'Auto-advance when timers run out or everyone is ready (ARIA helps)'),
+    ['roam', 'meeting', 'nominations'].includes(s.phase) && !s.nomination
+      ? el('div', { className: 'hint' }, `⏭️ Ready to move on: ${s.ready.length}/${s.readyNeeded}${s.ready.length ? ` (${s.ready.map((id) => player(id)?.name).filter(Boolean).join(', ')})` : ''}`)
+      : null,
   ));
   if (s.phase === 'night') parts.push(nightStatus(s));
   parts.push(el('section', {},
@@ -121,6 +124,7 @@ function manifest(s) {
           !p.alive && el('span', { className: 'flag bad' }, '💀 dead'),
           !p.alive && p.ghostVote && el('span', { className: 'flag' }, '👻 vote'),
           p.glitched && el('span', { className: 'flag bad' }, '⚡ glitched'),
+          p.hallucinating && el('span', { className: 'flag bad' }, '🤡 hallucinating'),
           p.redHerring && el('span', { className: 'flag' }, '📡 ghost signal'),
           p.used && el('span', { className: 'flag' }, 'ability used'),
           p.master && el('span', { className: 'flag' }, `master: ${name(p.master)}`),
@@ -202,6 +206,7 @@ const ANIM_LABELS = {
 function describeEvent(e, name) {
   switch (e.k) {
     case 'hack': return `💻 Hacker glitched ${name(e.t)}`;
+    case 'hallucinate': return `🤡 Holo-Jester pranks ${name(e.t)}${e.works ? ': they hallucinate tomorrow' : ' (no effect: glitched)'}`;
     case 'protect': return `💉 Medic shielded ${name(e.t)}${e.works ? '' : ' (no effect: glitched/drunk)'}`;
     case 'kill': return `🦑 Parasite attacked ${name(e.t)}: ${{ died: 'they die', protected: 'saved by the Medic', marine: 'the Marine shrugged it off', glitched: 'the Parasite was glitched', starpass: `jumped hosts${e.to ? ` to ${name(e.to)}` : ''}`, bounced: `the First Officer dodged, ${name(e.victim)} dies instead`, 'bounced-safe': 'the First Officer dodged' }[e.result] || e.result}`;
     case 'master': return `🤖 Service Droid serves ${name(e.t)}`;
@@ -244,10 +249,10 @@ function clues(s) {
   return el('div', {},
     el('section', {},
       el('h3', {}, '🔭 Window clues'),
-      el('div', { className: 'hint' }, `Observation Array: ${s.charge}/${s.chargeNeeded}. When full at dawn, ARIA shows a clue that helps the losing team.`),
-      s.clue ? el('div', {}, `Current clue: ${s.clue.kind} — “${s.clue.caption}”`) : el('div', { className: 'hint' }, 'No clue in the windows right now.'),
+      el('div', { className: 'hint' }, `Observation Array: ${s.charge}/${s.chargeNeeded}. When full at dawn, a clue that helps the losing team drifts past outside the Observation Deck for 20 seconds at a random moment while everyone explores. Players who did a task that day get a 20-second warning.`),
+      s.clue ? el('div', {}, `Today's clue: ${s.clue.kind} — “${s.clue.caption}”${s.clue.at ? (s.clue.live ? ' · drifting past now!' : ` · arrives ${new Date(s.clue.at).toLocaleTimeString()}`) : ' · arrives during exploring'}`) : el('div', { className: 'hint' }, 'No clue today.'),
       el('div', { className: 'hint' }, 'Show a clue right now:'),
-      el('div', { className: 'grid-buttons' }, ...kinds.map(([k, label, team]) => el('button', { title: `Helps the ${team}`, onclick: () => act('clue', { kind: k }, 'A clue appears in the Observation Deck window.') }, label))),
+      el('div', { className: 'grid-buttons' }, ...kinds.map(([k, label, team]) => el('button', { title: `Helps the ${team}`, onclick: () => act('clue', { kind: k }, 'A clue will drift past the Observation Deck in 20 seconds (or during the next exploring phase).') }, label))),
     ),
     el('section', {},
       el('h3', {}, '🎭 Registration'),

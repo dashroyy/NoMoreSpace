@@ -23,7 +23,7 @@ No More Space is a spooky, slightly silly space version of **Blood on the Clockt
 **Good wins** when the Parasite is dead.
 **Evil wins** when only 2 players are left alive. The ship falls into the black hole: no more space.
 
-## 2. All 22 roles
+## 2. All 23 roles
 
 Each role does exactly what its Trouble Brewing counterpart does. *Night\** means every night except the first.
 
@@ -59,13 +59,32 @@ Each role does exactly what its Trouble Brewing counterpart does. *Night\** mean
 | 🎭 Mimic | Spy | 5+ | Sees the whole Ship Manifest; might register as good |
 | 🥚 Incubator | Scarlet Woman | 5+ | If the Parasite dies with 5+ alive, becomes the new Parasite |
 | 🧳 Smuggler | Baron | **7+** | +2 Drifters in the game (2 fewer Crew) |
+| 🤡 Holo-Jester | *(new, no BotC equivalent)* | 5+ | Each night, choose a player: all tomorrow they **hallucinate** (see below) |
 
 ### The Parasite (evil)
 | Role | BotC | Ability |
 |---|---|---|
 | 🦑 The Parasite | Imp | Each night\*, kill a player. Kill yourself to jump into a Saboteur, who becomes the new Parasite |
 
-Every role card (press **R**) shows the ability, flavour text, **3–4 strategy tips** and everything you've learned so far.
+Every role card (press **R**) shows the ability, when it wakes, flavour text, **3–4 strategy tips** and everything you've learned so far.
+
+### ⚡ Ship systems: abilities that only work online
+Eight roles also get a **once-per-game ship system**, an extra ability that uses what a website can do and a table can't: live rooms, private chat and the 3D ship. Press the ⚡ button in the action bar (or **X**). Like every ability, they are **duds for the Space Drunk and for glitched players**, who are told it worked. Dead players can't use them. Every use shows up in the end-of-game replay.
+
+| Role | System | What it does |
+|---|---|---|
+| 📡 Comms Officer | 🎧 **Intercept** | While exploring: listen in to any room's chat for 45 s. You read the words, but not who said them |
+| 📚 Archivist | 🗂️ **Door logs** | By day: read a room's door log: everyone who has been inside it today |
+| 🛡️ Security Chief | 🔐 **Lockdown** | While exploring: seal the room you're in for 60 s. Nobody else can get in (a red force field appears), nobody can listen in, and nobody outside can talk to you |
+| 🔧 Engineer | 📶 **Sensor sweep** | While exploring: learn how many evil players are standing in a room right now (registration applies) |
+| 💉 Medic | 🩺 **Med-scan** | By day: learn whether a player's systems are glitched (hacked) right now |
+| 💻 Hacker | 👾 **Spoof** | By day: send a chat message that looks like it came from another player. Whoever can hear you sees it (everyone, during the meeting) |
+| 🎭 Mimic | 🎭 **Disguise** | While exploring: look exactly like another player for 60 s: suit, hat, name tag, map dot and chat name |
+| 🦑 The Parasite | 🌑 **Blackout** | While exploring: cut the lights for 45 s. Name tags, the map, the Rooms list, door logs and sensors go dark, and nearby chat names show as ??? |
+
+The good systems give the crew more ways to find information; the evil ones muddy exactly that information (a blackout blinds door logs and sensors, a spoof or disguise makes chat lie). Everything timed ends when the emergency meeting is called. The Captain sees through every trick in their chat.
+
+The role card also has a private **🗒️ Notebook**, like the scrap of paper BotC players keep: for each player, note the role they claim, whether you trust them (😇 / 😈) and a few words. Your guesses appear as small badges on the bridge table. It's stored only in your browser and is wiped when a new game starts.
 
 ## 3. Player counts & balance
 
@@ -140,12 +159,17 @@ Players with an ability choose targets on their screen. If they don't choose in 
 | **Dawn** | The Captain's (or ARIA's) story of the night appears in a **cloud bubble**; deaths play their **death animations** at the bridge table | ~10 s + 4 s per death |
 | **Explore** | Walk the ship. **Proximity chat** (text and voice): only players in the same room (or within a few steps; in corridors only distance counts) hear you, which recreates BotC's private conversations. Press **M** / tap **🚀 Rooms** (or click a room on the map) to **teleport** into any room; the list shows who is in each room, and a line above the chat says exactly who can hear you. Do **tasks**, look for **clues**, find the **drawings** | 25 s per living player (+90 s on day 1) |
 | **Emergency meeting** | Everyone's pulled back to their seats on the bridge. Open discussion | 12 s per living player |
-| **Nominations** | Click a player on the bridge table to nominate them. The **nominator accuses (20 s)**, the **nominee defends (20 s)**, then the **vote clock** sweeps clockwise from the seat after the nominee | 30 s per living player |
+| **Nominations** | Press **☝️ Nominate** (or click a seat) and pick a player. The **nominator accuses (20 s)**, the **nominee defends (20 s)**, then **everyone votes at once (15 s)**, and the **vote clock** sweeps round the table revealing each vote | 30 s per living player |
 | **Dusk** | The player "on the block" is **airlocked** | ~9 s |
 
-### Nominations & voting (exactly like BotC)
+**Ready to move on:** while exploring, in the meeting and during nominations (between votes), everyone has a **⏭️ Ready** button. When every connected player is ready, the ship moves on without waiting for the timer, like a Storyteller asking "any more nominations?". A new nomination resets everyone's readiness. In Captain mode the Command Station shows who is ready, and readiness only skips ahead when auto-advance is on.
+
+### Nominations & voting (BotC rules, built for playing online)
 - Each *living* player may nominate **once per day**; each player may be nominated **once per day**.
-- Raise your hand before the clock hand reaches your seat. When it passes you, your vote is **locked**.
+- **Nominate:** a ☝️ Nominate button opens a list of everyone who can still be nominated. Pick one and confirm (no fiddly clicking on tiny seats).
+- **Vote panel:** as soon as someone is nominated, a vote panel appears in the middle of the screen with two big buttons, **✋ YES (airlock them)** and **🙅 NO (spare them)**, also on the keys **Y** and **N**. You can vote during the speeches and **change your mind until the count starts**. Not voting counts as NO.
+- **Votes are secret until the count.** Everyone sees *who* has voted (a 🗳️ over their seat) but not *how*. When the ballot closes (after 15 s, or as soon as everyone connected has voted) the clock hand sweeps round the table from the seat after the nominee, revealing each ✋ in turn, just like hands going up around a real table. This replaces BotC's "raise your hand before the clock reaches you", which felt like waiting around online.
+- The panel shows how many have voted, how many YES votes are needed (and who to beat), whether your vote is a ghost vote, and the Service Droid's master rule. Afterwards it shows the result and who voted YES, and the bridge table panel keeps a list of **today's votes**.
 - A nominee goes "on the block" with votes **≥ half the living players** (rounded up) **and** more votes than anyone else that day. **A tie means nobody** goes on the block, and the next nominee must beat the tied number.
 - One airlocking per day at most.
 - **Dead players** stay at the table as ghosts. They can talk and get **one ghost vote** for the rest of the game.
@@ -155,6 +179,8 @@ Players with an ability choose targets on their screen. If they don't choose in 
 - **Stowaway** may register as evil (even as the Parasite) to the Scanner, Engineer, Navigator, Security Chief, Coroner, Black Box and Gunner.
 - **Mimic** may register as good and as a Crew or Drifter role.
 - **Ghost signal:** one good player always pings the Scanner as the Parasite.
+- **Dead players lose their abilities**, as in BotC: a dead Mimic stops seeing the Manifest and a dead Service Droid votes freely with their ghost vote.
+- **The Hacker's glitch ends when the Hacker dies.** If the Parasite kills the Hacker, players who act later that night (Coroner, Engineer, Scanner) get true information; if the Hacker is airlocked, their target works again straight away.
 
 ## 6. The Captain & the Command Station
 Whoever creates the ship chooses one of:
@@ -190,7 +216,9 @@ There are 11 rooms, each with a task console and a quick minigame:
 | Airlock | Purge the Vents (button mash) |
 | Crew Quarters | Feed the Ship Cat (it dodges) |
 
-- Each task (once per player per day, ghosts too) charges the **Observation Array**. When it reaches 1.5 × the number of living players, a **clue** appears outside the **Observation Deck window** the next morning.
+- Each task (once per player per day, ghosts too) charges the **Observation Array**. When it reaches 1.5 × the number of living players, a **clue** comes the next day.
+- **Clues are real 3D objects that drift past outside the ship**, beyond the Observation Deck's big window, for just **20 seconds** at a random moment while everyone is exploring. Stand in the Observation Deck and the camera tilts up to watch them go by; whoever is there gets the clue's caption. Blink and you miss it, so whoever saw it has to convince everyone else.
+- **Players who did a task that day get a 20-second warning** ("📡 Your task sensors ping…"), so tasks pay off. Everyone else has to notice the crowd heading for the window.
 - **Clues help whichever team is losing.** ARIA compares how close the ship is to the black hole (good losing) against how many evil players are dead or under suspicion (evil losing).
 
 | If the crew is behind | If the infiltrators are behind |
@@ -199,7 +227,23 @@ There are 11 rooms, each with a task console and a quick minigame:
 | ☄️ Three comets in three players' suit colours: **one carries spores** (is evil) | ☄️ Three comets crossing a constellation: one of them has that role |
 | 🛰️ A derelict probe blinking one player's colour: **not** the Parasite | 💡 Debris lights blink the number of Drifters |
 
-Clues are visual and cryptic. Nobody is told who the clue helps; you have to go to the window and decode it.
+| Clue | What drifts past |
+|---|---|
+| Comets | Three glowing comets with tails in players' suit colours, streaking across one after another |
+| Probe | A tumbling derelict satellite with solar panels, its beacon blinking a suit colour |
+| Constellation | A role's icon drawn in stars: warm and twinkling if *living*, cold and flickering if *dead* |
+| Debris lights | A cluster of buoys whose green lights blink together (count them!), or stay dark for zero |
+
+Clues are visual and cryptic. Nobody is told who the clue helps; you have to be at the window at the right moment and decode it.
+
+### 🤡 The Holo-Jester's hallucinations
+The Holo-Jester is an evil Saboteur. Each night they pick a player, whose visor projects hallucinations **all the next day**. Only that player's screen shows them, and they are never told:
+- **Crewmates who don't exist**, with trustworthy names like *Definitely Real Dave*, *Gary From Accounts* and *Not The Parasite*. They wander between rooms, dance, and chat to you ("I'm the Medic, trust me 😉", "The ducks know."), and they even show up on your map and as people who can hear you.
+- **Impossible things floating through the ship**: a whale, a flotilla of rubber ducks, a spinning cow, a pizza, a birthday cake, some chairs.
+- **Whispers from nobody** in the chat ("psst… the ducks are watching.").
+- **A fake clue** drifting past the Observation Deck (instead of the real one), with random contents.
+
+A glitched Holo-Jester's projector fizzles. Hallucinations wear off at night. The Captain and the Mimic can see who is hallucinating, and the end-game replay reveals every prank.
 
 **Social tell:** a team that's winning may *avoid* doing tasks, and that can give them away.
 
@@ -209,7 +253,21 @@ Clues are visual and cryptic. Nobody is told who the clue helps; you have to go 
 - **Spooky-festive decorations:** twinkling fairy lights along the walls, glowing jack-o'-lanterns with flickering carved faces, cobwebs in the corners, Halloween bunting.
 - **Spaceship details:** pipes, glowing corner pillars, blinking control panels, server racks, holographic data screens, glowing floor strips in the corridors, hazard stripes at every doorway.
 - **Everyone looks the same** for the whole game: a chunky spacesuit with a glass bubble helmet and two glowing eyes inside, a chest control panel, twin oxygen tanks, gloves and boots. Customise your **colour**, **hat**, **visor tint** (the glass) and **pet**.
-- **Sounds:** every effect is synthesised in the browser, with no audio files: airlock whoosh, gavel, vote clock ticks, task chimes, death stings, the dawn chime.
+- **Lighting moods:** the room lights tint with the phase: deep blue at night, warm at dawn, a flashing **red alert** when an emergency meeting is called, a faint red heartbeat during nominations and amber at dusk. Dust motes drift through every room in its light colour, and get more restless as the black hole closes in.
+- **Music:** an original score composed live in the browser, so no two games sound the same: a gothic lullaby drifting through space rather than synth bleeps. A music box, a wobbly **theremin**, a ghostly choir, pizzicato strings and ticking clocks, all in D minor, with a different arrangement for each part of the game:
+
+| When | Arrangement |
+|---|---|
+| Title screen & docking bay | A slow music-box waltz; the theremin answers every other phrase |
+| Day | A sly "oom-pah-pah" waltz: pizzicato bass, celesta chords, theremin or celesta tunes |
+| Night | No beat: choir chords, a music box playing to itself, a distant theremin |
+| Nominations & dusk | A ticking clock, a creeping pizzicato ostinato and a heartbeat |
+| The crew escapes | The waltz again in D major, bright and twinkly |
+| No more space | Low choir, a tolling bell and a theremin sinking into the dark |
+
+  Toggle music with 🎵 (top bar, or the title screen) separately from sound effects 🔊.
+- **Sounds:** every effect is synthesised in the browser, with no audio files: bells and celesta for chimes and info, a ship's bell tolling for emergency meetings, wooden clock ticks for votes, the airlock whoosh, the gavel and choir stings for deaths.
+- **Type:** *Unbounded* for titles and buttons, *Bricolage Grotesque* for reading, *Martian Mono* for codes and timers, and the dripping *Rubik Wet Paint* for spooky moments.
 - **Voice:** optional proximity voice chat (WebRTC). Volume fades with distance while exploring, everyone is at full volume in meetings, and mics are muted at night.
 
 ## 9. The epic reveal

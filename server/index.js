@@ -8,7 +8,7 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 const { Server } = require('socket.io');
-const { Game, DEATH_ANIMS } = require('./engine');
+const { Game, DEATH_ANIMS, ROOM_NAMES } = require('./engine');
 const { ROLES, TYPES, DISTRIBUTION, MIN_PLAYERS, MAX_PLAYERS, EVIL_INFO_MIN, teamOf } = require('./roles');
 const cosmetics = require('./cosmetics');
 const { TASKS } = require('./tasks');
@@ -238,7 +238,7 @@ io.on('connection', (socket) => {
   on('reg', ({ role, policy }) => game().setRegPolicy(me, role, policy));
   on('draft-edit', (edit) => game().editDraft(me, edit));
   on('toggle-dead', ({ id }) => game().captainToggleDead(me, id));
-  on('clue', ({ kind }) => game().forceClue(me, kind));
+  on('clue', ({ kind }) => game().forceClue(me, kind, Date.now()));
   on('say', ({ text }) => {
     game().say(me, text);
     io.to(room.code).emit('bubble', room.game.bubble);
@@ -265,6 +265,7 @@ io.on('connection', (socket) => {
   on('nominate', ({ target }) => game().nominate(me, target));
   on('hand', ({ up }) => game().setHand(me, up));
   on('done-speaking', () => game().doneSpeaking(me, Date.now()));
+  on('ready', ({ on: value }) => game().setReady(me, !!value));
   on('shoot', ({ target }) => game().gunnerShot(me, target));
   on('task', ({ task }) => game().completeTask(me, task));
   on('drawing', ({ data, signed }) => {
@@ -279,6 +280,54 @@ io.on('connection', (socket) => {
     io.to(room.code).emit('emote', { id: me, emote });
   }, { update: false });
 
+  // Who hears a message from this player right now, by phase and position.
+  function hearersOf(g, speakerId) {
+    if (['lobby', 'ended', 'dawn', 'meeting', 'nominations', 'dusk'].includes(g.phase)) return { channel: 'all', ids: g.players.map((p) => p.id) };
+    // Exploring: only players in the same room or close by hear you.
+    const mine = room.positions[speakerId];
+    const ids = g.players
+      .filter((p) => {
+        const pos = room.positions[p.id];
+        if (p.id === speakerId) return true;
+        if (!mine || !pos) return false;
+        const theirLock = g.activeLockdown(pos.room);
+        if (theirLock && !theirLock.allowed.includes(speakerId)) return false; // sealed rooms keep sound out too
+        // corridors are long, so there only distance counts
+        return (pos.room === mine.room && pos.room !== 'corridor') || Math.hypot(pos.x - mine.x, pos.z - mine.z) < NEAR_RADIUS;
+      })
+      .map((p) => p.id);
+    // a sealed room: only the people locked inside hear each other
+    const lock = mine && g.activeLockdown(mine.room);
+    if (lock) return { channel: 'near', ids: ids.filter((id) => lock.allowed.includes(id) || id === speakerId), room: mine.room };
+    return { channel: 'near', ids, room: mine?.room };
+  }
+
+  // Send a public (non-secret-channel) message, handling disguises, blackouts and eavesdroppers.
+  function deliver(g, speakerId, message, { spoofedBy = null } = {}) {
+    const now = Date.now();
+    const { channel, ids, room: where } = hearersOf(g, spoofedBy || speakerId);
+    message.channel = channel;
+    if (channel === 'near') {
+      const as = g.disguiseOf(speakerId, now);
+      if (as) message.name = g.get(as).name;
+      if (g.blackout(now)) message.name = '???';
+    }
+    const heard = new Set(ids).size - 1;
+    for (const id of new Set(ids)) personSocket(room, id)?.emit('chat', message);
+    // the Comms Officer's intercept: words without names
+    if (channel === 'near' && where && where !== 'corridor') {
+      for (const id of g.listeners(where, now)) {
+        if (!ids.includes(id)) personSocket(room, id)?.emit('chat', { ...message, from: null, name: `🎧 ${ROOM_NAMES[where]}`, channel: 'intercept' });
+      }
+    }
+    // the Captain hears everything, and sees through tricks
+    if (g.captain) {
+      const real = spoofedBy ? `${g.get(spoofedBy).name} as ${message.name}` : message.name !== g.get(speakerId)?.name && g.get(speakerId) ? `${g.get(speakerId).name} as ${message.name}` : message.name;
+      personSocket(room, g.captain.id)?.emit('chat', { ...message, name: real });
+    }
+    return heard;
+  }
+
   on('chat', ({ text, channel }) => {
     const g = game();
     const now = Date.now();
@@ -290,47 +339,51 @@ io.on('connection', (socket) => {
     const sender = g.get(me);
     const message = { from: me, name: captain ? `Captain ${g.captain.name}` : sender?.name, text: clean, at: now, ghost: sender ? !sender.alive : false };
 
-    // Who hears it?
-    let recipients;
     if (channel === 'evil') {
       if (!sender || teamOf(sender.role || 'crew') !== 'infiltrators' || !g.evilInfoShared()) throw new Error('You have no secret channel.');
       if (g.phase !== 'night') throw new Error('The secret channel only opens at night.');
       message.channel = 'evil';
-      recipients = g.players.filter((p) => p.role && teamOf(p.role) === 'infiltrators').map((p) => p.id);
-    } else if (captain || ['lobby', 'ended', 'dawn', 'meeting', 'nominations', 'dusk'].includes(g.phase)) {
+      const ids = g.players.filter((p) => p.role && teamOf(p.role) === 'infiltrators').map((p) => p.id);
+      if (g.captain) ids.push(g.captain.id);
+      for (const id of new Set(ids)) personSocket(room, id)?.emit('chat', message);
+      return { heard: ids.length - 1, channel: 'evil' };
+    }
+    if (captain) {
       message.channel = 'all';
-      recipients = [...g.players.map((p) => p.id)];
-    } else if (g.phase === 'night') {
-      throw new Error('Shh... everyone is asleep. (Draw something instead!)');
-    } else {
-      // Roaming: only players in the same room or close by hear you.
-      message.channel = 'near';
-      const mine = room.positions[me];
-      recipients = g.players
-        .filter((p) => {
-          const pos = room.positions[p.id];
-          if (p.id === me) return true;
-          if (!mine || !pos) return false;
-          // corridors are long, so there only distance counts
-          return (pos.room === mine.room && pos.room !== 'corridor') || Math.hypot(pos.x - mine.x, pos.z - mine.z) < NEAR_RADIUS;
-        })
-        .map((p) => p.id);
+      for (const id of [...g.players.map((p) => p.id), g.captain.id]) personSocket(room, id)?.emit('chat', message);
+      return { heard: g.players.length, channel: 'all' };
     }
-    const heard = new Set(recipients).size - 1; // everyone except you
-    if (g.captain) recipients.push(g.captain.id); // the Captain hears everything
-    for (const id of new Set(recipients)) {
-      const s = personSocket(room, id);
-      if (s) s.emit('chat', message);
-    }
+    if (g.phase === 'night') throw new Error('Shh... everyone is asleep. (Draw something instead!)');
+    const heard = deliver(g, me, message);
     return { heard, channel: message.channel };
   }, { update: false });
+
+  // ⚡ Ship systems (see roles.js `system`). The server adds what only it knows: where you stand and who is in the room.
+  on('system', ({ room: chosen, target, text }) => {
+    const g = game();
+    const here = room.positions[me]?.room;
+    const sys = g.systemFor(g.get(me));
+    const which = sys?.target === 'here' ? here : chosen;
+    const occupants = Object.entries(room.positions).filter(([, pos]) => pos.room === which).map(([id]) => id);
+    const result = g.useSystem(me, { room: chosen, target, text, here, occupants }, Date.now());
+    if (result.spoof) {
+      const as = g.get(result.spoof.as);
+      deliver(g, as.id, { from: as.id, name: as.name, text: result.spoof.text, at: Date.now(), ghost: !as.alive }, { spoofedBy: me });
+    }
+    return {};
+  });
 
   // Movement: stored and relayed ~10 times a second by the loop below.
   socket.on('pos', (data) => {
     if (!room || !room.game.get(me) || !data) return;
     const { x, z, r, m, room: where } = data;
     if (![x, z, r].every(Number.isFinite) || Math.abs(x) > 120 || Math.abs(z) > 120) return;
-    room.positions[me] = { x: Math.round(x * 100) / 100, z: Math.round(z * 100) / 100, r: Math.round(r * 100) / 100, m: m ? 1 : 0, room: ROOM_IDS.includes(where) ? where : 'corridor' };
+    let inRoom = ROOM_IDS.includes(where) ? where : 'corridor';
+    // a sealed room only holds the people who were inside when it was locked
+    const lock = room.game.activeLockdown(inRoom);
+    if (lock && !lock.allowed.includes(me)) inRoom = 'corridor';
+    room.positions[me] = { x: Math.round(x * 100) / 100, z: Math.round(z * 100) / 100, r: Math.round(r * 100) / 100, m: m ? 1 : 0, room: inRoom };
+    room.game.recordVisit(me, inRoom);
     room.posDirty = true;
   });
 

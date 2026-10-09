@@ -1,7 +1,7 @@
 // Entry point: connects the server, the 3D world and all the UI pieces.
 import { $, el, clear, problem, toast, typeText, isTouch } from './util.js';
-import { socket, store, onState, send, role, player, isCaptain } from './store.js';
-import { unlockAudio, sfx, setAmbient, setSound, soundEnabled } from './audio.js';
+import { socket, store, onState, send, role, player, isCaptain, serverNow } from './store.js';
+import { unlockAudio, sfx, setAmbient, setSound, soundEnabled, setMusic, musicEnabled } from './audio.js';
 import { World, blackHoleProgress } from './world/world.js';
 import { initChat, addChat, updateChatVisibility, clearChat, systemLine } from './ui/chat.js';
 import { initModal, openRoleCard, refreshRoleCard } from './ui/rolecard.js';
@@ -11,7 +11,11 @@ import { initDrawing, renderNight } from './ui/night.js';
 import { openTask } from './ui/tasks.js';
 import { initCommand, renderCommand } from './ui/command.js';
 import { initRooms } from './ui/rooms.js';
+import { ROOMS } from './world/layout.js';
+import { initSystems } from './ui/systems.js';
+import { initVote } from './ui/vote.js';
 import { Reveal } from './ui/reveal.js';
+import { clearNotebook } from './ui/notebook.js';
 import { initVoice, toggleVoice, voiceEnabled } from './voice.js';
 
 const SEAT_KEY = 'nms-seat';
@@ -31,14 +35,32 @@ function saveSeat(seat) {
   } catch {}
 }
 
+// Canvas text (name tags, room labels) can only use fonts that have finished loading.
+function loadFonts() {
+  if (!document.fonts?.load) return Promise.resolve();
+  const fonts = ['700 72px Unbounded', '600 30px "Bricolage Grotesque"', '700 16px "Martian Mono"', '400 40px "Rubik Wet Paint"'];
+  return Promise.race([Promise.all(fonts.map((f) => document.fonts.load(f))), new Promise((r) => setTimeout(r, 2500))]).catch(() => {});
+}
+
 async function boot() {
-  store.data = await fetch('/game-data.json').then((r) => r.json());
+  [store.data] = await Promise.all([fetch('/game-data.json').then((r) => r.json()), loadFonts()]);
   const world = new World($('world'), store.data, {
     onSendPos: (p) => socket.emit('pos', p),
     onNearTask: (taskId) => setUsePrompt(taskId ? store.data.tasks[taskId].name : null),
     onStep: () => sfx('step'),
   });
   window.__world = world; // handy for debugging in the console
+  world.serverNow = serverNow;
+  // when a clue drifts past, whoever is watching from the Observation Deck gets its caption
+  let captioned = null;
+  setInterval(() => {
+    const clue = store.state?.clue;
+    if (!clue || !world.flyby?.live || captioned === clue.at) return;
+    if (world.room !== 'observation' && !isCaptain()) return;
+    captioned = clue.at;
+    sfx('chime');
+    toast(`🔭 ${clue.caption}`, 'info', 12000);
+  }, 500);
   const reveal = new Reveal(world);
 
   initModal();
@@ -48,6 +70,8 @@ async function boot() {
   initVoice(world);
   initLobby({ onLeave: leave });
   initRooms(world);
+  initSystems(world);
+  initVote();
   initHud(world, {
     onRoleCard: (tab) => openRoleCard(typeof tab === 'string' ? tab : 'role'),
     onUse: () => {
@@ -70,16 +94,19 @@ async function boot() {
   // Unlock audio on the first interaction (browser rule).
   const unlock = () => {
     unlockAudio();
-    if (store.state) setAmbient(MOODS[store.state.phase] || 'calm');
+    setAmbient(store.state ? MOODS[store.state.phase] || 'calm' : 'calm'); // the title screen gets the lobby waltz
   };
   window.addEventListener('pointerdown', unlock, { once: true });
   window.addEventListener('keydown', unlock, { once: true });
 
   // ---------------- server events ----------------
-  socket.on('connect', () => {
+  const rejoin = () => {
     const seat = loadSeat();
     if (seat?.code && seat?.token) socket.emit('join', seat);
-  });
+  };
+  socket.on('connect', rejoin);
+  // the socket may have connected while the game data was loading
+  if (socket.connected) rejoin();
   socket.on('joined', ({ code, token, id }) => {
     store.me = id;
     const name = $('home-name').value || loadSeat()?.name || '';
@@ -122,11 +149,16 @@ async function boot() {
     updateChatVisibility(state);
     refreshRoleCard();
     world.setDoneTasks(state.you?.tasksDone || []);
+    world.setHallucination(state.you?.fx || null, state.phase, (m) => addChat(m));
 
     // clue in the windows
     if (JSON.stringify(state.clue) !== JSON.stringify(prev?.clue)) {
       world.setClue(state.clue, state.players, store.data.roles);
-      if (state.clue && prev && state.phase !== 'lobby') toast('🔭 Something has appeared outside the Observation Deck window…', 'info', 7000);
+      // players who did a task today get a heads-up from the ship's sensors
+      if (state.clue && prev && state.phase === 'roam' && state.you?.clueWarning && state.clue.at !== prev.clue?.at) {
+        sfx('blip');
+        toast('📡 Your task sensors ping: something is drifting toward the Observation Deck! Get to the window in the next 20 seconds…', 'info', 9000);
+      }
     }
     // drawings on the walls
     for (const d of state.drawings) if (!world.drawingCache.has(d.id)) socket.emit('get-drawing', { id: d.id });
@@ -164,6 +196,7 @@ function onPhaseChange(state, prev, world, reveal) {
     hideStory();
     if (prev && prev.phase !== 'lobby') {
       clearChat();
+      clearNotebook(); // a new game, a fresh page
       systemLine('Back in the docking bay. Fresh suits, fresh lies.');
     }
     return;
@@ -233,6 +266,20 @@ function onPhaseChange(state, prev, world, reveal) {
 
 // Toasts and sounds for things that happen within a phase.
 function announceChanges(state, prev, world) {
+  // ship systems everyone notices
+  const sys = state.systems || {};
+  const was = prev.systems || {};
+  if (sys.blackoutUntil && sys.blackoutUntil !== was.blackoutUntil) {
+    sfx('doom');
+    phaseBanner('🌑 BLACKOUT', 'The lights are out. Who is who?', 4000);
+  }
+  for (const l of sys.lockdowns || []) {
+    if (!(was.lockdowns || []).some((b) => b.room === l.room && b.until === l.until)) {
+      sfx('lock');
+      toast(`🔐 ${ROOMS.find((r) => r.id === l.room)?.name || 'A room'} has gone into lockdown!`, 'info', 6000);
+    }
+  }
+
   // new private info
   const notes = state.you?.notes || [];
   const before = prev.you?.notes?.length || 0;
@@ -314,6 +361,27 @@ function leave() {
 }
 
 function setupButtons() {
+  // a soft tap on every button press (night picks and minigames make their own sounds)
+  document.addEventListener('pointerdown', (e) => {
+    const b = e.target.closest?.('button');
+    if (b && !b.disabled && !b.closest('.night-action, .task-area')) sfx('tap');
+  });
+  const syncMusic = () => {
+    const on = musicEnabled();
+    $('btn-music').classList.toggle('off', !on);
+    $('btn-music').title = on ? 'Music on (click to mute)' : 'Music off';
+    $('home-music').textContent = on ? '🎵 Music on' : '🎵 Music off';
+    $('home-music').classList.toggle('off', !on);
+  };
+  syncMusic();
+  for (const id of ['btn-music', 'home-music']) {
+    $(id).addEventListener('click', () => {
+      unlockAudio();
+      setMusic(!musicEnabled());
+      setAmbient(store.state ? MOODS[store.state.phase] || 'calm' : 'calm');
+      syncMusic();
+    });
+  }
   const soundBtn = $('btn-sound');
   const syncSound = () => {
     soundBtn.textContent = soundEnabled() ? '🔊' : '🔇';

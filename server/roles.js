@@ -23,11 +23,14 @@ const TYPES = {
 //   notSelf       : cannot pick yourself
 //   order         : position in the night (lower acts first), matches Trouble Brewing
 // minPlayers: the role is only dealt in games with at least this many players.
+// system: an extra once-per-game "ship systems" ability that only works online
+//   (live rooms, chat and the 3D ship). target: room | player | here | spoof | none.
 const ROLES = {
   // ---------------- CREW (Townsfolk) ----------------
   comms: {
     name: 'Comms Officer', type: 'crew', tb: 'Washerwoman', icon: '📡', minPlayers: 3, tags: ['info'],
     ability: 'You start knowing that 1 of 2 players is a particular Crew role.',
+    system: { id: 'intercept', name: 'Intercept', icon: '🎧', target: 'room', phases: ['roam'], seconds: 45, text: 'Once per game, while exploring: tune into any room for 45 seconds. You read everything said there, but not who said it.' },
     night: { first: true, other: false, choose: 0, order: 30 },
     tips: [
       'Your info is true (unless you are glitched), so one of the two players really is that role.',
@@ -39,6 +42,7 @@ const ROLES = {
   archivist: {
     name: 'Archivist', type: 'crew', tb: 'Librarian', icon: '📚', minPlayers: 5, tags: ['info'],
     ability: 'You start knowing that 1 of 2 players is a particular Drifter. (Or that zero are aboard.)',
+    system: { id: 'accesslog', name: 'Door logs', icon: '🗂️', target: 'room', phases: ['roam', 'meeting'], text: 'Once per game, by day: pick a room and read its door log: everyone who has been inside it today.' },
     night: { first: true, other: false, choose: 0, order: 31 },
     tips: [
       'If you learn "zero Drifters", anyone claiming a Drifter is lying (or very confused).',
@@ -50,6 +54,7 @@ const ROLES = {
   security: {
     name: 'Security Chief', type: 'crew', tb: 'Investigator', icon: '🛡️', minPlayers: 5, tags: ['info'],
     ability: 'You start knowing that 1 of 2 players is a particular Saboteur.',
+    system: { id: 'lockdown', name: 'Lockdown', icon: '🔐', target: 'here', phases: ['roam'], seconds: 60, text: 'Once per game, while exploring: seal the room you are in for 60 seconds. Nobody else can get in, and nobody can listen in.' },
     night: { first: true, other: false, choose: 0, order: 32 },
     tips: [
       'One of your two players is evil, so treat both carefully, but do not airlock blindly: the Stowaway can trick you.',
@@ -72,6 +77,7 @@ const ROLES = {
   engineer: {
     name: 'Engineer', type: 'crew', tb: 'Empath', icon: '🔧', minPlayers: 4, tags: ['info'],
     ability: 'Each night, you learn how many of your 2 alive neighbours are evil.',
+    system: { id: 'sweep', name: 'Sensor sweep', icon: '📶', target: 'room', phases: ['roam'], text: 'Once per game, while exploring: scan a room and learn how many evil players are in it right now.' },
     night: { first: true, other: true, choose: 0, order: 60 },
     tips: [
       'Your neighbours change as players die: you always read the nearest living player on each side.',
@@ -105,6 +111,7 @@ const ROLES = {
   medic: {
     name: 'Medic', type: 'crew', tb: 'Monk', icon: '💉', minPlayers: 3, tags: ['protect'],
     ability: 'Each night*, choose a player (not yourself): they are safe from the Parasite tonight.',
+    system: { id: 'medscan', name: 'Med-scan', icon: '🩺', target: 'player', phases: ['roam', 'meeting'], text: 'Once per game, by day: scan a player to learn if their systems are glitched (hacked) right now.' },
     night: { first: false, other: true, choose: 1, notSelf: true, order: 40 },
     tips: [
       'Protect players with strong info: the Engineer, Scanner or a confirmed crew member.',
@@ -214,6 +221,7 @@ const ROLES = {
   hacker: {
     name: 'Hacker', type: 'saboteur', tb: 'Poisoner', icon: '💻', minPlayers: 5, tags: [],
     ability: 'Each night, choose a player: their systems are glitched tonight and tomorrow day.',
+    system: { id: 'spoof', name: 'Spoof', icon: '👾', target: 'spoof', phases: ['roam', 'meeting'], text: 'Once per game, by day: send a chat message that looks like it came from another player. Whoever can hear you sees it.' },
     night: { first: true, other: true, choose: 1, order: 10 },
     tips: [
       'Glitch info roles to feed them false results, or glitch the Medic so the Parasite can strike.',
@@ -225,6 +233,7 @@ const ROLES = {
   mimic: {
     name: 'Mimic', type: 'saboteur', tb: 'Spy', icon: '🎭', minPlayers: 5, tags: [],
     ability: 'Each night, you see the Ship Manifest. You might register as good & as a Crew or Drifter role, even if dead.',
+    system: { id: 'disguise', name: 'Disguise', icon: '🎭', target: 'player', phases: ['roam'], seconds: 60, text: 'Once per game, while exploring: look exactly like another player (suit, hat, name and chat) for 60 seconds.' },
     night: { first: true, other: true, choose: 0, order: 80 },
     tips: [
       'You can see every role. Use it to make perfect bluffs and to tell the Parasite who to kill.',
@@ -254,11 +263,24 @@ const ROLES = {
     ],
     flavor: 'Brought "a few extra passengers" through customs.',
   },
+  jester: {
+    name: 'Holo-Jester', type: 'saboteur', tb: null, icon: '🤡', minPlayers: 5, tags: ['action'],
+    ability: 'Each night, choose a player: all tomorrow, their visor projects hallucinations. They see crewmates who are not there, impossible things floating in space, whispers from nobody, and a fake clue outside the window.',
+    night: { first: true, other: true, choose: 1, order: 12 },
+    tips: [
+      'Your victim is never told. Everything they see looks real to them, including a fake clue drifting past the Observation Deck.',
+      'Pick the player most likely to see a real clue: an info role who loves doing tasks.',
+      'Back up their "visions" in the meeting. "Yes, I saw the comets too!" is a wonderful lie.',
+      'If someone swears they saw "Definitely Real Dave" in the Galley, you know your projector works.',
+    ],
+    flavor: 'Once the most-booked children\'s entertainer in the Kuiper Belt. Then the hologram projector malfunctioned at a birthday party. Then it worked perfectly.',
+  },
 
   // ---------------- THE PARASITE (Demon) ----------------
   parasite: {
     name: 'The Parasite', type: 'parasite', tb: 'Imp', icon: '🦑', minPlayers: 3, tags: [],
     ability: 'Each night*, choose a player: they die. If you choose yourself, you die & a Saboteur becomes the Parasite.',
+    system: { id: 'blackout', name: 'Blackout', icon: '🌑', target: 'none', phases: ['roam'], seconds: 45, text: 'Once per game, while exploring: cut the lights for 45 seconds. Name tags, the map, door logs and sensors go dark, and chat names show as ???.' },
     night: { first: false, other: true, choose: 1, order: 45 },
     tips: [
       'Kill players with strong information first, but watch out for the Medic and the Marine.',

@@ -4,11 +4,13 @@ A spooky, slightly silly space spin-off of **Blood on the Clocktower**, played o
 
 *The ship is falling into a black hole. Something aboard is not human. Find it before there is no more space.*
 
-- 🎭 **22 hidden roles**, each matching one in Blood on the Clocktower's *Trouble Brewing* (Crew, Drifters, Saboteurs, The Parasite), unlocked by player count
+- 🎭 **23 hidden roles**: 22 matching Blood on the Clocktower's *Trouble Brewing* (Crew, Drifters, Saboteurs, The Parasite) plus the 🤡 **Holo-Jester**, who makes a player hallucinate, unlocked by player count
 - 👥 **3–15 players**, using BotC's own setup table (plus a quick 3–4 player "Short Haul" mode)
 - 👨‍✈️ Play with a human **Captain** (Storyteller) running a full **Command Station**, or let **ARIA the autopilot** run the game
 - 🚀 **3D ship** with 12 rooms, proximity text & voice chat, 11 task minigames, window clues, night drawings on the walls
-- 🕐 BotC-style days: private chats → emergency meeting → nominations with a clockwise **vote clock** → airlock
+- 🕐 BotC-style days: private chats → emergency meeting → nominations where **everyone votes YES/NO at once** and a clockwise **vote clock** reveals the hands → airlock, with a **Ready** button to skip ahead when everyone's done talking
+- ⚡ **Ship systems**: once-per-game online abilities for 8 roles: intercept a room's chat, door logs, lockdowns, sensor sweeps, med-scans, spoofed messages, disguises and blackouts
+- 🗒️ A private **notebook** for tracking claims and suspicions, shown as badges around the bridge table
 - 🎬 An **epic end-game reveal** that unmasks every character model and replays each night
 
 ## Quick start
@@ -25,7 +27,7 @@ Open several **private/incognito windows** to play against yourself (3 minimum, 
 
 ```
 server/
-  roles.js        all 22 roles, the setup table, role tips
+  roles.js        all 23 roles, the setup table, role tips
   engine.js       the rules: nights, days, nominations, voting, winning
   storyteller.js  ARIA: balanced role picks, false info, stories, window clues
   tasks.js        the 11 room tasks
@@ -37,7 +39,7 @@ public/
   js/world/             the 3D ship (Three.js): layout, ship, avatars, role models, sky
   js/ui/                HUD, chat, role card, night & drawing, tasks, lobby,
                         Captain's Command Station, end-game reveal
-  js/audio.js           synthesised sound effects & ambience (no audio files)
+  js/audio.js           generative music & synthesised sound effects (no audio files)
   js/voice.js           proximity voice chat (WebRTC)
 test/                   engine tests (npm test)
 deploy/                 one-time server setup script + config

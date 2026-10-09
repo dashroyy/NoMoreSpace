@@ -194,7 +194,7 @@ export class Reveal {
         for (const d of ch.deaths || []) steps.push({ dur: 2.4, focus: d.id, caption: `💀 ${name(d.id)} did not wake up.`, enter: () => this.kill(d.id, d.anim) });
       }
       if (ch.k === 'day') {
-        const interesting = ch.events.filter((e) => ['nomination', 'execute', 'shot', 'sentinel', 'become-parasite', 'story'].includes(e.k) && !(e.k === 'nomination' && e.result === 'safe' && e.votes < 2));
+        const interesting = ch.events.filter((e) => ['nomination', 'execute', 'shot', 'sentinel', 'become-parasite', 'story', 'system'].includes(e.k) && !(e.k === 'nomination' && e.result === 'safe' && e.votes < 2));
         if (!interesting.length) continue;
         steps.push({ dur: 2, chapter: `DAY ${ch.n}`, caption: '', overview: true, enter: () => { sfx('dawn'); this.lighting('day'); } });
         for (const e of interesting) {
@@ -223,6 +223,8 @@ export class Reveal {
     const R = store.data.roles;
     const role = (id) => this.cast.get(id)?.startRole;
     switch (e.k) {
+      case 'hallucinate':
+        return { dur: 2.8, focus: e.a, beam: [e.a, e.t, 0xff8fd8], caption: `🤡 ${name(e.a)} the Holo-Jester made ${name(e.t)} see things that weren't there${e.works === false ? '… but the projector was glitched.' : '. (Definitely Real Dave says hi.)'}`, enter: () => sfx('pop') };
       case 'hack':
         return { dur: 2.6, focus: e.a, beam: [e.a, e.t, 0x39ff6b], caption: `💻 ${name(e.a)} the Hacker glitched ${name(e.t)}'s systems.`, enter: () => sfx('zap') };
       case 'protect': {
@@ -252,6 +254,8 @@ export class Reveal {
         return { dur: 3, focus: e.a, beam: [e.a, e.t, 0xffb547], caption: `📼 ${name(e.a)}'s Black Box flickered: “${e.text}” ${e.truthful ? '✔' : '✘ (false)'}`, enter: () => sfx('blip') };
       case 'become-parasite':
         return { dur: 3, focus: e.a, caption: `🥚 ${name(e.a)} became the new Parasite!`, enter: () => this.transform(e.a) };
+      case 'unglitch':
+        return { dur: 2.4, focus: e.t, caption: `💻 With ${name(e.a)} the Hacker dead, ${name(e.t)}'s systems rebooted.`, enter: () => sfx('blip') };
       default:
         return null;
     }
@@ -269,14 +273,33 @@ export class Reveal {
         const r = R[c?.finalRole || c?.startRole];
         return { dur: 3.6, focus: e.id, caption: `🚪 ${name(e.id)} was airlocked. They were ${r ? `the ${r.name} ${r.icon}` : 'mysterious'}.${e.story ? ` ${e.story}` : ''}`, enter: () => { sfx('airlock'); this.kill(e.id, 'airlock'); } };
       }
-      case 'shot':
-        return { dur: 3, focus: e.a, beam: [e.a, e.t, 0xff7a3a], caption: `🔫 ${name(e.a)} fired at ${name(e.t)}… ${e.hit ? 'and vaporised the Parasite!' : 'nothing happened.'}`, enter: () => { sfx('shot'); if (e.hit) this.kill(e.t, 'shot'); } };
+      case 'shot': {
+        // a Stowaway can register as the Parasite and get hit by mistake
+        const hitWhat = this.cast.get(e.t)?.startRole === 'stowaway' ? 'and vaporised… the Stowaway, who looked just like the Parasite!' : 'and vaporised the Parasite!';
+        return { dur: 3, focus: e.a, beam: [e.a, e.t, 0xff7a3a], caption: `🔫 ${name(e.a)} fired at ${name(e.t)}… ${e.hit ? hitWhat : 'nothing happened.'}`, enter: () => { sfx('shot'); if (e.hit) this.kill(e.t, 'shot'); } };
+      }
       case 'sentinel':
         return { dur: 3, focus: e.a, beam: [e.t, e.a, 0xffe14f], caption: `⚡ ${name(e.a)} nominated the Sentinel ${name(e.t)} and got fried!`, enter: () => { sfx('zap'); this.kill(e.a, 'airlock'); } };
       case 'become-parasite':
         return { dur: 3, focus: e.a, caption: `🥚 With the Parasite dead, ${name(e.a)} the Incubator hatched a new one!`, enter: () => this.transform(e.a) };
       case 'story':
         return { dur: 3.6, bubble: e.text, caption: '', overview: true };
+      case 'system': {
+        // ⚡ ship systems, shown in the replay so everyone learns what really happened
+        const ROOM = (id) => ({ bridge: 'the Bridge', observation: 'the Observation Deck', navigation: 'Navigation', comms: 'Comms', medbay: 'the Medbay', galley: 'the Galley', reactor: 'the Reactor', engine: 'the Engine Room', hydroponics: 'Hydroponics', airlock: 'the Airlock', quarters: 'Crew Quarters', cargo: 'the Cargo Bay' })[id] || 'a room';
+        const dud = e.works === false ? ' …but it was a dud!' : '';
+        const text = {
+          intercept: `🎧 ${name(e.a)} secretly listened in on ${ROOM(e.room)}.${dud}`,
+          accesslog: `🗂️ ${name(e.a)} read the door log of ${ROOM(e.room)}.${dud}`,
+          lockdown: `🔐 ${name(e.a)} sealed ${ROOM(e.room)} for a private chat.${dud}`,
+          sweep: `📶 ${name(e.a)} swept ${ROOM(e.room)} for evil.${dud}`,
+          medscan: `🩺 ${name(e.a)} med-scanned ${name(e.t)}.${dud}`,
+          spoof: `👾 ${name(e.a)} sent a fake message pretending to be ${name(e.t)}!`,
+          disguise: `🎭 ${name(e.a)} disguised themself as ${name(e.t)}!`,
+          blackout: `🌑 ${name(e.a)} cut the lights!`,
+        }[e.sys];
+        return text ? { dur: 2.6, focus: e.a, beam: e.t ? [e.a, e.t, 0xc77dff] : null, caption: text, enter: () => sfx('chime') } : null;
+      }
       default:
         return null;
     }
@@ -348,7 +371,7 @@ export class Reveal {
   finale(crewWon) {
     this.finaleMode = crewWon ? 'crew' : 'evil';
     sfx(crewWon ? 'fanfare' : 'doom');
-    setAmbient(crewWon ? 'calm' : 'night');
+    setAmbient(crewWon ? 'victory' : 'doom');
     for (const c of this.cast.values()) if (!c.revealed) this.unmask(c.p.id);
     if (crewWon) for (const c of this.cast.values()) c.avatar.burst(25, null, 4, 2);
   }

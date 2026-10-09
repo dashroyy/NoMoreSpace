@@ -48,8 +48,14 @@ export function teleportTo(roomId) {
   $('rooms-menu').hidden = true;
 }
 
+// Who someone looks like right now (the Mimic can wear another player's face).
+function shownAs(id) {
+  const as = world?.disguise?.[id] || id;
+  return store.state?.players.find((p) => p.id === as);
+}
+
 function name(id) {
-  return store.state?.players.find((p) => p.id === id)?.name || '?';
+  return world?.phantomName(id) || shownAs(id)?.name || '?';
 }
 
 // Group everyone by the room they're in.
@@ -66,28 +72,30 @@ function renderRooms(force = false) {
   const who = occupants();
   const me = store.state?.you?.id;
   // only rebuild when something changed, so a click never lands on a stale button
-  const key = JSON.stringify([world.room, who, store.state?.players.map((p) => [p.name, p.alive])]);
+  const key = JSON.stringify([world.room, who, store.state?.players.map((p) => [p.name, p.alive]), world.systemsKey]);
   if (key === lastKey && !force) return;
   lastKey = key;
   const players = store.state?.players || [];
   const chip = (id) => {
-    const p = players.find((x) => x.id === id);
-    const color = p ? suitHex(p) : '#ccc';
+    const p = shownAs(id);
+    const ph = world.whereabouts()[id]?.phantom;
+    const color = p ? suitHex(p) : ph ? store.data.suits[ph.avatar.look.suit] || '#ccc' : '#ccc';
     return el('span', { className: `who-chip ${id === me ? 'me' : ''} ${p && !p.alive ? 'ghost' : ''}` }, el('i', { style: { background: color } }), id === me ? 'You' : name(id));
   };
   const rows = ROOMS.map((r) => {
     const here = world.room === r.id;
-    const list = who[r.id] || [];
-    return el('button', { className: `room-row ${here ? 'here' : ''} ${list.some((id) => id !== me) ? 'busy' : ''}`, disabled: here, onclick: () => teleportTo(r.id) },
+    const list = world.blackout ? [] : who[r.id] || [];
+    const sealed = world.lockedOut(r.id);
+    return el('button', { className: `room-row ${here ? 'here' : ''} ${list.some((id) => id !== me) ? 'busy' : ''} ${sealed ? 'sealed' : ''}`, disabled: here || sealed, onclick: () => teleportTo(r.id) },
       el('span', { className: 'room-ico' }, ROOM_ICONS[r.id] || '🚪'),
       el('span', { className: 'room-main' },
         el('b', {}, r.name),
-        el('span', { className: 'room-who' }, ...(list.length ? list.map(chip) : [el('em', {}, 'empty')])),
+        el('span', { className: 'room-who' }, ...(world.blackout ? [el('em', {}, '📡 sensors offline')] : list.length ? list.map(chip) : [el('em', {}, 'empty')])),
       ),
-      el('span', { className: 'room-go' }, here ? 'You are here' : '🚀 Go'),
+      el('span', { className: 'room-go' }, here ? 'You are here' : sealed ? '🔐 Sealed' : '🚀 Go'),
     );
   });
-  const walking = (who.corridor || []).filter((id) => id !== me);
+  const walking = world.blackout ? [] : (who.corridor || []).filter((id) => id !== me);
   clear(menu,
     el('div', { className: 'rooms-head' },
       el('b', {}, '🚀 Teleport to a room'),
@@ -109,6 +117,7 @@ function whoText() {
     const hear = world.hearers();
     const room = ROOMS.find((r) => r.id === world.room);
     const where = room ? `${ROOM_ICONS[room.id]} ${room.name}` : '🚶 Corridor';
+    if (world.blackout) return `${where} · 🌑 Blackout! You can't see who is listening`;
     if (!hear.length) return `${where} · 🔇 Nobody can hear you · press M to teleport to someone`;
     return `${where} · 🔒 Private chat with ${hear.map(name).join(', ')}`;
   }

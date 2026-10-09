@@ -8,7 +8,7 @@
     <meta name="theme-color" content="#05060f" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Inter:wght@400;600;700&family=Creepster&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700;900&family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=Martian+Mono:wght@500;700&family=Rubik+Wet+Paint&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="/css/style.css" />
     <script type="importmap">
       { "imports": { "three": "/vendor/three/three.module.min.js" } }
@@ -47,6 +47,9 @@
           </div>
         </div>
         <p class="footnote">3–15 players · best with 7+ · voice chat optional</p>
+        <div class="home-audio">
+          <button id="home-music" class="small ghost" title="Music on/off">🎵 Music on</button>
+        </div>
       </div>
     </section>
 
@@ -98,6 +101,7 @@
         </div>
         <div class="tb-right">
           <div id="hud-charge" class="charge" title="Observation Array: do tasks to reveal a clue in the windows tomorrow"><span></span><b>🔭</b></div>
+          <button id="btn-music" class="icon" title="Music on/off">🎵</button>
           <button id="btn-sound" class="icon" title="Sound on/off">🔊</button>
           <button id="btn-mic" class="icon" title="Proximity voice chat">🎙️</button>
           <button id="btn-help" class="icon" title="How to play">❔</button>
@@ -133,14 +137,21 @@
       <nav class="actionbar">
         <button id="btn-role" class="action"><span>📜</span>Role card <kbd>R</kbd></button>
         <button id="btn-rooms" class="action rooms" hidden><span>🚀</span>Rooms <kbd>M</kbd></button>
+        <button id="btn-nominate" class="action nominate" hidden><span>☝️</span>Nominate</button>
+        <button id="btn-system" class="action system" hidden><span>⚡</span><b>System</b> <kbd>X</kbd></button>
         <button id="btn-emote" class="action"><span>🎭</span>Emote <kbd>Q</kbd></button>
         <button id="btn-hand" class="action hand" hidden><span>✋</span><b>Raise hand</b></button>
         <button id="btn-done-speaking" class="action" hidden><span>🎤</span>I'm done</button>
+        <button id="btn-ready" class="action ready" hidden><span>⏭️</span><b>Ready</b></button>
         <button id="btn-shoot" class="action danger" hidden><span>🔫</span>Shoot</button>
         <button id="btn-use" class="action" hidden><span>🛠️</span>Use <kbd>E</kbd></button>
       </nav>
       <div id="emote-menu" class="emote-menu card" hidden></div>
       <div id="rooms-menu" class="rooms-menu card" hidden></div>
+      <div id="nominate-menu" class="rooms-menu card" hidden></div>
+      <div id="system-menu" class="rooms-menu card" hidden></div>
+      <div id="vote-panel" class="vote-panel card" hidden></div>
+      <div id="intercept-tag" class="intercept-tag" hidden></div>
       <div id="joystick" class="joystick" hidden><div class="knob"></div></div>
     </section>
 

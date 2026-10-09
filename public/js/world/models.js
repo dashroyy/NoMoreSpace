@@ -269,6 +269,31 @@ export function buildRoleModel(roleId, accentHex = '#ffffff') {
       root = p.g;
       break;
     }
+    case 'jester': {
+      // a clown in a harlequin jumpsuit, juggling holograms from a projector on their chest
+      const p = person({ outfit: 0x7b3fe4, pants: 0xffd23f, skin: 0xfff1e6 });
+      part(p.g, new THREE.SphereGeometry(0.07, 10, 8), m(0xff2a2a), 0, 1.53, 0.27); // red nose
+      part(p.g, new THREE.TorusGeometry(0.22, 0.06, 8, 18), m(0xffffff), 0, 1.33, 0, [Math.PI / 2, 0, 0]); // ruff
+      for (let i = 0; i < 3; i++) part(p.g, new THREE.SphereGeometry(0.05, 8, 6), m([0xff2a2a, 0x2ad1ff, 0xffd23f][i]), 0, 1.15 - i * 0.18, 0.31);
+      // jester hat with bells
+      for (const s of [-1, 1]) {
+        part(p.hatAt, new THREE.ConeGeometry(0.12, 0.45, 10), m(s < 0 ? 0xff2a2a : 0x2ad1ff), s * 0.16, 0.14, 0, [0, 0, s * -0.9]);
+        part(p.hatAt, new THREE.SphereGeometry(0.06, 8, 6), m(0xffd23f, { metalness: 0.8, roughness: 0.2 }), s * 0.36, 0.28, 0);
+      }
+      part(p.g, new THREE.CylinderGeometry(0.08, 0.1, 0.1, 12), glow(accent, 1.6), 0, 0.98, 0.3, [Math.PI / 2, 0, 0]); // projector
+      // holograms: a duck, a whale and a cake, orbiting
+      const orbit = new THREE.Group();
+      orbit.position.y = 1.2;
+      for (let i = 0; i < 3; i++) {
+        const holo = part(orbit, i === 1 ? new THREE.CapsuleGeometry(0.1, 0.25, 4, 8) : new THREE.SphereGeometry(0.12, 10, 8), new THREE.MeshBasicMaterial({ color: [0xffe14f, 0x6cc8ff, 0xff8fd8][i], transparent: true, opacity: 0.6 }), Math.cos((i / 3) * Math.PI * 2) * 0.75, 0.2 * i, Math.sin((i / 3) * Math.PI * 2) * 0.75);
+        holo.rotation.z = Math.PI / 2;
+      }
+      p.g.add(orbit);
+      anim.orbit = orbit;
+      anim.wobble = true;
+      root = p.g;
+      break;
+    }
     case 'smuggler': {
       const p = person({ outfit: 0xb08d57, pants: 0x3a2f20, skin: SKINS[1] });
       part(p.hatAt, new THREE.CylinderGeometry(0.4, 0.4, 0.03, 18), m(0x3a2f20), 0, -0.06, 0);
@@ -321,6 +346,7 @@ export function animateRoleModel(model, t) {
   if (a.wobble) model.rotation.z = Math.sin(t * 2.2) * 0.18;
   if (a.tentacles) a.tentacles.forEach((ten, i) => (ten.rotation.z = Math.sin(t * 3 + i) * 0.35));
   if (a.body) a.body.scale.set(1 + Math.sin(t * 2) * 0.04, 1.15 + Math.sin(t * 2 + 1) * 0.05, 1 + Math.sin(t * 2) * 0.04);
+  if (a.orbit) a.orbit.rotation.y = t * 1.6;
   if (a.blob) a.blob.scale.set(1 + Math.sin(t * 4) * 0.08, 1 - Math.sin(t * 4) * 0.06, 1);
   if (a.pulse) model.children.forEach((c, i) => c.material?.emissiveIntensity != null && c.material.emissive?.getHex() && (c.material.emissiveIntensity = 0.6 + Math.sin(t * 3 + i) * 0.4));
 }
