@@ -12,6 +12,7 @@ const { Game, DEATH_ANIMS, ROOM_NAMES, HAUNTS, REACTIONS, HAUNTS_PER_DAY } = req
 const { ROLES, TYPES, DISTRIBUTION, MIN_PLAYERS, MAX_PLAYERS, EVIL_INFO_MIN, teamOf } = require('./roles');
 const cosmetics = require('./cosmetics');
 const { TASKS } = require('./tasks');
+const qrcode = require('qrcode-generator');
 const records = require('./records');
 
 const PORT = process.env.PORT != null ? Number(process.env.PORT) : 3000;
@@ -21,7 +22,7 @@ const THREE_DIR = path.join(ROOT, 'node_modules', 'three', 'build');
 const MAX_ROOMS = 150;
 const NEAR_RADIUS = 7; // proximity chat distance (players in the same room always hear each other)
 const ROOM_IDS = ['bridge', 'observation', 'navigation', 'comms', 'medbay', 'galley', 'reactor', 'engine', 'hydroponics', 'airlock', 'quarters', 'cargo', 'corridor'];
-const PLAYER_EMOTES = ['wave', 'dance', 'jump', 'spin', 'shrug', 'point', 'cry', 'laugh'];
+const PLAYER_EMOTES = ['wave', 'dance', 'scooby', 'scuba', 'jump', 'spin', 'shrug', 'point', 'cry', 'laugh'];
 const STINGERS = ['trombone', 'drumroll', 'airhorn', 'crickets', 'kazoo', 'gasp'];
 const CAPTAIN_EMOTES = [...PLAYER_EMOTES, 'faint', 'shiver', 'flail', 'grow', 'shrink', 'chicken', 'sneeze', 'moonwalk', 'levitate', 'confetti', 'zap'];
 
@@ -108,6 +109,22 @@ const server = http.createServer((req, res) => {
     }
     res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' });
     res.end(JSON.stringify(records.reports(), null, 2));
+    return;
+  }
+  // A QR code for the lobby, so friends on the same call can join from their phones.
+  if (url.pathname === '/qr.svg') {
+    const code = String(url.searchParams.get('code') || '').toUpperCase();
+    if (!/^[A-Z]{4}$/.test(code)) {
+      res.writeHead(400).end('Bad code');
+      return;
+    }
+    const proto = String(req.headers['x-forwarded-proto'] || 'http').split(',')[0].trim();
+    const host = String(req.headers.host || 'localhost').replace(/[^\w.:\-\[\]]/g, '');
+    const qr = qrcode(0, 'M');
+    qr.addData(`${proto}://${host}/?join=${code}`);
+    qr.make();
+    res.writeHead(200, { 'Content-Type': 'image/svg+xml', 'Cache-Control': 'no-cache' });
+    res.end(qr.createSvgTag({ cellSize: 6, margin: 3, scalable: true }));
     return;
   }
   if (url.pathname === '/game-data.json') {
@@ -223,7 +240,11 @@ io.on('connection', (socket) => {
       if (g.captain?.token === token) return seat(r, g.captain);
       const back = g.players.find((p) => p.token === token);
       if (back) return seat(r, back);
+      const watcher = g.spectators.find((s) => s.token === token);
+      if (watcher) return seat(r, watcher);
     }
+    // a game is already running: watch from the gallery and join at the next rematch
+    if (g.phase !== 'lobby') return seat(r, g.addSpectator(name));
     seat(r, g.addPlayer(name, look));
   });
 
@@ -316,6 +337,12 @@ io.on('connection', (socket) => {
     const e = g.haunt(me, kind, where, Date.now());
     io.to(room.code).emit('haunt', e);
   });
+  // "…" over your head while you type (never at night: the secret channels stay secret)
+  on('typing', ({ on: value }) => {
+    const g = game();
+    if (!g.get(me) || g.phase === 'night') return;
+    socket.to(room.code).emit('typing', { id: me, on: !!value });
+  }, { update: false });
   // emoji reactions float up from your seat
   on('react', ({ emoji }) => {
     const now = Date.now();
@@ -344,7 +371,7 @@ io.on('connection', (socket) => {
 
   // Who hears a message from this player right now, by phase and position.
   function hearersOf(g, speakerId) {
-    if (['lobby', 'ended', 'dawn', 'meeting', 'nominations', 'lastwords', 'dusk'].includes(g.phase)) return { channel: 'all', ids: g.players.map((p) => p.id) };
+    if (['lobby', 'ended', 'dawn', 'meeting', 'nominations', 'lastwords', 'dusk'].includes(g.phase)) return { channel: 'all', ids: [...g.players.map((p) => p.id), ...g.spectators.map((s) => s.id)] };
     // Exploring: only players in the same room or close by hear you.
     const mine = room.positions[speakerId];
     const ids = g.players
@@ -412,15 +439,26 @@ io.on('connection', (socket) => {
     }
     if (captain) {
       message.channel = 'all';
-      for (const id of [...g.players.map((p) => p.id), g.captain.id]) personSocket(room, id)?.emit('chat', message);
+      for (const id of [...g.players.map((p) => p.id), ...g.spectators.map((s) => s.id), g.captain.id]) personSocket(room, id)?.emit('chat', message);
       return { heard: g.players.length, channel: 'all' };
+    }
+    // spectators talk in the gallery: other spectators, the dead and the Captain hear them
+    const watcher = g.getSpectator(me);
+    if (watcher) {
+      message.name = `👀 ${watcher.name}`;
+      const open = ['lobby', 'ended'].includes(g.phase);
+      message.channel = open ? 'all' : 'gallery';
+      const ids = open ? [...g.players.map((p) => p.id), ...g.spectators.map((s) => s.id)] : [...g.spectators.map((s) => s.id), ...g.players.filter((p) => !p.alive).map((p) => p.id)];
+      if (g.captain) ids.push(g.captain.id);
+      for (const id of new Set(ids)) personSocket(room, id)?.emit('chat', message);
+      return { heard: new Set(ids).size - 1, channel: message.channel };
     }
     // the dead gossip on their own channel at night
     if (channel === 'ghost') {
       if (!sender || sender.alive) throw new Error('Only the dead can use the ghost channel.');
       if (g.phase !== 'night') throw new Error('The ghost channel opens at night. By day, the living can hear you.');
       message.channel = 'ghost';
-      const ids = g.players.filter((p) => !p.alive).map((p) => p.id);
+      const ids = [...g.players.filter((p) => !p.alive).map((p) => p.id), ...g.spectators.map((s) => s.id)];
       if (g.captain) ids.push(g.captain.id);
       for (const id of new Set(ids)) personSocket(room, id)?.emit('chat', message);
       return { heard: ids.length - 1, channel: 'ghost' };
@@ -557,6 +595,8 @@ io.on('connection', (socket) => {
       } else {
         const p = g.get(me);
         if (p) p.connected = false;
+        const watcher = g.getSpectator(me);
+        if (watcher) watcher.connected = false;
         // In the lobby, give people 45 seconds to come back (e.g. a page refresh) before freeing their seat.
         if (g.phase === 'lobby') {
           const r = room;

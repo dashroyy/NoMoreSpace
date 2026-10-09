@@ -84,7 +84,7 @@ export function initHud(w, { onRoleCard, onUse, onPuppetPick }) {
 export const hud = { onPuppetPick: null };
 
 function buildEmoteMenu() {
-  const labels = { wave: '👋 Wave', dance: '💃 Dance', jump: '🦘 Jump', spin: '🌀 Spin', shrug: '🤷 Shrug', point: '👉 Point', cry: '😭 Cry', laugh: '🤣 Laugh' };
+  const labels = { wave: '👋 Wave', dance: '💃 Dance', scooby: '🐶 Scooby dance', scuba: '🤿 Scuba dance', jump: '🦘 Jump', spin: '🌀 Spin', shrug: '🤷 Shrug', point: '👉 Point', cry: '😭 Cry', laugh: '🤣 Laugh' };
   clear($('emote-menu'), ...store.data.playerEmotes.map((e) => el('button', { className: 'small', onclick: () => { send('emote', { emote: e }).catch(() => {}); $('emote-menu').hidden = true; } }, labels[e] || e)));
 }
 
@@ -196,8 +196,9 @@ export function renderRing() {
     if (isCurrent) cls.push('current');
     if (nom?.locked?.[p.id] && nom.hands[p.id]) cls.push('locked-yes');
     const badge = p.id !== you.id && !you.isCaptain && state.phase !== 'lobby' ? badgeFor(p.id) : null;
+    // a letter on every token, so colour is never the only way to tell people apart
     const token = el('div', { className: 'token', style: { background: suitHex(p) } },
-      p.alive ? '' : '👻',
+      p.alive ? el('span', { className: 'initial', style: { color: inkFor(suitHex(p)) } }, initial(p.name)) : '👻',
       p.ghostVote ? el('span', { className: 'ghostvote', title: 'Has a ghost vote' }) : null,
       badge ? el('span', { className: `nb-badge ${badge.trust}`, title: badge.title }, badge.text) : null,
       state.afk?.includes(p.id) ? el('span', { className: 'afk-badge', title: 'Away from keyboard (counts as ready)' }, '💤')
@@ -292,8 +293,17 @@ function drawMinimap() {
       g.globalAlpha = pl && !pl.alive ? 0.45 : 1;
       g.fillStyle = pl ? suitHex(pl) : '#fff';
       g.beginPath();
-      g.arc(sx(p.x), sz(p.z), 3, 0, Math.PI * 2);
+      g.arc(sx(p.x), sz(p.z), 5, 0, Math.PI * 2);
       g.fill();
+      if (pl) {
+        g.fillStyle = inkFor(suitHex(pl));
+        g.font = "bold 7px 'Silkscreen', sans-serif";
+        g.textAlign = 'center';
+        g.textBaseline = 'middle';
+        g.fillText(initial(pl.name), sx(p.x), sz(p.z) + 0.5);
+        g.textAlign = 'start';
+        g.textBaseline = 'alphabetic';
+      }
     }
     g.globalAlpha = 1;
   }
@@ -310,6 +320,17 @@ function drawMinimap() {
   g.fillStyle = '#cfd6ff';
   g.font = '9px Silkscreen, monospace';
   g.fillText(room ? room.name : 'Corridor', 6, H - 6);
+}
+
+function initial(name) {
+  return String(name || '?').trim().charAt(0).toUpperCase();
+}
+
+// Dark letters on light suits, light letters on dark ones.
+function inkFor(hex) {
+  const n = parseInt(String(hex).replace('#', ''), 16) || 0;
+  const lum = 0.299 * ((n >> 16) & 255) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255);
+  return lum > 150 ? '#0b0d18' : '#ffffff';
 }
 
 export function setUsePrompt(taskName) {

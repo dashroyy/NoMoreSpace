@@ -87,6 +87,9 @@ function typeBadge(r) {
 
 function myRole() {
   const you = store.state?.you;
+  if (you?.isSpectator) {
+    return el('div', {}, el('h2', {}, '👀 You are watching'), el('p', { className: 'hint' }, 'This game started before you arrived. Watch the crew, chat with the ghosts in the gallery, and you will join as a player at the next rematch. Meanwhile, the 📖 All roles tab explains everyone you might meet.'));
+  }
   if (!you || you.isCaptain) {
     return el('div', {}, el('h2', {}, '👨‍✈️ You are the Captain'), el('p', { className: 'hint' }, 'You run the game like a Blood on the Clocktower Storyteller: use the Command Station to move between phases, check the Ship Manifest (grimoire), edit what players learn at night, tell the story of each death and puppet the crew.'));
   }

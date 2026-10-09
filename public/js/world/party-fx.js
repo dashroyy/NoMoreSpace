@@ -65,12 +65,33 @@ export class PartyFx {
     }
   }
 
+  // "…" over someone's head while they type a message
+  typing(id, on) {
+    this.typists ||= new Map();
+    const old = this.typists.get(id);
+    if (old) {
+      disposeTree(old.sprite);
+      this.typists.delete(id);
+    }
+    const a = this.world.avatars.get(id);
+    if (!on || !a) return;
+    const sprite = makeTextSprite('💬 …', { size: 40, scale: 0.01, color: '#14102a', bg: 'rgba(245,242,255,0.92)' });
+    sprite.position.y = 2.75;
+    a.root.add(sprite);
+    this.typists.set(id, { sprite, until: performance.now() + 6000 });
+  }
+
   // ids of everyone talking on voice chat right now
   setSpeaking(ids) {
     this.speaking = ids;
   }
 
   update(dt, t) {
+    // typing dots bob, and time out if someone stops halfway
+    for (const [id, ty] of this.typists || []) {
+      ty.sprite.position.y = 2.75 + Math.sin(t * 6) * 0.04;
+      if (performance.now() > ty.until || this.world.avatars.get(id)?.bubble) this.typing(id, false);
+    }
     // floating emoji and cackles
     for (const f of this.floaters) {
       f.life -= dt;

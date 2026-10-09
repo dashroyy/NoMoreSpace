@@ -30,6 +30,19 @@ function meter(id, stream) {
   }
 }
 
+// Your own volume for each player (mute a loud mic, or turn someone down). Just for you.
+const userVolume = new Map(); // id -> 0..1
+export function peerVolume(id) {
+  return userVolume.has(id) ? userVolume.get(id) : 1;
+}
+export function setPeerVolume(id, level) {
+  userVolume.set(id, Math.max(0, Math.min(1, level)));
+  updateVolumes();
+}
+export function hasVoice(id) {
+  return peers.has(id);
+}
+
 // ids of everyone talking right now (short pauses between words still count)
 export function speakingIds() {
   const now = performance.now();
@@ -162,6 +175,6 @@ function updateVolumes() {
       const d = Math.hypot(pos[id].x - mine.x, pos[id].z - mine.z);
       volume = Math.max(0, Math.min(1, 1 - (d - 2.5) / (HEAR_RADIUS - 2.5)));
     } else if (phase === 'roam' && !pos[id]) volume = 1; // the Captain speaks over the intercom
-    peer.audio.volume = volume;
+    peer.audio.volume = volume * peerVolume(id);
   }
 }

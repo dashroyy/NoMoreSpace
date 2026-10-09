@@ -934,3 +934,43 @@ test('last words: the most laughed-at ones make the share card', () => {
   assert.strictEqual(best.laughs, 1);
   assert.strictEqual(best.reactions, 2);
 });
+
+test('late friends watch as spectators and join the crew at the rematch', () => {
+  const { g, p } = setup(SEVEN);
+  assert.throws(() => new Game('X').addSpectator('Pat'), /still docked/);
+  const pat = g.addSpectator('Pat');
+  assert.throws(() => g.addSpectator('pat'), /taken/);
+  const view = g.viewFor(pat.id);
+  assert.deepStrictEqual(view.you, { id: pat.id, name: 'Pat', isSpectator: true });
+  assert.strictEqual(view.grimoire, undefined, 'spectators never see roles');
+  assert.ok(view.players.every((x) => x.role === undefined));
+  assert.strictEqual(g.viewFor(p[0].id).spectators[0].name, 'Pat');
+  g.endGame(p[0].id, 'crew', 5000);
+  g.react(pat.id, '👀'); // spectators can react
+  g.rematch(p[2].id, 6000);
+  const joined = g.get(pat.id);
+  assert.ok(joined, 'the spectator is now a player, with the same id');
+  assert.strictEqual(joined.token, pat.token);
+  assert.strictEqual(g.players.length, 8);
+  assert.strictEqual(g.spectators.length, 0);
+});
+
+test('a quiet host in the lobby lets anyone launch', () => {
+  const g = new Game('X', { random: seeded(2) });
+  const host = g.addPlayer('Host');
+  const others = ['A', 'B', 'C', 'D'].map((n) => g.addPlayer(n));
+  g.touch(host.id, 1000);
+  assert.strictEqual(g.hostAway(30_000), false);
+  assert.throws(() => g.start(others[0].id, 30_000), /Only the host/);
+  assert.strictEqual(g.hostAway(70_000), true, 'a minute without touching anything');
+  assert.ok(g.viewFor(others[0].id).hostAway !== undefined);
+  g.start(others[0].id, 70_000);
+  assert.strictEqual(g.phase, 'night');
+  // a disconnected host counts as away straight away
+  const g2 = new Game('Y');
+  const h2 = g2.addPlayer('Host');
+  g2.addPlayer('A');
+  h2.connected = false;
+  assert.strictEqual(g2.hostAway(0), true);
+  assert.strictEqual(new Game('Z', { mode: 'captain' }).hostAway(), false, 'only in Autopilot games');
+});

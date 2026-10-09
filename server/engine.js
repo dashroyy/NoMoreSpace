@@ -20,6 +20,8 @@ const HAUNTS_PER_DAY = 3;
 const HAUNT_COOLDOWN_MS = 6000;
 const REACTIONS = ['😱', '🤣', '🙄', '👀', '🫡'];
 const AFK_MS = 90_000; // no input for this long by day = away from keyboard
+const HOST_AWAY_MS = 60_000; // a quiet host in the lobby lets anyone launch
+const MAX_SPECTATORS = 10;
 const CLUE_MS = 20_000; // a clue drifts past the Observation Deck for this long
 const CLUE_WARN_MS = 20_000; // players who did a task today get this much warning
 const ROOM_NAMES = {
@@ -65,6 +67,7 @@ class Game {
     this.shipName = st.shipName(random);
     // the evening's running scores, kept across rematches (by player name)
     this.season = { games: 0, rows: {} };
+    this.spectators = []; // late friends watching until the next rematch: { id, token, name, connected }
     this.resetState();
   }
 
@@ -232,7 +235,7 @@ class Game {
   cleanName(name) {
     const clean = String(name || '').replace(/\s+/g, ' ').trim().slice(0, 18);
     if (!clean) throw new Error('Pick a name first.');
-    const taken = [...this.players.map((p) => p.name), this.captain?.name].filter(Boolean);
+    const taken = [...this.players.map((p) => p.name), ...(this.spectators || []).map((s) => s.name), this.captain?.name].filter(Boolean);
     if (taken.some((n) => n.toLowerCase() === clean.toLowerCase())) throw new Error('That name is taken on this ship.');
     return clean;
   }
@@ -316,7 +319,8 @@ class Game {
   // deal: optional exact role per seat (the Captain assigning roles by hand).
   // drunkAs: optional Crew role the Space Drunk believes they are.
   start(byId, now = Date.now(), { deal = null, drunkAs = null } = {}) {
-    this.requireController(byId);
+    // if the host has gone quiet in the lobby, any player can launch
+    if (!(this.hostAway(now) && this.get(byId))) this.requireController(byId);
     if (this.phase !== 'lobby') throw new Error('Already launched.');
     const n = this.players.length;
     if (n < MIN_PLAYERS) throw new Error(`Need at least ${MIN_PLAYERS} players.`);
@@ -1434,7 +1438,7 @@ class Game {
 
   react(pid, emoji) {
     if (!REACTIONS.includes(emoji)) throw new Error('Unknown reaction.');
-    if (!this.get(pid) && this.captain?.id !== pid) throw new Error('Join a ship first.');
+    if (!this.get(pid) && this.captain?.id !== pid && !this.getSpectator(pid)) throw new Error('Join a ship first.');
     if (this.phase === 'night' || this.phase === 'lobby') throw new Error('Not now.');
     // reactions to last words decide the "funniest last words" on the share card
     const w = this.phase === 'lastwords' && this.lastWordsLog.find((x) => x.day === this.day && x.id === this.lastWords?.id);
@@ -1449,6 +1453,42 @@ class Game {
     let w = this.lastWordsLog.find((x) => x.day === this.day && x.id === pid);
     if (!w) this.lastWordsLog.push((w = { id: pid, day: this.day, text: '', reactions: 0, laughs: 0 }));
     w.text = (w.text ? `${w.text} … ${text}` : text).slice(0, 160);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Late friends: spectators watch a game in progress and join at the rematch
+  // ---------------------------------------------------------------------------
+
+  addSpectator(name) {
+    if (this.phase === 'lobby') throw new Error('The ship is still docked: join the crew instead.');
+    if (this.spectators.length >= MAX_SPECTATORS) throw new Error('The viewing gallery is full.');
+    const s = { id: randomId(), token: randomId(16), name: this.cleanName(name), connected: true };
+    this.spectators.push(s);
+    return s;
+  }
+
+  getSpectator(id) {
+    return this.spectators.find((s) => s.id === id) || null;
+  }
+
+  // Back in the docking bay, spectators join the crew (keeping their id, so their connection carries on).
+  absorbSpectators() {
+    for (const s of this.spectators.splice(0)) {
+      if (this.players.length >= MAX_PLAYERS) continue;
+      const p = this.addPlayer(s.name, {});
+      if (this.hostId === p.id) this.hostId = s.id;
+      p.id = s.id;
+      p.token = s.token;
+      p.connected = s.connected;
+      p.lastActive = Date.now();
+    }
+  }
+
+  // Autopilot lobby only: the host has left or not touched anything for a minute.
+  hostAway(now = Date.now()) {
+    if (this.mode !== 'autopilot' || this.phase !== 'lobby') return false;
+    const h = this.get(this.hostId);
+    return !h || !h.connected || (!!h.lastActive && now - h.lastActive > HOST_AWAY_MS);
   }
 
   // "Finish the sentence: Zorp is…" ARIA weaves it into the stories.
@@ -1472,6 +1512,7 @@ class Game {
     const anyone = this.phase === 'ended' && (this.get(byId) || this.captain?.id === byId);
     if (!anyone) this.requireController(byId);
     this.resetState();
+    this.absorbSpectators();
     this.rematchAt = now;
     this.announce(`Round ${this.season.games + 1}! Same crew, fresh lies. Warm up those dance moves.`, 'system');
   }
@@ -1646,6 +1687,7 @@ class Game {
   reset(byId) {
     this.requireController(byId);
     this.resetState();
+    this.absorbSpectators();
     this.announce('The Captain reset the ship. Back to the docking bay!', 'system');
   }
 
@@ -1663,7 +1705,10 @@ class Game {
     }
     this.lastClueKey = clues;
     const afk = this.updateAfk(now);
-    return this.tickPhase(now) || cluesChanged || afk;
+    const away = this.hostAway(now);
+    const awayChanged = away !== !!this.lastHostAway;
+    this.lastHostAway = away;
+    return this.tickPhase(now) || cluesChanged || afk || awayChanged;
   }
 
   tickPhase(now) {
@@ -1773,6 +1818,8 @@ class Game {
       season: this.seasonView(),
       rematchAt: this.rematchAt,
       afk: [...this.afk],
+      hostAway: this.hostAway(Date.now()),
+      spectators: this.spectators.map((s) => ({ id: s.id, name: s.name, connected: s.connected })),
       mode: this.mode,
       phase: this.phase,
       day: this.day,
@@ -1835,6 +1882,11 @@ class Game {
       view.you = { id: pid, name: this.captain.name, isCaptain: true, isController: this.isController(pid) };
       view.grimoire = this.grimoire();
       view.clue = this.clue && { ...this.clue, live: !!this.clueView(this.clue) };
+      return view;
+    }
+    const watcher = this.getSpectator(pid);
+    if (watcher) {
+      view.you = { id: pid, name: watcher.name, isSpectator: true };
       return view;
     }
     if (!p) return view;

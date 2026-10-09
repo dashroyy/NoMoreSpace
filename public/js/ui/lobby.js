@@ -5,6 +5,7 @@ import { $, el, clear, problem, toast } from '../util.js';
 import { store, send, suitHex, isController, isCaptain } from '../store.js';
 import { HAT_LABELS, PET_LABELS } from '../world/avatar.js';
 import { sfx } from '../audio.js';
+import { rememberLook } from './extras.js';
 
 let rolePicks = null; // array of role ids when hand-picking
 
@@ -14,16 +15,27 @@ export function initLobby({ onLeave }) {
     navigator.clipboard?.writeText(url).then(() => toast('Invite link copied!'), () => prompt('Copy this link:', url));
   });
   $('lobby-leave').addEventListener('click', onLeave);
+  // the QR code: click for a big one to hold up to the camera on a video call
+  $('lobby-qr').addEventListener('click', () => {
+    const big = el('img', { src: $('lobby-qr').src, alt: 'QR code: scan to join', className: 'qr-big' });
+    import('./rolecard.js').then(({ openModal }) => openModal(el('div', { className: 'qr-modal' }, el('h2', {}, `📱 Scan to join ${store.state.shipName || 'the ship'}`), big, el('p', { className: 'hint' }, `Or go to ${location.host} and enter the code ${store.state.code}.`))));
+  });
 }
 
 function setLook(change) {
   const current = store.state.players.find((p) => p.id === store.me)?.cosmetics;
   if (!current) return;
-  send('look', { look: { ...current, ...change } }).then(() => sfx('pop')).catch((e) => problem(e.message));
+  const look = { ...current, ...change };
+  send('look', { look }).then(() => {
+    sfx('pop');
+    rememberLook(look); // your next ship starts with the same look
+  }).catch((e) => problem(e.message));
 }
 
 export function renderLobby(state) {
   $('lobby-code').textContent = state.code;
+  const qr = `/qr.svg?code=${state.code}`;
+  if (!$('lobby-qr').src.endsWith(qr)) $('lobby-qr').src = qr;
   const captain = isCaptain();
   $('lobby-wardrobe').hidden = captain;
   $('lobby-captain-note').hidden = !captain;
@@ -65,6 +77,12 @@ export function renderLobby(state) {
 
   const setup = $('lobby-setup');
   const wait = $('lobby-wait');
+  if (!ctl && state.hostAway && state.players.length >= data.minPlayers) {
+    // the host has gone quiet: anyone can launch so the group isn't stuck
+    wait.textContent = 'The host seems to be away. Anyone can launch the ship.';
+    clear(setup, el('button', { className: 'primary big', onclick: () => send('start').then(() => sfx('whoosh')).catch((e) => problem(e.message)) }, '🚀 Launch the ship'));
+    return;
+  }
   if (!ctl) {
     clear(setup);
     wait.textContent = state.mode === 'captain'

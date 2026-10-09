@@ -135,7 +135,7 @@ export class World {
 
   syncPlayers(state) {
     this.myId = state.you?.id;
-    this.spectator = !!state.you?.isCaptain;
+    this.spectator = !!(state.you?.isCaptain || state.you?.isSpectator);
     const seen = new Set();
     for (const p of state.players) {
       seen.add(p.id);

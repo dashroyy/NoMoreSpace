@@ -326,6 +326,23 @@ Small details borrowed from the best party games (Among Us, Jackbox, Town of Sal
 - **"What now?" line** under the timer: one sentence for your role and the moment, e.g. *"🔧 Your number comes at dawn. Find out who sits next to you."* Ghosts and the Captain get their own.
 - **First-game coach:** for players with fewer than 2 finished games, a tip bubble points at the right button the first time each key moment comes up (role card, night choice, rooms, Ready, claims, nominating, voting, reactions, ghost tools). Each tip shows once; "Got it" dismisses it for good.
 
+### 🧰 Comforts for playing online
+- **📖 The Ship's Wiki:** a picture-book guide you can open from the title screen, the lobby or the 📖 button: the teams, a diagram of the day cycle, how the vote clock works, a searchable encyclopedia of every role (ability, when it wakes, ship system, tips), the setup table as a chart, lies and glitches, ghosts and controls.
+- **📱 QR code in the lobby:** friends on the same call scan it to join (click it for a big one to hold up on a video call).
+- **Remembered look and bio:** your suit, hat, visor, pet and bio come back on your next ship.
+- **"Are you sure?"** before closing the tab while a game is running.
+- **👀 Late friends** who arrive mid-game watch from the gallery (no roles shown; they can react and chat with other spectators and the dead) and join the crew automatically at the next rematch.
+- **Your turn, even in another tab:** the browser tab flashes ("🌙 Your turn!", "☝️ Vote now!") and phones buzz when the game needs you.
+- **@mentions:** `@Name` highlights the message and pings that player; type `@` and press Tab to finish a name.
+- **"💬 …" over your head** while you type (never at night).
+- **⏸️ Pause** for the host of an Autopilot game.
+- **Lobby launch backup:** if the host leaves or goes quiet for a minute, anyone can launch.
+- **Player card:** click any seat on the bridge table to see their bio and claim, and to mute or turn down their voice (just for you).
+- **Letters on every token** on the bridge table and the minimap, so colour is never the only way to tell people apart.
+- **🗣️ Read aloud:** the browser's built-in text to speech reads the stories (ARIA has a low, calm voice) and last words in the speaker's own voice; switch it to also read the chat. Cycles off → stories → stories and chat.
+- **New dances:** 🐶 the Scooby dance (arms swinging side to side) and 🤿 the Scuba dance (pinch your nose, wave and sink, with bubbles), each with its own sound.
+- **More sounds:** friends boarding and leaving, claims (a little trumpet), being nominated (a dread sting), becoming a ghost (a theremin "woo"), pause and resume, @mention pings, and a sound for every emote.
+
 ## 9b. Behind the scenes
 - **Phones:** when a phone wakes up after the screen was off, the game reconnects straight away and shows "Reconnecting…" until it's back.
 - **Play stats:** every finished game adds one line (no names) to `data/stats.jsonl` on the server. See the summary at **/stats** (win rates by player count, average length, how often each role is dealt and survives).

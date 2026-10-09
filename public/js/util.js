@@ -59,6 +59,12 @@ export function clamp(v, min, max) {
   return Math.max(min, Math.min(max, v));
 }
 
+// Buzz the phone (browsers only allow it after the player has tapped the page once).
+export function buzz(pattern) {
+  if (navigator.userActivation && !navigator.userActivation.hasBeenActive) return;
+  navigator.vibrate?.(pattern);
+}
+
 export function isTouch() {
   return matchMedia('(pointer: coarse)').matches;
 }

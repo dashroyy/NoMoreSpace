@@ -1,16 +1,38 @@
 // Text chat. By day you only hear people in the same room or nearby
 // (proximity chat). During meetings everyone hears everyone. At night only
 // the infiltrators can talk, on their secret channel.
-import { $, el } from '../util.js';
-import { send, store } from '../store.js';
+import { $, el, buzz } from '../util.js';
+import { send, store, socket } from '../store.js';
 import { sfx } from '../audio.js';
+import { speak } from '../tts.js';
 
 let tab = 'near';
 const logs = { near: [], evil: [], ghost: [] };
 
 export function initChat() {
+  // "…" over your head while you type, and Tab to finish an @name
+  const input0 = $('chat-input');
+  let typingSent = 0;
+  const typing = (on) => {
+    const now = Date.now();
+    if (on && now - typingSent < 2500) return;
+    typingSent = on ? now : 0;
+    socket.emit('typing', { on }, () => {});
+  };
+  input0.addEventListener('input', () => typing(!!input0.value.trim()));
+  input0.addEventListener('blur', () => typingSent && typing(false));
+  input0.addEventListener('keydown', (e) => {
+    if (e.key !== 'Tab') return;
+    const m = input0.value.match(/@([^@\s]*)$/);
+    if (!m) return;
+    const hit = (store.state?.players || []).map((p) => p.name).find((n) => n.toLowerCase().startsWith(m[1].toLowerCase()));
+    if (!hit) return;
+    e.preventDefault();
+    input0.value = `${input0.value.slice(0, input0.value.length - m[0].length)}@${hit} `;
+  });
   $('chat-form').addEventListener('submit', (e) => {
     e.preventDefault();
+    if (typingSent) typing(false);
     const input = $('chat-input');
     const text = input.value.trim();
     if (!text) return;
@@ -61,7 +83,28 @@ function setTab(name) {
 function line(m) {
   const cls = ['msg', m.ghost ? 'ghost' : '', m.from === store.state?.you?.id ? 'mine' : '', m.name?.startsWith('Captain ') ? 'captain' : '', m.channel === 'evil' ? 'evil' : '', m.channel === 'intercept' ? 'intercept' : '', m.lastWords ? 'lastwords' : '', m.system ? 'system' : ''].join(' ');
   const tag = { all: '📢', near: '👂', evil: '🦑', ghost: '👻', intercept: '' }[m.channel] || '';
-  return el('div', { className: cls }, m.system ? null : el('span', { className: 'ch' }, tag), m.system ? null : el('b', {}, `${m.name}${m.ghost ? ' 👻' : ''}: `), m.text);
+  return el('div', { className: `${cls} ${mentionsMe(m) ? 'mention' : ''}` }, m.system ? null : el('span', { className: 'ch' }, tag), m.system ? null : el('b', {}, `${m.name}${m.ghost ? ' 👻' : ''}: `), ...withMentions(m.text));
+}
+
+// @Name in a message: highlighted, and a ping for the person named.
+function mentionsMe(m) {
+  const me = store.state?.you?.name;
+  return !!me && !m.system && m.from !== store.state?.you?.id && String(m.text).toLowerCase().includes(`@${me.toLowerCase()}`);
+}
+
+function withMentions(text) {
+  const names = (store.state?.players || []).map((p) => p.name).sort((a, b) => b.length - a.length);
+  if (!names.length || !String(text).includes('@')) return [text];
+  const esc = names.map((n) => n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+  const re = new RegExp(`@(${esc.join('|')})`, 'gi');
+  const out = [];
+  let last = 0;
+  for (const hit of String(text).matchAll(re)) {
+    out.push(text.slice(last, hit.index), el('span', { className: 'at' }, hit[0]));
+    last = hit.index + hit[0].length;
+  }
+  out.push(text.slice(last));
+  return out;
 }
 
 function render() {
@@ -82,7 +125,13 @@ export function addChat(m) {
   else if (m.channel === 'ghost') logs.ghost.push(m);
   else logs.near.push(m);
   if (logs.near.length > 200) logs.near.shift();
-  if (m.from !== store.state?.you?.id) sfx('chat');
+  if (m.from !== store.state?.you?.id) {
+    if (mentionsMe(m)) {
+      sfx('ping');
+      buzz(80);
+    } else sfx('chat');
+    if (!m.lastWords && m.channel !== 'intercept') speak(m.text, { kind: 'chat', who: m.name });
+  }
   render();
 }
 

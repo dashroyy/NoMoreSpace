@@ -49,6 +49,7 @@
           </div>
         </div>
         <p class="footnote">3–15 players · best with 7+ · voice chat optional · <a href="#" id="home-bug">🐞 Report a bug</a></p>
+        <button id="home-wiki" class="wiki-cta">📖 New here? Read the Ship's Wiki</button>
         <div class="home-audio">
           <button id="home-music" class="small ghost" title="Music on/off">🎵 Music on</button>
         </div>
@@ -64,7 +65,10 @@
             <h2>Ship <span id="lobby-code" class="code"></span></h2>
             <div class="lobby-ship"><span id="lobby-ship"></span> <span id="lobby-round" class="badge"></span></div>
           </div>
-          <button id="lobby-copy" class="small ghost">Copy invite link</button>
+          <div class="lobby-invite">
+            <button id="lobby-copy" class="small ghost">Copy invite link</button>
+            <img id="lobby-qr" class="lobby-qr" alt="QR code: scan to join this ship" title="Scan with a phone camera to join (click to enlarge)" />
+          </div>
         </div>
         <div id="lobby-wardrobe">
           <label class="bio-field">Finish the sentence: <b id="lobby-bio-name">You</b> is…
@@ -93,6 +97,7 @@
         <div id="lobby-setup" class="lobby-setup"></div>
         <div id="lobby-wait" class="hint"></div>
         <div id="lobby-season" hidden></div>
+        <button id="lobby-wiki" class="small">📖 Ship's Wiki: learn the roles</button>
         <button id="lobby-leave" class="small ghost">Leave ship</button>
       </div>
     </section>
@@ -112,6 +117,9 @@
         </div>
         <div class="tb-right">
           <div id="hud-charge" class="charge" title="Observation Array: do tasks to reveal a clue in the windows tomorrow"><span></span><b>🔭</b></div>
+          <button id="btn-pause" class="icon" title="Pause the game (host)" hidden>⏸️</button>
+          <button id="btn-wiki" class="icon" title="The Ship's Wiki: rules and every role">📖</button>
+          <button id="btn-tts" class="icon" title="Read aloud">🗣️</button>
           <button id="btn-music" class="icon" title="Music on/off">🎵</button>
           <button id="btn-sound" class="icon" title="Sound on/off">🔊</button>
           <button id="btn-mic" class="icon" title="Proximity voice chat">🎙️</button>

@@ -647,6 +647,32 @@ const SOUNDS = {
   },
   warn: () => [81, 76].forEach((m, i) => bell(m, now() + i * 0.18, { vol: 0.09, decay: 0.9 })),
   count: () => tick(now(), { vol: 0.07, bus: sfxBus }),
+  // more little sounds
+  ping: () => [88, 93].forEach((m, i) => bell(m, now() + i * 0.08, { vol: 0.09, decay: 0.6 })), // someone @mentioned you
+  join: () => [69, 76, 81].forEach((m, i) => bell(m, now() + i * 0.07, { vol: 0.06, decay: 0.7 })), // a friend boards
+  leave: () => [81, 76, 69].forEach((m, i) => bell(m, now() + i * 0.07, { vol: 0.05, decay: 0.6 })),
+  pause: () => tone({ freq: 500, slide: 90, dur: 0.6, vol: 0.12, type: 'triangle' }), // tape stops
+  resume: () => tone({ freq: 90, slide: 500, dur: 0.45, vol: 0.12, type: 'triangle' }),
+  claim: () => [0, 0.12].forEach((d, i) => tone({ freq: [392, 523][i], dur: 0.22, vol: 0.08, delay: d, type: 'sawtooth', filter: { freq: 1400 } })), // a little trumpet
+  dread: () => {
+    choir([38, 39, 45], now(), 2.2, { vol: 0.12, bus: sfxBus, vowel: [400, 700] });
+    heartbeat(now() + 0.2, { vol: 0.3, bus: sfxBus });
+  },
+  ghost: () => theremin([{ midi: 72, t: now(), dur: 0.5 }, { midi: 79, t: now() + 0.5, dur: 0.5 }, { midi: 67, t: now() + 1, dur: 0.9 }], { vol: 0.08, bus: sfxBus }),
+  groove: () => {
+    // a funky little bass riff for dancing
+    [38, 38, 45, 47, 45, 38, 41, 43].forEach((m, i) => pluck(m, now() + i * 0.16, { vol: 0.16, decay: 0.2, bright: 2200, bus: sfxBus }));
+    [0, 0.32, 0.64, 0.96].forEach((d) => noise({ dur: 0.05, vol: 0.06, freq: 6000, q: 2, delay: d + 0.16 }));
+  },
+  bubbles: () => {
+    for (let i = 0; i < 10; i++) tone({ freq: 500 + Math.random() * 900, slide: 1200 + Math.random() * 900, dur: 0.06, vol: 0.05, delay: i * 0.11 + Math.random() * 0.05 });
+  },
+  boing: () => tone({ freq: 160, slide: 640, dur: 0.28, vol: 0.12, type: 'triangle' }),
+  whirl: () => noise({ dur: 0.6, vol: 0.12, freq: 600, slide: 2600, q: 3 }),
+  giggle: () => [0, 0.09, 0.18, 0.27].forEach((d, i) => tone({ freq: 700 + (i % 2) * 120, slide: 600, dur: 0.07, vol: 0.06, delay: d, type: 'triangle' })),
+  sob: () => tone({ freq: 440, slide: 300, dur: 0.7, vol: 0.07, type: 'triangle' }),
+  swish: () => noise({ dur: 0.25, vol: 0.08, freq: 1200, slide: 3000, q: 1 }),
+  huh: () => tone({ freq: 300, slide: 420, dur: 0.22, vol: 0.08, type: 'triangle' }),
 };
 
 export function sfx(name) {

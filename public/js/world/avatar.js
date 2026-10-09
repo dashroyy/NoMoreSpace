@@ -642,9 +642,10 @@ export class Avatar {
   // ---------- animation ----------
 
   emote(name) {
-    this.emoteState = { name, t: 0, dur: { faint: 3.5, levitate: 3, moonwalk: 2.6, grow: 2.5, shrink: 2.5, dance: 3, chicken: 2.6 }[name] || 2 };
+    this.emoteState = { name, t: 0, dur: { faint: 3.5, levitate: 3, moonwalk: 2.6, grow: 2.5, shrink: 2.5, dance: 3, chicken: 2.6, scooby: 3.4, scuba: 3.6 }[name] || 2 };
     if (name === 'confetti') this.burst(40, null, 3);
     if (name === 'cry') this.burst(14, 0x6cc8ff, 1);
+    if (name === 'scuba') [0, 700, 1400, 2100].forEach((ms) => setTimeout(() => this.burst(6, 0xbfefff, 0.6, 1.9), ms)); // bubbles
     if (name === 'sneeze') setTimeout(() => this.burst(18, 0x9be36b, 2), 500);
     if (name === 'chicken') this.burst(10, 0xffffff, 1);
     if (name === 'zap') this.burst(16, 0x9fdcff, 3);
@@ -771,6 +772,35 @@ export class Avatar {
         case 'flail': this.armL.rotation.z = Math.sin(e.t * 20) * 2.5; this.armR.rotation.z = Math.cos(e.t * 22) * 2.5; b.position.y += Math.abs(Math.sin(e.t * 10)) * 0.2; break;
         case 'grow': s = 1 + Math.sin(Math.PI * p) * 0.9; break;
         case 'shrink': s = 1 - Math.sin(Math.PI * p) * 0.6; break;
+        case 'scooby': {
+          // Scooby Doo Pa Pa: both arms swing out to one side, then the other, knees bouncing on the beat
+          const beat = Math.sin(e.t * 8.5);
+          b.position.x = beat * 0.14;
+          b.rotation.z = -beat * 0.14;
+          b.rotation.y = beat * 0.25;
+          b.position.y += Math.abs(Math.cos(e.t * 8.5)) * 0.14;
+          this.armL.rotation.z = 1.15 + beat * 0.95;
+          this.armR.rotation.z = -1.15 + beat * 0.95;
+          this.armL.rotation.x = -0.3;
+          this.armR.rotation.x = -0.3;
+          this.legL.rotation.x = Math.max(0, beat) * 0.55;
+          this.legR.rotation.x = Math.max(0, -beat) * 0.55;
+          break;
+        }
+        case 'scuba': {
+          // the scuba dance: pinch your nose, wave the other arm overhead and shimmy down into the deep, then back up
+          const dip = Math.sin(Math.PI * p);
+          const wiggle = Math.sin(e.t * 14);
+          b.position.y -= dip * 0.45;
+          b.position.x = wiggle * 0.06;
+          b.rotation.z = wiggle * 0.1;
+          this.armR.rotation.z = -2.2; // hand up to the helmet
+          this.armR.rotation.x = -1.2;
+          this.armL.rotation.z = 2.7 + Math.sin(e.t * 9) * 0.35; // other arm up, waving like a swimmer
+          this.legL.rotation.x = dip * 0.8;
+          this.legR.rotation.x = dip * 0.8;
+          break;
+        }
         case 'chicken': b.rotation.x = Math.sin(e.t * 14) * 0.35; this.armL.rotation.z = 0.8 + wave * 0.5; this.armR.rotation.z = -0.8 - wave * 0.5; break;
         case 'sneeze': b.rotation.x = e.t < 0.5 ? -e.t * 0.8 : Math.max(0, 0.6 - (e.t - 0.5) * 1.5); break;
         case 'moonwalk': {

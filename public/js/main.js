@@ -21,6 +21,9 @@ import { Reveal } from './ui/reveal.js';
 import { clearNotebook } from './ui/notebook.js';
 import { initParty, renderParty } from './ui/party.js';
 import { initCoach, renderCoach } from './ui/coach.js';
+import { initExtras, renderExtras, savedLook, extras } from './ui/extras.js';
+import { speak } from './tts.js';
+import { openWiki } from './ui/wiki.js';
 import { initVoice, toggleVoice, voiceEnabled } from './voice.js';
 
 const SEAT_KEY = 'nms-seat';
@@ -85,6 +88,8 @@ async function boot() {
   initVote();
   initParty(world);
   initCoach();
+  initExtras(world);
+  for (const id of ['home-wiki', 'lobby-wiki', 'btn-wiki']) $(id).addEventListener('click', () => openWiki());
   initHud(world, {
     onRoleCard: (tab) => openRoleCard(typeof tab === 'string' ? tab : 'role'),
     onUse: () => {
@@ -139,12 +144,17 @@ async function boot() {
     addChat(m);
     if (m.channel !== 'evil') world.say(m.from, m.text);
     // last words get the big cloud bubble
-    if (m.lastWords) showStory(`“${m.text}”`, [], 9000, `🎤 ${m.name}'s last words`);
+    if (m.lastWords) {
+      showStory(`“${m.text}”`, [], 9000, `🎤 ${m.name}'s last words`, false);
+      speak(m.text, { kind: 'lastwords', who: m.name });
+    }
   });
   socket.on('stinger', ({ name }) => sfx(name));
   socket.on('emote', ({ id, emote, byCaptain }) => {
     world.emote(id, emote);
     if (byCaptain) sfx(emote === 'zap' ? 'zap' : 'pop');
+    // every emote has a little sound (only nearby avatars, so the whole ship isn't noisy)
+    else if (world.avatars.get(id)?.root.visible) sfx({ scooby: 'groove', scuba: 'bubbles', dance: 'groove', jump: 'boing', spin: 'whirl', laugh: 'giggle', cry: 'sob', wave: 'swish', shrug: 'huh', point: 'tap' }[emote] || 'pop');
   });
   socket.on('bubble', (b) => showStory(b.text, [], 9000));
   socket.on('drawing', ({ id, data }) => world.addDrawingImage(id, data));
@@ -184,6 +194,7 @@ async function boot() {
 
     renderParty(state, prev);
     renderCoach(state);
+    renderExtras(state, prev);
     if (prev && prev.code === state.code) announceChanges(state, prev, world);
   });
 }
@@ -198,7 +209,8 @@ function route(state) {
   $('screen-home').hidden = true;
   $('screen-lobby').hidden = screen !== 'lobby';
   $('hud').hidden = false;
-  $('night').hidden = !(state.phase === 'night' && !isCaptain());
+  $('night').hidden = !(state.phase === 'night' && !isCaptain() && !state.you?.isSpectator);
+  document.body.classList.toggle('is-spectator', !!state.you?.isSpectator);
   $('joystick').hidden = !(isTouch() && ['lobby', 'roam'].includes(state.phase) && !isCaptain());
 }
 
@@ -361,8 +373,9 @@ function announceChanges(state, prev, world) {
 // Story cloud bubble
 // ---------------------------------------------------------------------------
 
-function showStory(text, chips = [], ms = 8000, author = null) {
+function showStory(text, chips = [], ms = 8000, author = null, read = true) {
   if (!text) return;
+  if (read) speak(text, { kind: 'story' });
   const state = store.state;
   $('story-author').textContent = author || (state?.mode === 'captain' && state.captain ? `☁️ Captain ${state.captain.name} says` : '☁️ ARIA, ship AI, reports');
   typeText($('story-text'), text, 18);
@@ -388,11 +401,11 @@ function setupHome() {
   $('home-create').addEventListener('click', () => {
     unlockAudio();
     const mode = document.querySelector('input[name="mode"]:checked')?.value || 'autopilot';
-    send('create', { name: $('home-name').value, mode }).then(() => sfx('whoosh')).catch((e) => problem(e.message));
+    send('create', { name: $('home-name').value, mode, look: savedLook() }).then(() => sfx('whoosh')).catch((e) => problem(e.message));
   });
   $('home-join').addEventListener('click', () => {
     unlockAudio();
-    send('join', { code: $('home-code').value, name: $('home-name').value }).then(() => sfx('whoosh')).catch((e) => problem(e.message));
+    send('join', { code: $('home-code').value, name: $('home-name').value, look: savedLook() }).then(() => sfx('whoosh')).catch((e) => problem(e.message));
   });
   $('home-code').addEventListener('keydown', (e) => e.key === 'Enter' && $('home-join').click());
   document.body.classList.add('screen-home');
@@ -400,6 +413,7 @@ function setupHome() {
 
 function leave() {
   if (!confirm('Leave this ship?')) return;
+  extras.leaving = true;
   send('leave').catch(() => {});
   saveSeat(null);
   location.reload();

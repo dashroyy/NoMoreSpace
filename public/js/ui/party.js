@@ -9,6 +9,7 @@ import { speakingIds } from '../voice.js';
 import { openModal, closeModal } from './rolecard.js';
 import { phaseBanner } from './hud.js';
 import { ROOMS } from '../world/layout.js';
+import { rememberBio } from './extras.js';
 
 const REACT_PHASES = ['dawn', 'meeting', 'nominations', 'lastwords', 'dusk'];
 const DAY_PHASES = ['roam', 'meeting', 'nominations'];
@@ -62,7 +63,10 @@ export function initParty(w) {
   for (const ev of ['pointerdown', 'keydown', 'wheel', 'touchstart']) window.addEventListener(ev, active, { passive: true });
 
   // ---------- lobby: bio and ship name ----------
-  $('lobby-bio').addEventListener('change', (e) => send('bio', { text: e.target.value }).then(() => sfx('pop')).catch((er) => problem(er.message)));
+  $('lobby-bio').addEventListener('change', (e) => send('bio', { text: e.target.value }).then(() => {
+    sfx('pop');
+    rememberBio(e.target.value);
+  }).catch((er) => problem(er.message)));
 
   // speaking rings and the countdown run on their own little clocks
   setInterval(updateSpeaking, 120);
@@ -293,6 +297,7 @@ function todo(state) {
   const you = state.you || {};
   if (!you.id || state.phase === 'lobby' || state.phase === 'ended') return '';
   if (you.isCaptain) return '👨‍✈️ Run the show from the Command Station.';
+  if (you.isSpectator) return '👀 You are watching from the gallery. You join the crew at the next rematch.';
   const r = role(you.role);
   if (you.alive === false) {
     if (state.phase === 'night') return '👻 Gossip with the other ghosts and place your bet.';
