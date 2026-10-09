@@ -263,6 +263,18 @@ const ROLES = {
     ],
     flavor: 'Brought "a few extra passengers" through customs.',
   },
+  jester: {
+    name: 'Holo-Jester', type: 'saboteur', tb: null, icon: '🤡', minPlayers: 5, tags: ['action'],
+    ability: 'Each night, choose a player: all tomorrow, their visor projects hallucinations. They see crewmates who are not there, impossible things floating in space, whispers from nobody, and a fake clue outside the window.',
+    night: { first: true, other: true, choose: 1, order: 12 },
+    tips: [
+      'Your victim is never told. Everything they see looks real to them, including a fake clue drifting past the Observation Deck.',
+      'Pick the player most likely to see a real clue: an info role who loves doing tasks.',
+      'Back up their "visions" in the meeting. "Yes, I saw the comets too!" is a wonderful lie.',
+      'If someone swears they saw "Definitely Real Dave" in the Galley, you know your projector works.',
+    ],
+    flavor: 'Once the most-booked children\'s entertainer in the Kuiper Belt. Then the hologram projector malfunctioned at a birthday party. Then it worked perfectly.',
+  },
 
   // ---------------- THE PARASITE (Demon) ----------------
   parasite: {

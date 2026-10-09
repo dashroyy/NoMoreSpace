@@ -55,7 +55,7 @@ function shownAs(id) {
 }
 
 function name(id) {
-  return shownAs(id)?.name || '?';
+  return world?.phantomName(id) || shownAs(id)?.name || '?';
 }
 
 // Group everyone by the room they're in.
@@ -78,7 +78,8 @@ function renderRooms(force = false) {
   const players = store.state?.players || [];
   const chip = (id) => {
     const p = shownAs(id);
-    const color = p ? suitHex(p) : '#ccc';
+    const ph = world.whereabouts()[id]?.phantom;
+    const color = p ? suitHex(p) : ph ? store.data.suits[ph.avatar.look.suit] || '#ccc' : '#ccc';
     return el('span', { className: `who-chip ${id === me ? 'me' : ''} ${p && !p.alive ? 'ghost' : ''}` }, el('i', { style: { background: color } }), id === me ? 'You' : name(id));
   };
   const rows = ROOMS.map((r) => {

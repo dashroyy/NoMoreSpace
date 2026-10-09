@@ -121,7 +121,7 @@ export function paintBlackHole(ctx, cx, cy, r, t) {
   ctx.restore();
 }
 
-function paintConstellation(ctx, cx, cy, size, emoji, living, t) {
+export function paintConstellation(ctx, cx, cy, size, emoji, living, t) {
   const { pts, canvas } = emojiShape(emoji);
   const color = living ? [255, 214, 120] : [150, 185, 235];
   // a ghostly outline of the role icon, so the shape can be recognised

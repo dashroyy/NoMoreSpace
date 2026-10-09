@@ -3,6 +3,8 @@ import * as THREE from 'three';
 import { Avatar } from './avatar.js';
 import { buildShip } from './ship.js';
 import { SpaceCanvases, buildBackdrop } from './sky.js';
+import { Flyby } from './flyby.js';
+import { Hallucinations } from './hallucinate.js';
 import { moveWithCollision, roomAt, roomById, walkable, seatPosition, TASK_STATIONS, SPAWN, DRAWING_SLOTS } from './layout.js';
 
 const SEATED = ['dawn', 'meeting', 'nominations', 'dusk'];
@@ -88,6 +90,7 @@ export class World {
     this.nearTask = null;
     this.room = 'bridge';
     this.beams = [];
+    this.serverNow = () => Date.now(); // main.js swaps in the server clock
     this.teleportReadyAt = 0;
     this.progress = 0;
     this.night = false;
@@ -295,14 +298,23 @@ export class World {
     for (const light of this.ship.lights) light.userData.base = 40 * (1 - p * 0.35);
   }
 
+  // The Holo-Jester's victim sees things that aren't there (see hallucinate.js).
+  setHallucination(fx, phase, onWhisper) {
+    this.hallucinations ||= new Hallucinations(this);
+    this.hallucinations.onWhisper = onWhisper;
+    this.hallucinations.set(fx, phase);
+  }
+
+  // Clues are objects drifting past outside the ship for a few seconds (see flyby.js).
   setClue(clue, players, roles) {
-    this.space.clue = clue;
-    this.space.colorOf = (id) => {
-      const p = players.find((x) => x.id === id);
-      return p ? this.data.suits[p.cosmetics.suit] : '#ffffff';
-    };
-    this.space.iconOf = (roleId) => roles[roleId]?.icon || '★';
-    this.space.last = -1;
+    this.flyby ||= new Flyby(this.scene);
+    this.flyby.set(clue, {
+      colorOf: (id) => {
+        const p = players.find((x) => x.id === id);
+        return p ? this.data.suits[p.cosmetics.suit] : '#ffffff';
+      },
+      iconOf: (roleId) => roles[roleId]?.icon || '★',
+    });
   }
 
   setDoneTasks(list) {
@@ -371,6 +383,8 @@ export class World {
     this.updateAmbience(dt, t);
     this.ship.decor.update(t, { night: this.night, progress: this.progress });
     this.updateBeams(dt);
+    this.flyby?.update(this.serverNow(), t);
+    this.hallucinations?.update(dt, t);
     // the big Observation Deck window (where clues appear) only needs repainting when it can be seen
     this.space.bigVisible = this.phase === 'home' || this.phase === 'night' || this.spectator || this.camTarget.z < -12;
     this.space.update(t);
@@ -544,9 +558,10 @@ export class World {
       target.set(this.spectatorPos.x, 0, this.spectatorPos.z);
       offset.set(0, 26 * z, 19 * z);
     } else if (this.room === 'observation') {
-      // tilt up to look out of the big window, where the clues appear
-      target.set(this.local.x * 0.6, 1.5, Math.max(this.local.z - 5.5, -31));
-      offset.set(0, 7.5 * z, 9.5 * z);
+      // tilt up to look out of the big window, and out into space while a clue drifts past
+      const out = this.flyby?.live;
+      target.set(this.local.x * (out ? 0.3 : 0.6), out ? 0.5 : 1.5, out ? -40 : Math.max(this.local.z - 5.5, -31));
+      offset.set(0, (out ? 9 : 7.5) * z, (out ? 17 : 9.5) * z);
     } else {
       target.set(this.local.x, 0, this.local.z - 0.8);
       offset.set(0, 11.5 * z, 8.8 * z);
@@ -708,7 +723,19 @@ export class World {
       const p = id === this.myId ? this.local : a.target || a.root.position;
       out[id] = { room: roomAt(p.x, p.z), x: p.x, z: p.z };
     }
+    // to a hallucinating player, the imaginary crewmates are just as real
+    if (this.phase === 'roam') {
+      (this.hallucinations?.phantoms || []).forEach((ph, i) => {
+        const p = ph.avatar.root.position;
+        out[`~ph${i}`] = { room: roomAt(p.x, p.z), x: p.x, z: p.z, phantom: ph };
+      });
+    }
     return out;
+  }
+
+  // Display name for an id from whereabouts() (players or imaginary friends).
+  phantomName(id) {
+    return id.startsWith('~ph') ? this.hallucinations?.phantoms[Number(id.slice(3))]?.name : null;
   }
 
   // Who would hear you in proximity chat (same rules as the server).

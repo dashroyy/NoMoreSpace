@@ -4,7 +4,7 @@ A spooky, slightly silly space spin-off of **Blood on the Clocktower**, played o
 
 *The ship is falling into a black hole. Something aboard is not human. Find it before there is no more space.*
 
-- 🎭 **22 hidden roles**, each matching one in Blood on the Clocktower's *Trouble Brewing* (Crew, Drifters, Saboteurs, The Parasite), unlocked by player count
+- 🎭 **23 hidden roles**: 22 matching Blood on the Clocktower's *Trouble Brewing* (Crew, Drifters, Saboteurs, The Parasite) plus the 🤡 **Holo-Jester**, who makes a player hallucinate, unlocked by player count
 - 👥 **3–15 players**, using BotC's own setup table (plus a quick 3–4 player "Short Haul" mode)
 - 👨‍✈️ Play with a human **Captain** (Storyteller) running a full **Command Station**, or let **ARIA the autopilot** run the game
 - 🚀 **3D ship** with 12 rooms, proximity text & voice chat, 11 task minigames, window clues, night drawings on the walls
@@ -27,7 +27,7 @@ Open several **private/incognito windows** to play against yourself (3 minimum, 
 
 ```
 server/
-  roles.js        all 22 roles, the setup table, role tips
+  roles.js        all 23 roles, the setup table, role tips
   engine.js       the rules: nights, days, nominations, voting, winning
   storyteller.js  ARIA: balanced role picks, false info, stories, window clues
   tasks.js        the 11 room tasks

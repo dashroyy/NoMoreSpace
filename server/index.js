@@ -238,7 +238,7 @@ io.on('connection', (socket) => {
   on('reg', ({ role, policy }) => game().setRegPolicy(me, role, policy));
   on('draft-edit', (edit) => game().editDraft(me, edit));
   on('toggle-dead', ({ id }) => game().captainToggleDead(me, id));
-  on('clue', ({ kind }) => game().forceClue(me, kind));
+  on('clue', ({ kind }) => game().forceClue(me, kind, Date.now()));
   on('say', ({ text }) => {
     game().say(me, text);
     io.to(room.code).emit('bubble', room.game.bubble);

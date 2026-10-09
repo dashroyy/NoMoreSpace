@@ -116,7 +116,7 @@ function myRole() {
   }
   if (you.manifest) {
     parts.push(el('h3', {}, '🎭 Ship Manifest (you see everything)'), el('div', { className: 'notes' }, ...you.manifest.map((m) =>
-      el('div', { className: 'note' }, `${m.alive ? '' : '💀 '}${m.name}: ${role(m.role).icon} ${role(m.role).name}${m.role === 'drunk' ? ` (thinks they are ${role(m.believed).name})` : ''}${m.glitched ? ' · glitched' : ''}${m.redHerring ? ' · ghost signal' : ''}`),
+      el('div', { className: 'note' }, `${m.alive ? '' : '💀 '}${m.name}: ${role(m.role).icon} ${role(m.role).name}${m.role === 'drunk' ? ` (thinks they are ${role(m.believed).name})` : ''}${m.glitched ? ' · glitched' : ''}${m.hallucinating ? ' · hallucinating' : ''}${m.redHerring ? ' · ghost signal' : ''}`),
     )));
   }
   if (you.master) parts.push(el('p', { className: 'hint' }, `🤖 Your master today: ${player(you.master)?.name}. You may only vote when they vote.`));

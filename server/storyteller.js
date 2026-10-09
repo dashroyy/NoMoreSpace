@@ -200,7 +200,22 @@ function makeClue(game, random = Math.random, forced = null) {
   };
 }
 
+// The Holo-Jester's victim sees a clue that isn't there: same kinds and
+// captions as real clues, with random (often false) contents.
+const CLUE_KINDS = ['dead-constellation', 'living-constellation', 'comets', 'probe', 'drift-count', 'role-comets'];
+function fakeClue(game, random = Math.random) {
+  const real = makeClue(game, random, { team: pick(['crew', 'infiltrators'], random), kind: pick(CLUE_KINDS, random) });
+  const goodRoles = [...rolesOfType('crew'), ...rolesOfType('drifter')].filter((r) => r !== 'drunk');
+  const living = game.players.filter((p) => p.alive);
+  const fake = { ...real };
+  if (fake.role) fake.role = pick(goodRoles, random);
+  if (fake.players) fake.players = sample(living, fake.players.length, random).map((p) => p.id);
+  if (fake.count != null) fake.count = Math.floor(random() * 4);
+  return fake;
+}
+
 module.exports = {
+  fakeClue,
   pick,
   shuffle,
   sample,

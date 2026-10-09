@@ -1,6 +1,6 @@
 // Entry point: connects the server, the 3D world and all the UI pieces.
 import { $, el, clear, problem, toast, typeText, isTouch } from './util.js';
-import { socket, store, onState, send, role, player, isCaptain } from './store.js';
+import { socket, store, onState, send, role, player, isCaptain, serverNow } from './store.js';
 import { unlockAudio, sfx, setAmbient, setSound, soundEnabled, setMusic, musicEnabled } from './audio.js';
 import { World, blackHoleProgress } from './world/world.js';
 import { initChat, addChat, updateChatVisibility, clearChat, systemLine } from './ui/chat.js';
@@ -50,6 +50,17 @@ async function boot() {
     onStep: () => sfx('step'),
   });
   window.__world = world; // handy for debugging in the console
+  world.serverNow = serverNow;
+  // when a clue drifts past, whoever is watching from the Observation Deck gets its caption
+  let captioned = null;
+  setInterval(() => {
+    const clue = store.state?.clue;
+    if (!clue || !world.flyby?.live || captioned === clue.at) return;
+    if (world.room !== 'observation' && !isCaptain()) return;
+    captioned = clue.at;
+    sfx('chime');
+    toast(`🔭 ${clue.caption}`, 'info', 12000);
+  }, 500);
   const reveal = new Reveal(world);
 
   initModal();
@@ -138,11 +149,16 @@ async function boot() {
     updateChatVisibility(state);
     refreshRoleCard();
     world.setDoneTasks(state.you?.tasksDone || []);
+    world.setHallucination(state.you?.fx || null, state.phase, (m) => addChat(m));
 
     // clue in the windows
     if (JSON.stringify(state.clue) !== JSON.stringify(prev?.clue)) {
       world.setClue(state.clue, state.players, store.data.roles);
-      if (state.clue && prev && state.phase !== 'lobby') toast('🔭 Something has appeared outside the Observation Deck window…', 'info', 7000);
+      // players who did a task today get a heads-up from the ship's sensors
+      if (state.clue && prev && state.phase === 'roam' && state.you?.clueWarning && state.clue.at !== prev.clue?.at) {
+        sfx('blip');
+        toast('📡 Your task sensors ping: something is drifting toward the Observation Deck! Get to the window in the next 20 seconds…', 'info', 9000);
+      }
     }
     // drawings on the walls
     for (const d of state.drawings) if (!world.drawingCache.has(d.id)) socket.emit('get-drawing', { id: d.id });

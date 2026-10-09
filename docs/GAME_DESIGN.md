@@ -23,7 +23,7 @@ No More Space is a spooky, slightly silly space version of **Blood on the Clockt
 **Good wins** when the Parasite is dead.
 **Evil wins** when only 2 players are left alive. The ship falls into the black hole: no more space.
 
-## 2. All 22 roles
+## 2. All 23 roles
 
 Each role does exactly what its Trouble Brewing counterpart does. *Night\** means every night except the first.
 
@@ -59,6 +59,7 @@ Each role does exactly what its Trouble Brewing counterpart does. *Night\** mean
 | 🎭 Mimic | Spy | 5+ | Sees the whole Ship Manifest; might register as good |
 | 🥚 Incubator | Scarlet Woman | 5+ | If the Parasite dies with 5+ alive, becomes the new Parasite |
 | 🧳 Smuggler | Baron | **7+** | +2 Drifters in the game (2 fewer Crew) |
+| 🤡 Holo-Jester | *(new, no BotC equivalent)* | 5+ | Each night, choose a player: all tomorrow they **hallucinate** (see below) |
 
 ### The Parasite (evil)
 | Role | BotC | Ability |
@@ -215,7 +216,9 @@ There are 11 rooms, each with a task console and a quick minigame:
 | Airlock | Purge the Vents (button mash) |
 | Crew Quarters | Feed the Ship Cat (it dodges) |
 
-- Each task (once per player per day, ghosts too) charges the **Observation Array**. When it reaches 1.5 × the number of living players, a **clue** appears outside the **Observation Deck window** the next morning.
+- Each task (once per player per day, ghosts too) charges the **Observation Array**. When it reaches 1.5 × the number of living players, a **clue** comes the next day.
+- **Clues are real 3D objects that drift past outside the ship**, beyond the Observation Deck's big window, for just **20 seconds** at a random moment while everyone is exploring. Stand in the Observation Deck and the camera tilts up to watch them go by; whoever is there gets the clue's caption. Blink and you miss it, so whoever saw it has to convince everyone else.
+- **Players who did a task that day get a 20-second warning** ("📡 Your task sensors ping…"), so tasks pay off. Everyone else has to notice the crowd heading for the window.
 - **Clues help whichever team is losing.** ARIA compares how close the ship is to the black hole (good losing) against how many evil players are dead or under suspicion (evil losing).
 
 | If the crew is behind | If the infiltrators are behind |
@@ -224,7 +227,23 @@ There are 11 rooms, each with a task console and a quick minigame:
 | ☄️ Three comets in three players' suit colours: **one carries spores** (is evil) | ☄️ Three comets crossing a constellation: one of them has that role |
 | 🛰️ A derelict probe blinking one player's colour: **not** the Parasite | 💡 Debris lights blink the number of Drifters |
 
-Clues are visual and cryptic. Nobody is told who the clue helps; you have to go to the window and decode it.
+| Clue | What drifts past |
+|---|---|
+| Comets | Three glowing comets with tails in players' suit colours, streaking across one after another |
+| Probe | A tumbling derelict satellite with solar panels, its beacon blinking a suit colour |
+| Constellation | A role's icon drawn in stars: warm and twinkling if *living*, cold and flickering if *dead* |
+| Debris lights | A cluster of buoys whose green lights blink together (count them!), or stay dark for zero |
+
+Clues are visual and cryptic. Nobody is told who the clue helps; you have to be at the window at the right moment and decode it.
+
+### 🤡 The Holo-Jester's hallucinations
+The Holo-Jester is an evil Saboteur. Each night they pick a player, whose visor projects hallucinations **all the next day**. Only that player's screen shows them, and they are never told:
+- **Crewmates who don't exist**, with trustworthy names like *Definitely Real Dave*, *Gary From Accounts* and *Not The Parasite*. They wander between rooms, dance, and chat to you ("I'm the Medic, trust me 😉", "The ducks know."), and they even show up on your map and as people who can hear you.
+- **Impossible things floating through the ship**: a whale, a flotilla of rubber ducks, a spinning cow, a pizza, a birthday cake, some chairs.
+- **Whispers from nobody** in the chat ("psst… the ducks are watching.").
+- **A fake clue** drifting past the Observation Deck (instead of the real one), with random contents.
+
+A glitched Holo-Jester's projector fizzles. Hallucinations wear off at night. The Captain and the Mimic can see who is hallucinating, and the end-game replay reveals every prank.
 
 **Social tell:** a team that's winning may *avoid* doing tasks, and that can give them away.
 

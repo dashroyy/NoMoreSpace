@@ -674,3 +674,56 @@ test('ship systems: blackout hides door logs, disguises expire, lockdowns stop e
   g.beginMeeting(5000);
   assert.strictEqual(g.activeLockdown('galley', 5001), null);
 });
+
+test('clues drift past at a set moment while exploring, and only task-doers get a warning', () => {
+  const { g, p, role } = setup(['comms', 'engineer', 'medic', 'hacker', 'parasite']);
+  playNight(g);
+  g.charge = 999; // the Observation Array is full, so a clue comes tomorrow
+  g.applyDraft(2000);
+  assert.ok(g.clue, 'a clue is ready');
+  assert.strictEqual(g.viewFor(p[0].id).clue, null, 'nobody sees it before exploring');
+  g.beginRoam(10_000);
+  const { at, until } = g.clue;
+  const roam = g.dur('roam');
+  assert.ok(at >= 10_000 + roam * 0.3 && at <= 10_000 + roam * 0.65, 'arrives partway through exploring');
+  assert.strictEqual(until - at, 20_000);
+  assert.strictEqual(g.clueView(g.clue, at - 25_000), null, 'still secret 25s before');
+  assert.ok(g.clueView(g.clue, at - 15_000), 'sent 20s ahead so clients can get ready');
+  assert.strictEqual(g.clueView(g.clue, until + 1), null, 'gone afterwards');
+  // the server re-sends state when it appears and disappears
+  g.tick(at - 30_000);
+  assert.strictEqual(g.tick(at - 19_000), true);
+  // task-doers get the warning
+  g.completeTask(p[1].id, Object.keys(require('../server/tasks').TASKS)[0]);
+  assert.strictEqual(g.viewFor(p[1].id).you.clueWarning, true);
+  assert.strictEqual(g.viewFor(p[2].id).you.clueWarning, false);
+  assert.ok(role('parasite'));
+});
+
+test('the Holo-Jester makes one player see a fake clue (and things that are not there) for a day', () => {
+  const { g, p, role } = setup(['comms', 'engineer', 'medic', 'jester', 'parasite']);
+  const victim = role('engineer');
+  playNight(g, { [role('jester').id]: [victim.id] });
+  assert.ok(g.draft.events.some((e) => e.k === 'hallucinate' && e.t === victim.id && e.works));
+  g.applyDraft(2000);
+  assert.strictEqual(g.hallucination.id, victim.id);
+  g.beginRoam(10_000);
+  const at = g.hallucination.clue.at;
+  assert.ok(at, 'the fake clue is scheduled even with no real clue');
+  const seen = g.viewFor(victim.id);
+  assert.ok(seen.you.fx && seen.you.fx.seed != null, 'the victim gets hallucinations');
+  assert.strictEqual(g.viewFor(p[0].id).you.fx, null, 'nobody else does');
+  // only the victim sees the fake clue when it arrives
+  const realNow = Date.now;
+  Date.now = () => at + 1000;
+  try {
+    assert.ok(g.viewFor(victim.id).clue, 'victim sees a clue');
+    assert.strictEqual(g.viewFor(p[0].id).clue, null, 'others see nothing');
+  } finally {
+    Date.now = realNow;
+  }
+  // it wears off at night, and the Captain/Mimic manifest shows it
+  assert.ok(g.manifest().find((m) => m.id === victim.id).hallucinating);
+  g.beginNight(20_000);
+  assert.strictEqual(g.hallucination, null);
+});

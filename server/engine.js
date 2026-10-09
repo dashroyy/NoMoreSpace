@@ -13,8 +13,10 @@ const cosmetics = require('./cosmetics');
 const { TASKS } = require('./tasks');
 
 const DAY_PHASES = ['roam', 'meeting', 'nominations'];
-const TARGET_RULE = { hacker: 'alive', medic: 'alive', parasite: 'alive', scanner: 'any', droid: 'any', blackbox: 'any' };
+const TARGET_RULE = { hacker: 'alive', jester: 'alive', medic: 'alive', parasite: 'alive', scanner: 'any', droid: 'any', blackbox: 'any' };
 const DEATH_ANIMS = ['airlock', ...st.NIGHT_ANIMS, 'fainted', 'shot'];
+const CLUE_MS = 20_000; // a clue drifts past the Observation Deck for this long
+const CLUE_WARN_MS = 20_000; // players who did a task today get this much warning
 const ROOM_NAMES = {
   bridge: 'the Bridge', observation: 'the Observation Deck', navigation: 'Navigation', comms: 'Comms', medbay: 'the Medbay', galley: 'the Galley',
   reactor: 'the Reactor', engine: 'the Engine Room', hydroponics: 'Hydroponics', airlock: 'the Airlock', quarters: 'Crew Quarters', cargo: 'the Cargo Bay',
@@ -89,6 +91,7 @@ class Game {
     this.winReason = null;
     this.charge = 0;
     this.clue = null;
+    this.hallucination = null; // the Holo-Jester's victim for today: { id, seed, clue }
     this.tasksDone = {};
     this.drawings = [];
     this.regCache = {};
@@ -359,6 +362,7 @@ class Game {
     this.executedYesterday = this.executedToday;
     this.executedToday = null;
     this.glitch = null; // last night's glitch wore off at dusk
+    this.hallucination = null; // and so did the hallucinations
     this.choices = {};
     this.draft = null;
     this.blackbox = null;
@@ -542,6 +546,15 @@ class Game {
       d.events.push({ k: 'hack', a: hacker.id, t: d.glitch.id });
     }
 
+    // The Holo-Jester picks tomorrow's hallucinating player (a glitched Jester's projector fizzles).
+    const jester = aliveRole('jester');
+    if (jester && choice(jester)) {
+      const t = choice(jester)[0];
+      const works = !broken(jester);
+      if (works) d.hallucinate = t;
+      d.events.push({ k: 'hallucinate', a: jester.id, t, works });
+    }
+
     // First night information roles.
     if (N === 1) {
       for (const p of believers('comms')) {
@@ -711,6 +724,9 @@ class Game {
     const story = d.story || st.dawnStory(deaths.map((x) => this.name(x.id)), this.random);
     this.chapter.story = story;
     this.dawn = { night: this.night, deaths, story, at: now };
+    this.hallucination = d.hallucinate && this.get(d.hallucinate)?.alive
+      ? { id: d.hallucinate, seed: Math.floor(this.random() * 1e9), clue: st.fakeClue(this, this.random) }
+      : null;
     this.mimicManifest = this.manifest();
     this.draft = null;
     this.blackbox = null;
@@ -794,6 +810,10 @@ class Game {
   beginRoam(now) {
     this.setPhase('roam', this.dur('roam'), now);
     this.visits = {};
+    // clues drift past at a random moment while everyone is exploring
+    const when = () => now + Math.round(this.dur('roam') * (0.3 + this.random() * 0.35));
+    if (this.clue) this.scheduleClue(this.clue, when());
+    if (this.hallucination) this.scheduleClue(this.hallucination.clue, this.clue?.at ?? when());
     this.announce(`Day ${this.day}. Explore the ship, do tasks and whisper with crewmates.`, 'day');
   }
 
@@ -1262,11 +1282,34 @@ class Game {
     this.checkWin();
   }
 
-  forceClue(byId, kind) {
+  forceClue(byId, kind, now = Date.now()) {
     this.requireController(byId);
     if (this.phase === 'lobby' || this.phase === 'ended') throw new Error('No game running.');
     const team = ['dead-constellation', 'comets', 'probe'].includes(kind) ? 'crew' : ['living-constellation', 'drift-count', 'role-comets'].includes(kind) ? 'infiltrators' : null;
     this.clue = st.makeClue(this, this.random, team ? { team, kind } : null);
+    // while exploring it arrives in 20 seconds; otherwise during the next exploring phase
+    if (this.phase === 'roam') this.scheduleClue(this.clue, now + CLUE_WARN_MS);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Clues: objects that drift past the Observation Deck for a few seconds
+  // ---------------------------------------------------------------------------
+
+  scheduleClue(clue, at) {
+    clue.at = at;
+    clue.until = at + CLUE_MS;
+  }
+
+  // Clients only learn about a clue shortly before it arrives, and it vanishes after.
+  clueView(clue, now = Date.now()) {
+    if (!clue?.at || now < clue.at - CLUE_WARN_MS || now > clue.until) return null;
+    const { kind, players, role, count, caption, at, until } = clue;
+    return { kind, players, role, count, caption, at, until };
+  }
+
+  // A key that changes whenever a clue appears or disappears for anyone (so the server re-sends state).
+  clueKey(now = Date.now()) {
+    return `${!!this.clueView(this.clue, now)}|${!!this.clueView(this.hallucination?.clue, now)}`;
   }
 
   say(byId, text, now = Date.now()) {
@@ -1294,7 +1337,15 @@ class Game {
   // Timers (called a few times per second by the server)
   // ---------------------------------------------------------------------------
 
+  // Returns true when something changed and everyone needs a fresh state.
   tick(now = Date.now()) {
+    const clues = this.clueKey(now);
+    const cluesChanged = clues !== (this.lastClueKey ?? 'false|false');
+    this.lastClueKey = clues;
+    return this.tickPhase(now) || cluesChanged;
+  }
+
+  tickPhase(now) {
     if (this.pausedRemaining != null) return false;
     const due = this.phaseEndsAt != null && now >= this.phaseEndsAt;
     const auto = this.autoAdvance;
@@ -1359,6 +1410,7 @@ class Game {
       believed: p.believed,
       alive: p.alive,
       glitched: this.isGlitched(p),
+      hallucinating: this.hallucination?.id === p.id,
       redHerring: p.id === this.redHerringId,
       ghostVote: p.ghostVote,
       used: p.used,
@@ -1426,7 +1478,7 @@ class Game {
       dawn: this.dawn,
       dusk: this.dusk,
       bubble: this.bubble,
-      clue: this.clue,
+      clue: this.clueView(this.clue),
       charge: this.charge,
       chargeNeeded: this.chargeNeeded(),
       drawings: this.drawings.filter((d) => d.published).map((d) => ({ id: d.id, signedBy: d.signed ? this.name(d.author) : null })),
@@ -1444,6 +1496,7 @@ class Game {
     if (this.captain && this.captain.id === pid) {
       view.you = { id: pid, name: this.captain.name, isCaptain: true, isController: this.isController(pid) };
       view.grimoire = this.grimoire();
+      view.clue = this.clue && { ...this.clue, live: !!this.clueView(this.clue) };
       return view;
     }
     if (!p) return view;
@@ -1472,6 +1525,12 @@ class Game {
       system: this.systemFor(p) && p.alive ? { id: this.systemFor(p).id, used: p.systemUsed } : null,
       intercepting: this.systems.intercepts.filter((i) => i.by === pid && Date.now() < i.until).map((i) => ({ room: i.room, until: i.until }))[0] || null,
     };
+    // Players who did a task today get a heads-up before a clue arrives.
+    view.you.clueWarning = (this.tasksDone[pid] || []).length > 0;
+    // The Holo-Jester's victim sees their own (fake) clue and a few other things that aren't there.
+    const h = this.hallucination;
+    view.you.fx = h && h.id === pid && p.alive && DAY_PHASES.concat('dawn').includes(this.phase) ? { seed: h.seed } : null;
+    if (view.you.fx) view.clue = this.clueView(h.clue);
     // Votes stay secret until the clock hand reveals them (you always see your own).
     if (view.nomination) view.nomination = this.secretBallot(view.nomination, pid);
     return view;

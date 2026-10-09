@@ -223,6 +223,8 @@ export class Reveal {
     const R = store.data.roles;
     const role = (id) => this.cast.get(id)?.startRole;
     switch (e.k) {
+      case 'hallucinate':
+        return { dur: 2.8, focus: e.a, beam: [e.a, e.t, 0xff8fd8], caption: `🤡 ${name(e.a)} the Holo-Jester made ${name(e.t)} see things that weren't there${e.works === false ? '… but the projector was glitched.' : '. (Definitely Real Dave says hi.)'}`, enter: () => sfx('pop') };
       case 'hack':
         return { dur: 2.6, focus: e.a, beam: [e.a, e.t, 0x39ff6b], caption: `💻 ${name(e.a)} the Hacker glitched ${name(e.t)}'s systems.`, enter: () => sfx('zap') };
       case 'protect': {

@@ -280,7 +280,7 @@ function drawMinimap() {
   if (['lobby', 'roam'].includes(store.state?.phase) && !world.blackout) {
     for (const [id, p] of Object.entries(world.whereabouts())) {
       if (id === world.myId) continue;
-      const pl = players.find((x) => x.id === (world.disguise?.[id] || id));
+      const pl = p.phantom ? { cosmetics: p.phantom.avatar.look, alive: true } : players.find((x) => x.id === (world.disguise?.[id] || id));
       g.globalAlpha = pl && !pl.alive ? 0.45 : 1;
       g.fillStyle = pl ? suitHex(pl) : '#fff';
       g.beginPath();

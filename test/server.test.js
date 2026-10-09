@@ -70,7 +70,7 @@ test('serves the page, game data and Three.js, and blocks path tricks', async ()
   }));
   assert.strictEqual((await get('/')).status, 200);
   const data = JSON.parse((await get('/game-data.json')).body);
-  assert.strictEqual(Object.keys(data.roles).length, 22);
+  assert.strictEqual(Object.keys(data.roles).length, 23);
   assert.strictEqual((await get('/vendor/three/three.module.min.js')).status, 200);
   assert.notStrictEqual((await get('/..%2fpackage.json')).status, 200);
   assert.notStrictEqual((await get('/vendor/three/..%2f..%2f..%2fpackage.json')).status, 200);
@@ -109,7 +109,7 @@ test('the infiltrator channel only reaches infiltrators (7+ players)', async () 
   assert.ok((await call(host, 'start')).ok);
   await waitFor(() => latest(host).phase === 'night');
   const byId = (id) => players.find((c) => latest(c).you.id === id);
-  const evilIds = room.game.players.filter((p) => ['parasite', 'hacker', 'mimic', 'incubator', 'smuggler'].includes(p.role)).map((p) => p.id);
+  const evilIds = room.game.players.filter((p) => ['parasite', 'hacker', 'mimic', 'incubator', 'smuggler', 'jester'].includes(p.role)).map((p) => p.id);
   const sender = byId(evilIds[0]);
   assert.ok((await call(sender, 'chat', { text: 'secret plan', channel: 'evil' })).ok);
   await waitFor(() => evilIds.every((id) => byId(id).chats.some((m) => m.text === 'secret plan')));
