@@ -24,6 +24,8 @@ import { initCoach, renderCoach } from './ui/coach.js';
 import { initExtras, renderExtras, savedLook, extras } from './ui/extras.js';
 import { speak } from './tts.js';
 import { openWiki } from './ui/wiki.js';
+import { initSettings } from './ui/settings.js';
+import { initSession, renderSession } from './ui/session.js';
 import { initVoice, toggleVoice, voiceEnabled } from './voice.js';
 
 const SEAT_KEY = 'nms-seat';
@@ -89,6 +91,8 @@ async function boot() {
   initParty(world);
   initCoach();
   initExtras(world);
+  initSettings({ moods: MOODS });
+  initSession();
   for (const id of ['home-wiki', 'lobby-wiki', 'btn-wiki']) $(id).addEventListener('click', () => openWiki());
   initHud(world, {
     onRoleCard: (tab) => openRoleCard(typeof tab === 'string' ? tab : 'role'),
@@ -118,6 +122,12 @@ async function boot() {
   window.addEventListener('keydown', unlock, { once: true });
 
   // ---------------- server events ----------------
+  // ?replay=<id>: rewatch a finished game's reveal instead of playing
+  const replayId = new URLSearchParams(location.search).get('replay');
+  if (replayId) {
+    startReplay(replayId, reveal);
+    return;
+  }
   const rejoin = () => {
     const seat = loadSeat();
     if (seat?.code && seat?.token) socket.emit('join', seat);
@@ -139,7 +149,14 @@ async function boot() {
     saveSeat(null);
     location.reload();
   });
-  socket.on('pos', (packed) => world.applyPositions(packed));
+  socket.on('pos', (packed) => {
+    // the docking-bay duck travels with the movement updates
+    if (packed['@ball']) {
+      world.fx.ball(packed['@ball']);
+      delete packed['@ball'];
+    }
+    world.applyPositions(packed);
+  });
   socket.on('chat', (m) => {
     addChat(m);
     if (m.channel !== 'evil') world.say(m.from, m.text);
@@ -195,8 +212,35 @@ async function boot() {
     renderParty(state, prev);
     renderCoach(state);
     renderExtras(state, prev);
+    renderSession(state, prev);
     if (prev && prev.code === state.code) announceChanges(state, prev, world);
   });
+}
+
+// Rewatch a finished game from a replay link.
+async function startReplay(id, reveal) {
+  try {
+    const res = await fetch(`/replay/${encodeURIComponent(id)}.json`);
+    if (!res.ok) throw new Error('missing');
+    const state = await res.json();
+    document.body.classList.remove('screen-home');
+    document.body.classList.add('screen-replay');
+    $('screen-home').hidden = true;
+    const go = () => {
+      unlockAudio();
+      reveal.start(state);
+    };
+    // browsers only play sound after a click, so ask for one
+    const start = el('div', { className: 'replay-start card' },
+      el('h2', {}, `🎬 ${state.shipName || 'A game'} of No More Space`),
+      el('p', { className: 'hint' }, `${state.players.length} players · ${state.winner === 'crew' ? 'the crew escaped' : 'no more space'}`),
+      el('button', { className: 'primary big', onclick: () => { start.remove(); go(); } }, '▶ Watch the replay'),
+    );
+    document.body.append(start);
+  } catch {
+    problem('That replay link has expired or does not exist.');
+    setTimeout(() => (location.href = '/'), 2500);
+  }
 }
 
 function route(state) {
@@ -398,6 +442,10 @@ function setupHome() {
   if (params.get('join')) $('home-code').value = params.get('join').toUpperCase();
   const saved = loadSeat();
   if (saved?.name) $('home-name').value = saved.name;
+  $('home-practice').addEventListener('click', () => {
+    unlockAudio();
+    send('create', { name: $('home-name').value || 'Rookie', practice: true, look: savedLook() }).then(() => sfx('whoosh')).catch((e) => problem(e.message));
+  });
   $('home-create').addEventListener('click', () => {
     unlockAudio();
     const mode = document.querySelector('input[name="mode"]:checked')?.value || 'autopilot';

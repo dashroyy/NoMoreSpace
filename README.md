@@ -10,6 +10,7 @@ A spooky, slightly silly space spin-off of **Blood on the Clocktower**, played o
 - 🚀 **3D ship** with 12 rooms, proximity text & voice chat, 11 task minigames, window clues, night drawings on the walls
 - 🕐 BotC-style days: private chats → emergency meeting → nominations where **everyone votes YES/NO at once** and a clockwise **vote clock** reveals the hands → airlock, with a **Ready** button to skip ahead when everyone's done talking
 - ⚡ **Ship systems**: once-per-game online abilities for 8 roles: intercept a room's chat, door logs, lockdowns, sensor sweeps, med-scans, spoofed messages, disguises and blackouts
+- 🤖 Robot crewmates to fill empty seats, a 🎓 practice mode, 🔮 "who dies tonight?" guesses, replay links, a ⚙️ settings panel with text size, and games that survive server restarts
 - 👻 Ghosts stay in the game (bets on the Parasite, haunting, a ghost channel), emoji reactions, speaking rings, lobby bios, ship names, rematches with a season scoreboard, and a shareable result card
 - 🗒️ A private **notebook** for tracking claims and suspicions, shown as badges around the bridge table
 - 🎬 An **epic end-game reveal** that unmasks every character model and replays each night
@@ -34,6 +35,9 @@ server/
   tasks.js        the 11 room tasks
   cosmetics.js    suit colours, hats, visors, pets
   index.js        web server + live connections (Socket.IO)
+  bots.js         robot crewmates' brains
+  persist.js      saves running games across restarts
+  records.js      play stats, bug reports and replays (in data/)
 public/
   index.html, css/style.css
   js/main.js            wires everything together

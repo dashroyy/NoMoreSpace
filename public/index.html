@@ -51,6 +51,10 @@
         </div>
         <p class="footnote">3–15 players · best with 7+ · voice chat optional · <a href="#" id="home-bug">🐞 Report a bug</a></p>
         <button id="home-wiki" class="wiki-cta">📖 New here? Read the Ship's Wiki</button>
+        <div class="home-buttons">
+          <button id="home-practice" class="small">🎓 Practice with robots</button>
+          <button id="home-settings" class="small ghost">⚙️ Settings</button>
+        </div>
         <div class="home-audio">
           <button id="home-music" class="small ghost" title="Music on/off">🎵 Music on</button>
         </div>
@@ -119,6 +123,7 @@
         <div class="tb-right">
           <div id="hud-charge" class="charge" title="Observation Array: do tasks to reveal a clue in the windows tomorrow"><span></span><b>🔭</b></div>
           <button id="btn-pause" class="icon" title="Pause the game (host)" hidden>⏸️</button>
+          <button id="btn-settings" class="icon" title="Settings">⚙️</button>
           <button id="btn-wiki" class="icon" title="The Ship's Wiki: rules and every role">📖</button>
           <button id="btn-tts" class="icon" title="Read aloud">🗣️</button>
           <button id="btn-music" class="icon" title="Music on/off">🎵</button>
@@ -181,6 +186,7 @@
       <div id="intercept-tag" class="intercept-tag" hidden></div>
       <div id="claim-menu" class="rooms-menu card" hidden></div>
       <div id="whisper-card" class="whisper-card card" hidden></div>
+      <div id="restart-banner" class="restart-banner" hidden></div>
       <div id="reconnect-banner" class="reconnect-banner" hidden>📡 Connection lost. Reconnecting…</div>
       <div id="joystick" class="joystick" hidden><div class="knob"></div></div>
     </section>
@@ -217,6 +223,7 @@
             <button id="draw-send" class="small primary">Pin it to the wall</button>
           </div>
         </div>
+        <div class="card night-guess night-action" id="night-guess" hidden></div>
         <div class="card night-ghost" id="night-ghost" hidden>
           <h3>👻 Ghost channel</h3>
           <p class="hint">Only the dead can read this. Gossip away while the living sleep.</p>

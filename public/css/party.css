@@ -187,3 +187,36 @@ body.is-spectator .actionbar, body.is-spectator .minimap { display: none !import
   .wiki-split, .wiki-teams { grid-template-columns: 1fr; }
   .wiki-vs { justify-self: center; }
 }
+
+/* ---------- Text size (Settings): zoom the interface, never the 3D ship ---------- */
+#screen-home, #screen-lobby, #hud, #night, .modal, .story, #reveal, .toasts, .coach, .problem, .restart-banner, .reconnect-banner, .replay-start { zoom: var(--ui-zoom, 1); }
+
+/* ---------- Settings ---------- */
+.settings { display: grid; gap: 8px; }
+.settings h3 { margin-top: 8px; }
+.set-row { display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: center; padding: 8px 10px; border: 1px solid var(--line); background: rgba(255, 255, 255, 0.03); }
+.set-choices { display: flex; gap: 4px; flex-wrap: wrap; justify-content: flex-end; }
+.set-choices button.active { color: var(--amber); border-color: var(--amber); background: rgba(255, 181, 71, 0.12); }
+@media (max-width: 560px) { .set-row { grid-template-columns: 1fr; } .set-choices { justify-content: flex-start; } }
+body.no-crt::before, body.no-crt::after { display: none !important; }
+.home-buttons { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-top: 8px; }
+.home-buttons button { background: var(--panel); backdrop-filter: blur(8px); }
+
+/* ---------- Server restart countdown ---------- */
+.restart-banner {
+  position: fixed; z-index: 50; top: 10px; left: 50%; transform: translateX(-50%); width: min(620px, calc(100% - 24px));
+  padding: 10px 14px; text-align: center; background: rgba(40, 24, 4, 0.95); border: 1px solid var(--amber); color: #ffe9b8;
+  box-shadow: 0 0 24px rgba(255, 181, 71, 0.35);
+}
+
+/* ---------- Robots in the lobby ---------- */
+.robot-row { gap: 6px; }
+
+/* ---------- The suspicion web ---------- */
+.web { margin: 10px 0; display: grid; justify-items: center; gap: 6px; }
+.web .hint { justify-self: stretch; }
+.web-svg { width: min(420px, 100%); height: auto; font-family: var(--font-body); }
+
+/* ---------- Replay start card ---------- */
+.replay-start { position: fixed; z-index: 30; left: 50%; top: 50%; transform: translate(-50%, -50%); padding: 24px; display: grid; gap: 12px; justify-items: center; text-align: center; width: min(460px, calc(100% - 24px)); }
+body.screen-replay #hud { display: none; }

@@ -345,6 +345,28 @@ Small details borrowed from the best party games (Among Us, Jackbox, Town of Sal
 - **New dances:** 🐶 the Scooby dance (arms swinging side to side) and 🤿 the Scuba dance (pinch your nose, wave and sink, with bubbles), each with its own sound.
 - **More sounds:** friends boarding and leaving, claims (a little trumpet), being nominated (a dread sting), becoming a ghost (a theremin "woo"), pause and resume, @mention pings, and a sound for every emote.
 
+### 🤖 Robot crewmates and practice
+- **Robots fill empty seats:** in the lobby the host can **🤖 Add a robot** (or remove them all). Robots have names and bios, wander the ship, make sensible night choices for their role, **claim a role at the meeting** (evil robots bluff, and sometimes invent fake clues), **share what their role told them**, nominate whoever they suspect most, vote, give last words and press Ready, so they never hold the humans up. Good robots read their own clues (scans, neighbour counts, Black Box results, "one of two" hints) and give half-weight to clues others share; evil robots know their team (in games of 7+, like any evil player) and don't always vote together. Their timing follows the pace setting. In all-robot test games the crew wins about a third of the time.
+- **🎓 Practice with robots** (title screen): you and six robots, at a quick pace, with the first-game tips switched on.
+
+### 🔮 Who dies tonight?
+At night everyone (alive or dead) can guess who the Parasite will strike, or that nobody will die. A right guess is a point on the season scoreboard, and the best guesser wins **🔮 Clairvoyant**. Everyone sees the same card, so it gives nothing away; the Parasite can guess too, but its guesses never count.
+
+### 🦆 The docking-bay duck
+While waiting in the lobby, a giant rubber duck in a space helmet sits on the bridge. Walk (or run) into it to bump it around; it bounces off the walls and the table. The server moves it, so everyone sees the same duck.
+
+### 🕸️ The suspicion web
+The end screen draws every YES vote of the game as an arrow from voter to nominee: green if it hit an evil player, red if it hit a good one.
+
+### 🎬 Replays
+Every finished game gets a link (**🔗 Copy replay link** on the end screen) that replays the end-game reveal for anyone, even people who weren't there.
+
+### ⚙️ Settings
+One panel (⚙️ in the top bar, or on the title screen) for sound, music, read aloud, voice chat, **text size (S / M / L / XL)**, the old-screen scanline effect, graphics quality, and showing the new-player tips again. Number keys **1–9** fire emotes straight away (the numbers are shown in the emote menu).
+
+### 🔄 Restarts
+Updating the game no longer ends games in progress: players get a 20-second "ship systems rebooting" warning, the server saves every game, and everyone is reconnected to the same seat when it comes back (see the hosting guide).
+
 ## 9b. Behind the scenes
 - **Phones:** when a phone wakes up after the screen was off, the game reconnects straight away and shows "Reconnecting…" until it's back.
 - **Play stats:** every finished game adds one line (no names) to `data/stats.jsonl` on the server. See the summary at **/stats** (win rates by player count, average length, how often each role is dealt and survives).

@@ -5,6 +5,7 @@ import { $, el, clear } from '../util.js';
 import { store } from '../store.js';
 import { progress } from '../progress.js';
 import { sfx } from '../audio.js';
+import { uiZoom } from './settings.js';
 
 const KEY = 'nms-coach';
 
@@ -58,7 +59,7 @@ export function initCoach() {
 
 export function renderCoach(state) {
   const box = $('coach');
-  if (!state?.you || state.you.isCaptain || progress().games >= 2) return hide();
+  if (!state?.you || state.you.isCaptain || state.you.isSpectator || (progress().games >= 2 && !state.practice)) return hide();
   const done = seen();
   // keep the current tip while its moment lasts
   if (showing) {
@@ -89,12 +90,13 @@ function place() {
   const target = document.querySelector(TIPS.find((t) => t.id === showing).at);
   if (!visible(target)) return hide();
   const r = target.getBoundingClientRect();
-  const w = box.offsetWidth;
-  const h = box.offsetHeight;
+  const z = uiZoom(); // the text-size setting zooms the coach too: work in screen pixels, then divide
+  const w = box.offsetWidth * z;
+  const h = box.offsetHeight * z;
   const left = Math.max(8, Math.min(window.innerWidth - w - 8, r.left + r.width / 2 - w / 2));
   const above = r.top - h - 14 > 8;
-  box.style.left = `${left}px`;
-  box.style.top = `${above ? r.top - h - 14 : r.bottom + 14}px`;
+  box.style.left = `${left / z}px`;
+  box.style.top = `${(above ? r.top - h - 14 : r.bottom + 14) / z}px`;
   box.classList.toggle('below', !above);
-  box.style.setProperty('--arrow', `${Math.max(16, Math.min(w - 16, r.left + r.width / 2 - left))}px`);
+  box.style.setProperty('--arrow', `${Math.max(16, Math.min(w - 16, r.left + r.width / 2 - left)) / z}px`);
 }

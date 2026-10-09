@@ -85,7 +85,7 @@ export const hud = { onPuppetPick: null };
 
 function buildEmoteMenu() {
   const labels = { wave: '👋 Wave', dance: '💃 Dance', scooby: '🐶 Scooby dance', scuba: '🤿 Scuba dance', jump: '🦘 Jump', spin: '🌀 Spin', shrug: '🤷 Shrug', point: '👉 Point', cry: '😭 Cry', laugh: '🤣 Laugh' };
-  clear($('emote-menu'), ...store.data.playerEmotes.map((e) => el('button', { className: 'small', onclick: () => { send('emote', { emote: e }).catch(() => {}); $('emote-menu').hidden = true; } }, labels[e] || e)));
+  clear($('emote-menu'), ...store.data.playerEmotes.map((e, i) => el('button', { className: 'small', title: i < 9 ? `Key ${i + 1}` : '', onclick: () => { send('emote', { emote: e }).catch(() => {}); $('emote-menu').hidden = true; } }, i < 9 ? el('kbd', {}, i + 1) : null, ' ', labels[e] || e)));
 }
 
 function toggleEmotes() {

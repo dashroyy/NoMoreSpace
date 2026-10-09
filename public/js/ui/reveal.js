@@ -1,7 +1,7 @@
 // The end-game cinematic: everyone's suit comes off to reveal their true
 // character, then ARIA replays every night and day from the ship's black box.
 import * as THREE from 'three';
-import { $, el, clear } from '../util.js';
+import { $, el, clear, toast } from '../util.js';
 import { store, send } from '../store.js';
 import { sfx, setAmbient } from '../audio.js';
 import { Avatar, makeTextSprite } from '../world/avatar.js';
@@ -399,15 +399,19 @@ export class Reveal {
         );
       })),
       awardsBox(s),
+      suspicionWeb(s),
       betsBox(s),
       lastWordsBox(s),
       this.unlocked?.length ? el('div', { className: 'unlocked' }, `🎁 New for your spacesuit: ${this.unlocked.join(', ')}!`) : null,
       seasonTable(s.season),
       el('div', { className: 'row' },
-        el('button', { className: 'primary', onclick: () => send('rematch').catch(() => {}) }, '🔁 Rematch (same crew)'),
+        s.isReplay
+          ? el('button', { className: 'primary', onclick: () => (location.href = '/') }, '🚀 Play No More Space')
+          : el('button', { className: 'primary', onclick: () => send('rematch').catch(() => {}) }, '🔁 Rematch (same crew)'),
         el('button', { onclick: () => openShareCard(s) }, '📸 Share card'),
+        s.replayId ? el('button', { onclick: () => copyReplayLink(s.replayId) }, '🔗 Copy replay link') : null,
         el('button', { onclick: () => this.start(this.state) }, '🎬 Watch again'),
-        el('button', { className: 'ghost', onclick: () => this.stop() }, 'Close'),
+        el('button', { className: 'ghost', onclick: () => (s.isReplay ? (location.href = '/') : this.stop()) }, 'Close'),
       ),
     );
   }
@@ -544,6 +548,70 @@ export class Reveal {
 
     this.world.renderer.render(this.scene, this.camera);
   }
+}
+
+function copyReplayLink(id) {
+  const url = `${location.origin}/?replay=${id}`;
+  navigator.clipboard?.writeText(url).then(() => toast('🔗 Replay link copied! Anyone with it can rewatch this game.'), () => prompt('Copy this link:', url));
+}
+
+// Who voted for whom, all game: arrows from each voter to the player they
+// voted to airlock. Green arrows hit an evil player; red ones a good one.
+function suspicionWeb(s) {
+  const votes = new Map();
+  for (const ch of s.history || []) {
+    for (const e of ch.events || []) {
+      if (e.k !== 'nomination') continue;
+      for (const v of e.voters || []) votes.set(`${v}>${e.t}`, (votes.get(`${v}>${e.t}`) || 0) + 1);
+    }
+  }
+  if (!votes.size) return null;
+  const NS = 'http://www.w3.org/2000/svg';
+  const svg = (tag, attrs = {}, ...kids) => {
+    const n = document.createElementNS(NS, tag);
+    for (const [k, v] of Object.entries(attrs)) n.setAttribute(k, v);
+    for (const c of kids) n.append(c instanceof Node ? c : document.createTextNode(String(c)));
+    return n;
+  };
+  const players = s.players;
+  const W = 420;
+  const C = W / 2;
+  const R = 150;
+  const at = (i) => {
+    const a = -Math.PI / 2 + (i / players.length) * Math.PI * 2;
+    return [C + Math.cos(a) * R, C + Math.sin(a) * R];
+  };
+  const where = new Map(players.map((p, i) => [p.id, at(i)]));
+  const isEvil = (id) => store.data.types[store.data.roles[players.find((p) => p.id === id)?.role]?.type]?.team === 'infiltrators';
+  const root = svg('svg', { viewBox: `0 0 ${W} ${W}`, class: 'web-svg', role: 'img', 'aria-label': 'Who voted for whom during the game' },
+    svg('defs', {},
+      ...[['good', '#7dffa8'], ['bad', '#ff5a77']].map(([id, color]) => svg('marker', { id: `arrow-${id}`, viewBox: '0 0 10 10', refX: 9, refY: 5, markerWidth: 6, markerHeight: 6, orient: 'auto-start-reverse' }, svg('path', { d: 'M0,0 L10,5 L0,10 z', fill: color }))),
+    ),
+  );
+  for (const [key, count] of votes) {
+    const [from, to] = key.split('>');
+    const a = where.get(from);
+    const b = where.get(to);
+    if (!a || !b) continue;
+    const dx = b[0] - a[0];
+    const dz = b[1] - a[1];
+    const len = Math.hypot(dx, dz) || 1;
+    const hit = isEvil(to);
+    root.append(svg('line', {
+      x1: a[0] + (dx / len) * 18, y1: a[1] + (dz / len) * 18, x2: b[0] - (dx / len) * 20, y2: b[1] - (dz / len) * 20,
+      stroke: hit ? '#7dffa8' : '#ff5a77', 'stroke-width': 1 + count * 1.2, opacity: 0.75, 'marker-end': `url(#arrow-${hit ? 'good' : 'bad'})`,
+    }));
+  }
+  players.forEach((p) => {
+    const [x, y] = where.get(p.id);
+    root.append(svg('circle', { cx: x, cy: y, r: 14, fill: store.data.suits[p.cosmetics?.suit] || '#888', stroke: isEvil(p.id) ? '#ff5a77' : '#6cf0ff', 'stroke-width': 3 }));
+    root.append(svg('text', { x, y: y + (y > C ? 30 : -20), 'text-anchor': 'middle', 'font-size': 14, fill: '#e3e8ff' }, `${store.data.roles[p.role]?.icon || ''} ${p.name}`));
+  });
+  return el('div', { className: 'web' },
+    el('h3', {}, '🕸️ The suspicion web'),
+    el('p', { className: 'hint' }, 'Every YES vote of the game, from voter to nominee. Green arrows hit an evil player, red ones a good one. Rings: red = evil, blue = good.'),
+    root,
+  );
 }
 
 // What the ghosts bet on (the server only reveals bets once the game is over).

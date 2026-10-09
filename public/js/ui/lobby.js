@@ -108,6 +108,11 @@ export function renderLobby(state) {
     roleToggle,
     picking ? rolePicker(state, n) : null,
     el('button', { className: 'secondary', onclick: () => send('shuffle-seats').catch((e) => problem(e.message)) }, '🔀 Shuffle seats'),
+    // robot crewmates fill empty seats
+    el('div', { className: 'row robot-row' },
+      el('button', { className: 'small', disabled: n >= data.maxPlayers, title: 'A robot crewmate fills an empty seat. It plays, votes and lies like anyone else.', onclick: () => send('add-bot').then(() => sfx('join')).catch((e) => problem(e.message)) }, '🤖 Add a robot'),
+      state.players.some((p) => p.bot) ? el('button', { className: 'small ghost', onclick: () => send('remove-bots').catch((e) => problem(e.message)) }, '🧹 Remove robots') : null,
+    ),
     el('button', {
       className: 'primary big', disabled: !enough,
       onclick: () => {

@@ -155,6 +155,8 @@ The setup script ends by printing these steps. In short:
 
 From then on, every push or merge to `main` runs the tests, and if they pass, the game goes live within about a minute. 🚀
 
+**Deploys don't end games.** Before restarting, the deploy tells everyone "Ship systems rebooting in 20s", then waits 20 seconds. When the server stops it saves every running game to `data/rooms.json` (it also saves once a minute, in case of a crash), and when it starts again it loads them back. Players' pages reconnect by themselves and take their seats back, so a game carries on where it left off. Saves older than 30 minutes are ignored.
+
 > **Secrets are secret.** Never paste private keys, passwords or vouchers into code files or chats. They only go in GitHub Secrets.
 
 ## When something breaks
@@ -166,6 +168,10 @@ From then on, every push or merge to `main` runs the tests, and if they pass, th
 | HTTPS error | `journalctl -u caddy -n 50`; check Cloudflare SSL mode is **Full (strict)** |
 | Is the game alive? | Visit `https://nomorespace.online/health` |
 | Server feels slow | `htop` (install with `apt install htop`), and look at memory |
+
+## Replays
+
+Every finished game is saved to `data/replays/` (the newest 500 are kept), and the end screen has a **🔗 Copy replay link** button: `https://nomorespace.online/?replay=<id>` replays the end-game reveal for anyone.
 
 ## Play stats and bug reports
 The game keeps two small files in `data/` next to the app on your server. Deploys never touch this folder.

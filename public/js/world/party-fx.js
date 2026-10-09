@@ -81,12 +81,36 @@ export class PartyFx {
     this.typists.set(id, { sprite, until: performance.now() + 6000 });
   }
 
+  // The docking-bay ball: a giant rubber duck in a space helmet. The server
+  // moves it; we glide it to each new position. pos: [x, z, vx, vz]
+  ball([x, z, vx, vz]) {
+    if (!this.duck) this.duck = buildDuck(this.world.scene);
+    this.duckTarget = { x, z, vx, vz, at: performance.now() };
+    if (!this.duck.visible) this.duck.position.set(x, 0.75, z);
+    this.duck.visible = true;
+  }
+
   // ids of everyone talking on voice chat right now
   setSpeaking(ids) {
     this.speaking = ids;
   }
 
   update(dt, t) {
+    // the duck: only in the docking bay
+    if (this.duck) {
+      if (this.world.phase !== 'lobby') this.duck.visible = false;
+      else if (this.duckTarget) {
+        const d = this.duckTarget;
+        const ahead = Math.min(0.15, (performance.now() - d.at) / 1000);
+        const k = 1 - Math.exp(-dt * 10);
+        this.duck.position.x += (d.x + d.vx * ahead - this.duck.position.x) * k;
+        this.duck.position.z += (d.z + d.vz * ahead - this.duck.position.z) * k;
+        this.duck.position.y = 0.75 + Math.abs(Math.sin(t * 2.2)) * 0.12;
+        const speed = Math.hypot(d.vx, d.vz);
+        if (speed > 0.3) this.duck.rotation.y = Math.atan2(d.vx, d.vz);
+        this.duck.rotation.z = Math.sin(t * 3) * 0.08 + Math.min(0.4, speed * 0.04); // wobbles when kicked
+      }
+    }
     // typing dots bob, and time out if someone stops halfway
     for (const [id, ty] of this.typists || []) {
       ty.sprite.position.y = 2.75 + Math.sin(t * 6) * 0.04;
@@ -157,4 +181,40 @@ export class PartyFx {
       }
     }
   }
+}
+
+// A big rubber duck in a glass space helmet.
+function buildDuck(scene) {
+  const g = new THREE.Group();
+  const yellow = new THREE.MeshStandardMaterial({ color: 0xffd93b, roughness: 0.45 });
+  const orange = new THREE.MeshStandardMaterial({ color: 0xff8a1a, roughness: 0.5 });
+  const black = new THREE.MeshStandardMaterial({ color: 0x111111 });
+  const body = new THREE.Mesh(new THREE.SphereGeometry(0.62, 20, 14), yellow);
+  body.scale.set(1, 0.82, 1.2);
+  g.add(body);
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.38, 18, 12), yellow);
+  head.position.set(0, 0.55, 0.42);
+  g.add(head);
+  const beak = new THREE.Mesh(new THREE.ConeGeometry(0.14, 0.34, 10), orange);
+  beak.rotation.x = Math.PI / 2;
+  beak.position.set(0, 0.5, 0.86);
+  g.add(beak);
+  for (const s of [-1, 1]) {
+    const eye = new THREE.Mesh(new THREE.SphereGeometry(0.055, 8, 6), black);
+    eye.position.set(s * 0.15, 0.66, 0.74);
+    g.add(eye);
+  }
+  const tail = new THREE.Mesh(new THREE.ConeGeometry(0.2, 0.35, 8), yellow);
+  tail.rotation.x = -2.2;
+  tail.position.set(0, 0.25, -0.75);
+  g.add(tail);
+  const helmet = new THREE.Mesh(
+    new THREE.SphereGeometry(0.52, 20, 14),
+    new THREE.MeshStandardMaterial({ color: 0xbfefff, transparent: true, opacity: 0.22, roughness: 0.05, metalness: 0.3, depthWrite: false }),
+  );
+  helmet.position.copy(head.position);
+  g.add(helmet);
+  g.visible = false;
+  scene.add(g);
+  return g;
 }
