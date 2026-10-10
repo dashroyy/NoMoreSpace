@@ -42,6 +42,10 @@ body {
   background: radial-gradient(ellipse at center, transparent 45%, rgba(0, 0, 0, 0.55) 80%, rgba(0, 0, 0, 0.9) 100%);
   transition: background 2s;
 }
+/* the disaster outside tints the edges of the screen, and flashes (lightning, a laugh, a shudder) */
+#doom-glow, #doom-flash { position: fixed; inset: 0; z-index: 1; pointer-events: none; opacity: 0; }
+#doom-glow { background: radial-gradient(ellipse at center, transparent 48%, rgba(var(--doom-rgb, 255, 110, 40), 0.5) 100%); }
+#doom-flash { background: rgb(var(--doom-rgb, 255, 110, 40)); mix-blend-mode: screen; }
 body.phase-night #vignette { background: radial-gradient(ellipse at center, rgba(0, 0, 10, 0.4) 0%, rgba(0, 0, 0, 0.92) 70%); }
 body.horizon-close #vignette { box-shadow: inset 0 0 160px rgba(160, 0, 40, 0.35); }
 

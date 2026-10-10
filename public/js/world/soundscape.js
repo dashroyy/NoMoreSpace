@@ -417,6 +417,78 @@ const OUTBREAK_SOUNDS = {
   },
 };
 
+// ---------- the disaster outside: a bed that grows as it gets closer, and one-off cues ----------
+// bed(kit, out) builds the steady sound; tune(nodes, p, kit) (optional) retunes it as the end nears.
+const MINOR = [392, 466, 392, 349, 311, 349, 392, 523]; // a music-box lullaby in a minor key
+const DOOM_SOUNDS = {
+  // 🕳️ the black hole: a deep sub-bass and a metal whine that climbs as it gets closer
+  classic: {
+    gain: 0.7,
+    bed: (k, o) => [
+      ...drone(k, o, 38, 'sine', 0.06, { swell: [0.07, 0.5] }),
+      ...drone(k, o, 57, 'triangle', 0.014, { lp: 220, swell: [0.11, 0.7] }),
+      ...hiss(k, o, 'lowpass', 150, 0.6, 0.06, { swell: [0.13, 0.5] }),
+      ...drone(k, o, 300, 'sine', 0.005, {}), // the whine (always the last node): higher as it nears
+    ],
+    tune: (nodes, p, k) => {
+      const whine = nodes[nodes.length - 1];
+      whine.frequency.setTargetAtTime(300 + p * 520, k.ctx.currentTime, 2);
+    },
+    // a shudder: a long, low boom, a groan of metal and a slide down
+    cue: (k, o, t, power) => {
+      blip(k, o, t, { freq: 52, to: 28, dur: 1.8, vol: 0.12 * power, type: 'sine', attack: 0.04 });
+      burst(k, o, t, { type: 'lowpass', freq: 220, q: 0.6, dur: 1.6, vol: 0.1 * power, attack: 0.05 });
+      blip(k, o, t + 0.15, { freq: 640, to: 320, dur: 0.9, vol: 0.012 * power, type: 'square' });
+      blip(k, o, t + 0.5, { freq: 140, to: 70, dur: 1.1, vol: 0.02 * power, type: 'sawtooth' });
+    },
+  },
+  // 🤡 the Great Grin: a lullaby that is slightly out of tune, a slow heartbeat, a wheezing organ
+  carnival: {
+    gain: 1,
+    bed: (k, o) => [
+      ...drone(k, o, 55, 'sawtooth', 0.012, { lp: 170, swell: [0.1, 0.5] }),
+      ...drone(k, o, 233, 'sawtooth', 0.0035, { lp: 700, swell: [0.2, 0.6] }), // two pipes a hair apart: they beat
+      ...drone(k, o, 237.2, 'sawtooth', 0.0035, { lp: 700 }),
+      ...hiss(k, o, 'bandpass', 900, 0.6, 0.008, { swell: [0.15, 0.7] }),
+    ],
+    events: [
+      { every: [1.1, 1.1], play: (k, o, t) => { blip(k, o, t, { freq: 58, dur: 0.14, vol: 0.05 }); blip(k, o, t + 0.2, { freq: 52, dur: 0.14, vol: 0.035 }); } }, // thump-thump
+      { every: [14, 26], play: (k, o, t) => MINOR.forEach((f, i) => blip(k, o, t + i * 0.62, { freq: f * (i % 3 === 2 ? 0.96 : 1), to: f * 0.985, dur: 0.9, vol: 0.011, type: 'triangle', attack: 0.01 })) },
+    ],
+    // it laughs: a mocking ha-ha-ha, low and rasping, with a high music-box plink on top
+    cue: (k, o, t, power) => {
+      power *= 1.6;
+      for (let i = 0; i < 5; i++) {
+        blip(k, o, t + i * 0.24, { freq: 150 - i * 7, to: 105 - i * 6, dur: 0.18, vol: 0.05 * power, type: 'sawtooth', attack: 0.015 });
+        burst(k, o, t + i * 0.24, { type: 'bandpass', freq: 500, q: 1.5, dur: 0.12, vol: 0.03 * power });
+      }
+      blip(k, o, t + 1.35, { freq: 1568, to: 1480, dur: 1.2, vol: 0.012 * power, type: 'triangle' });
+    },
+  },
+  // 🦠 the Bloom: wet breathing, a sick tremolo hum, crackling spores, thunder inside the cloud
+  outbreak: {
+    gain: 1,
+    bed: (k, o) => [
+      ...hiss(k, o, 'bandpass', 420, 0.8, 0.07, { swell: [0.19, 0.9] }), // breathing in and out
+      ...drone(k, o, 62, 'sine', 0.03, { swell: [5.5, 0.6] }),
+      ...hiss(k, o, 'highpass', 5000, 0.5, 0.006, { swell: [0.4, 0.8] }),
+    ],
+    events: [
+      { every: [0.25, 1.1], play: (k, o, t) => burst(k, o, t, { type: 'highpass', freq: 3000, q: 0.8, dur: 0.012, vol: 0.03 }) }, // spores crackle
+      { every: [6, 14], play: (k, o, t) => blip(k, o, t, { freq: rand(120, 200), to: rand(300, 520), dur: 0.35, vol: 0.03, type: 'sine' }) }, // a wet gurgle
+    ],
+    // lightning: a crack, then thunder rolling through the gas
+    cue: (k, o, t, power) => {
+      burst(k, o, t, { type: 'highpass', freq: 2500, q: 0.5, dur: 0.18, vol: 0.09 * power, attack: 0.002 });
+      burst(k, o, t + 0.1, { type: 'lowpass', freq: 130, q: 0.6, dur: 2.6, vol: 0.12 * power, attack: 0.15 });
+      blip(k, o, t + 0.1, { freq: 70, to: 38, dur: 1.8, vol: 0.07 * power, type: 'sine', attack: 0.1 });
+    },
+  },
+};
+
+// how loud the disaster is in each phase
+const DOOM_PHASE = { home: 0, lobby: 0, roam: 1, meeting: 0.9, nominations: 0.9, lastwords: 0.8, dusk: 0.9, dawn: 1, night: 1.3, ended: 0.4 };
+
 // how loud the ship is in each phase (seated phases listen from the bridge)
 const PHASE_LEVEL = { home: 0, lobby: 1, roam: 1, meeting: 0.6, nominations: 0.5, lastwords: 0.5, dusk: 0.6, dawn: 0.6, ended: 0.45 };
 
@@ -425,6 +497,44 @@ export class Soundscape {
     this.rooms = null;
     this.last = 0;
     this.script = 'classic';
+    this.doom = null; // the disaster's own bed: { out, nodes, events, level }
+    this.progress = 0;
+    this.phase = 'home';
+  }
+
+  // (re)build the disaster's steady sound for this script
+  buildDoom() {
+    const kit = this.kit;
+    const def = DOOM_SOUNDS[this.script] || DOOM_SOUNDS.classic;
+    if (this.doom) {
+      for (const n of this.doom.nodes) {
+        try { n.stop(); } catch {}
+      }
+    } else {
+      const out = kit.ctx.createGain();
+      out.gain.value = 0;
+      out.connect(kit.bus);
+      this.doom = { out, nodes: [], events: [], level: 0 };
+    }
+    const nodes = def.bed(kit, this.doom.out);
+    this.doom.nodes = nodes;
+    const now = kit.ctx.currentTime;
+    this.doom.events = (def.events || []).map((e) => ({ ...e, next: now + rand(0.2, e.every[1]) }));
+    this.doom.level = -1;
+    def.tune?.(nodes, this.progress, kit);
+  }
+
+  // a one-off from the disaster: the black hole shudders, the Grin laughs, the Bloom throws lightning
+  doomCue(id, power = 1) {
+    const kit = ambienceKit();
+    if (!kit || !kit.enabled() || kit.ctx.state !== 'running') return;
+    if ((DOOM_PHASE[this.phase] ?? 0) === 0) return;
+    const def = DOOM_SOUNDS[id] || DOOM_SOUNDS.classic;
+    const out = kit.ctx.createGain();
+    out.gain.value = 1.4;
+    out.connect(kit.bus);
+    def.cue(kit, out, kit.ctx.currentTime + 0.02, Math.min(1.3, power));
+    setTimeout(() => out.disconnect(), 5000);
   }
 
   // which set of room sounds this ship plays (the Cosmic Carnival has its own)
@@ -436,6 +546,7 @@ export class Soundscape {
     id = id || 'classic';
     if (id === this.script) return;
     this.script = id;
+    if (this.doom && this.kit) this.buildDoom();
     if (!this.rooms) return; // not started yet: start() will use it
     const defs = this.defs();
     const now = this.kit.ctx.currentTime;
@@ -453,6 +564,7 @@ export class Soundscape {
 
   start(kit) {
     this.kit = kit;
+    this.buildDoom();
     const defs = this.defs();
     this.rooms = ROOMS.filter((r) => defs[r.id]).map((r) => {
       const out = kit.ctx.createGain();
@@ -466,7 +578,7 @@ export class Soundscape {
   }
 
   // called every frame from the world; does its work ten times a second
-  update({ x, z, phase, night = false }) {
+  update({ x, z, phase, night = false, progress = 0 }) {
     const kit = ambienceKit();
     if (!kit) return;
     if (!this.rooms) this.start(kit);
@@ -474,6 +586,32 @@ export class Soundscape {
     if (now - this.last < 0.1) return;
     this.last = now;
     const on = kit.enabled() && kit.ctx.state === 'running';
+    this.phase = phase;
+    this.progress = progress;
+    // the disaster outside: always there once the game starts, louder the closer it gets
+    if (this.doom) {
+      const def = DOOM_SOUNDS[this.script] || DOOM_SOUNDS.classic;
+      const level = (DOOM_PHASE[phase] ?? 0.5) * (0.15 + 0.85 * progress);
+      if (Math.abs(level - this.doom.level) > 0.004) {
+        this.doom.out.gain.setTargetAtTime(level * def.gain, now, 0.8);
+        if (Math.abs(progress - (this.doom.lastTune ?? -1)) > 0.03) {
+          def.tune?.(this.doom.nodes, progress, kit);
+          this.doom.lastTune = progress;
+        }
+        this.doom.level = level;
+      }
+      for (const e of this.doom.events) {
+        if (e.next < now - 1) e.next = now + rand(0, e.every[1]);
+        while (e.next <= now + 0.15) {
+          if (on && level > 0.02) {
+            try {
+              e.play(kit, this.doom.out, Math.max(now + 0.01, e.next));
+            } catch {}
+          }
+          e.next += rand(e.every[0], e.every[1]);
+        }
+      }
+    }
     for (const room of this.rooms) {
       let level;
       if (night) level = 0.025; // the camera floats high over the whole ship: a faint mix of everything

@@ -1,6 +1,8 @@
 // Space outside the ship: stars, the black hole, and the clues that appear in
 // the windows. Everything is painted on canvases (no image files).
 import * as THREE from 'three';
+import { Doom } from './doom.js';
+import { cloudCanvas, CLOUD_TINTS, CLOUD_DARK, eyeCanvas, glowCanvas, grinFaceCanvas, grinGlowCanvases, planetCanvas, FACE, CAP_RADIUS } from './doom-art.js';
 
 function seededRandom(seed) {
   return () => {
@@ -82,264 +84,283 @@ export function paintSpace(ctx, w, h, { t = 0, progress = 0, clue = null, colorO
   if (clue) paintClue(ctx, w, h, clue, t, colorOf, iconOf);
 }
 
-// The Cosmic Carnival's doom: the Great Grin, a colossal clown-faced moon with a
-// bottomless mouth. r is the face radius (it grows as the show gets closer to
-// being swallowed); the whole face bobs, blinks and grins wider with time.
-const WIG = ['#ff4fa3', '#ffd23f', '#3ad6e8', '#8a5cff', '#7fe33b', '#ff8a2a'];
+// ---------------------------------------------------------------------------
+// The disasters, painted in 2D (the ship's windows and the end-game stage). The 3D
+// versions under the ship are in doom.js; both use the pictures in doom-art.js.
+// Every painter takes the centre, a radius r (it grows as the ship nears its end) and
+// the time t, and animates itself from t.
+// ---------------------------------------------------------------------------
 
+const hashT = (n) => {
+  const x = Math.sin(n * 127.1 + 311.7) * 43758.5453;
+  return x - Math.floor(x);
+};
+
+// 🤡 The Great Grin: a scary clown planet. A pale, cracked face with hollow glowing eyes
+// (the pupils follow you), a rotten red nose and a grin full of fangs, with fire in its
+// mouth that flickers and cracks that glow like embers.
 export function paintGrin(ctx, cx, cy, r, t) {
-  // pink and gold glow around the moon
-  const glow = ctx.createRadialGradient(cx, cy, r * 0.7, cx, cy, r * 3.4);
-  glow.addColorStop(0, 'rgba(255,90,170,0.45)');
-  glow.addColorStop(0.4, 'rgba(255,200,80,0.14)');
-  glow.addColorStop(1, 'rgba(0,0,0,0)');
-  ctx.fillStyle = glow;
-  ctx.fillRect(cx - r * 4, cy - r * 4, r * 8, r * 8);
-
-  // rainbow wig, puffing up and down around the head
-  for (let i = 0; i < 11; i++) {
-    const a = Math.PI * (0.78 + (i / 10) * 1.44);
-    const bob = Math.sin(t * 1.6 + i) * r * 0.04;
-    const d = r * (1.02 + (i % 2) * 0.08) + bob;
-    ctx.fillStyle = WIG[i % WIG.length];
-    ctx.beginPath();
-    ctx.arc(cx + Math.cos(a) * d, cy + Math.sin(a) * d, r * (0.36 + (i % 3) * 0.03), 0, Math.PI * 2);
-    ctx.fill();
-  }
-
-  // the face
-  const face = ctx.createRadialGradient(cx - r * 0.25, cy - r * 0.3, r * 0.1, cx, cy, r);
-  face.addColorStop(0, '#fffaf0');
-  face.addColorStop(1, '#f1d3c2');
-  ctx.fillStyle = face;
+  const beat = Math.pow(Math.max(0, Math.sin(t * 2.1)), 6) * 0.5 + Math.pow(Math.max(0, Math.sin(t * 2.1 - 0.5)), 6) * 0.3;
+  ctx.save();
+  // a red haze round it
+  const halo = ctx.createRadialGradient(cx, cy, r * 0.8, cx, cy, r * 3);
+  halo.addColorStop(0, `rgba(255,50,40,${0.45 + beat * 0.2})`);
+  halo.addColorStop(0.4, 'rgba(120,10,90,0.18)');
+  halo.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = halo;
+  ctx.fillRect(cx - r * 3.2, cy - r * 3.2, r * 6.4, r * 6.4);
+  // the broken ring of debris (its far half first)
+  const debris = (back) => {
+    for (let i = 0; i < 26; i++) {
+      const a = (i / 26) * Math.PI * 2 + t * 0.12;
+      const d = r * (1.5 + (i % 4) * 0.2);
+      const y = Math.sin(a) * d * 0.28;
+      if ((Math.sin(a) < 0) !== back) continue;
+      ctx.fillStyle = `rgba(150,${60 + (i % 3) * 20},70,0.8)`;
+      ctx.fillRect(cx + Math.cos(a) * d, cy + y, Math.max(1, r * 0.03), Math.max(1, r * 0.03));
+    }
+  };
+  debris(true);
+  // the planet: dark violet rock, lit from the front, with a bloody rim
   ctx.beginPath();
   ctx.arc(cx, cy, r, 0, Math.PI * 2);
-  ctx.fill();
-  // rosy cheeks
-  ctx.fillStyle = 'rgba(255,90,120,0.35)';
-  for (const sx of [-1, 1]) {
-    ctx.beginPath();
-    ctx.arc(cx + sx * r * 0.62, cy + r * 0.12, r * 0.17, 0, Math.PI * 2);
-    ctx.fill();
-  }
-
-  // eyes with blue diamonds, blinking now and then
-  const blink = (t % 5.2) > 5.05 ? 0.12 : 1;
-  for (const sx of [-1, 1]) {
-    const ex = cx + sx * r * 0.36;
-    const ey = cy - r * 0.22;
-    ctx.fillStyle = '#3b6df0';
-    ctx.beginPath();
-    ctx.moveTo(ex, ey - r * 0.42);
-    ctx.lineTo(ex + r * 0.12, ey - r * 0.27);
-    ctx.lineTo(ex, ey - r * 0.12);
-    ctx.lineTo(ex - r * 0.12, ey - r * 0.27);
-    ctx.closePath();
-    ctx.fill();
-    ctx.fillStyle = '#fff';
-    ctx.beginPath();
-    ctx.ellipse(ex, ey, r * 0.17, r * 0.2 * blink, 0, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = '#12091f';
-    ctx.beginPath();
-    ctx.ellipse(ex + Math.sin(t * 0.7) * r * 0.05, ey + r * 0.04, r * 0.07, r * 0.09 * blink, 0, 0, Math.PI * 2);
-    ctx.fill();
-  }
-
-  // the bottomless mouth: wider and deeper as the show nears its end (r grows)
-  const open = 0.5 + Math.sin(t * 1.3) * 0.07;
-  const mx0 = cx - r * 0.7;
-  const mx1 = cx + r * 0.7;
-  const my = cy + r * 0.3;
-  const mouth = new Path2D();
-  mouth.moveTo(mx0, my);
-  mouth.quadraticCurveTo(cx, my + r * 0.18, mx1, my);
-  mouth.quadraticCurveTo(cx, my + r * (0.18 + open * 1.9), mx0, my);
-  mouth.closePath();
   ctx.save();
-  ctx.fillStyle = '#05000c';
-  ctx.fill(mouth);
-  ctx.clip(mouth);
-  // a few stars deep inside the dark
-  for (let i = 0; i < 7; i++) {
-    ctx.fillStyle = `rgba(255,230,250,${0.3 + 0.4 * Math.abs(Math.sin(t * 0.9 + i * 1.7))})`;
-    ctx.fillRect(mx0 + ((i * 97) % 140) / 140 * (mx1 - mx0), my + r * (0.25 + ((i * 53) % 60) / 60 * open * 1.5), 2, 2);
-  }
-  // teeth along the top lip
-  ctx.fillStyle = '#fffdf6';
-  for (let i = 0; i < 9; i++) {
-    ctx.fillRect(mx0 + (i / 9) * (mx1 - mx0) + r * 0.02, my + r * 0.04, (mx1 - mx0) / 9 - r * 0.04, r * 0.15);
-  }
+  ctx.clip();
+  const rock = ctx.createRadialGradient(cx - r * 0.3, cy - r * 0.35, r * 0.1, cx, cy, r);
+  rock.addColorStop(0, '#6b5a78');
+  rock.addColorStop(0.7, '#2c2038');
+  rock.addColorStop(1, '#10091a');
+  ctx.fillStyle = rock;
+  ctx.fillRect(cx - r, cy - r, r * 2, r * 2);
+  ctx.globalAlpha = 0.35;
+  ctx.drawImage(planetCanvas(512), cx - r, cy - r, r * 2, r * 2);
+  ctx.globalAlpha = 1;
   ctx.restore();
-  // lips
-  ctx.strokeStyle = '#d7263d';
-  ctx.lineWidth = Math.max(2, r * 0.09);
-  ctx.lineCap = 'round';
-  ctx.stroke(mouth);
-
-  // the big red nose pulses like a warning light
-  const pulse = 1 + Math.sin(t * 3) * 0.06;
-  ctx.fillStyle = '#e8203a';
-  ctx.shadowColor = '#ff2d55';
-  ctx.shadowBlur = r * 0.35;
-  ctx.beginPath();
-  ctx.arc(cx, cy + r * 0.04, r * 0.17 * pulse, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.shadowBlur = 0;
-  ctx.fillStyle = 'rgba(255,255,255,0.7)';
-  ctx.beginPath();
-  ctx.arc(cx - r * 0.05, cy - r * 0.01, r * 0.04, 0, Math.PI * 2);
-  ctx.fill();
-}
-
-// Whichever doom this script is about (the black hole, or the Great Grin).
-export function paintDoom(ctx, cx, cy, r, t, script = 'classic') {
-  if (script === 'carnival') paintGrin(ctx, cx, cy, r * 0.8, t);
-  else if (script === 'outbreak') paintBloom(ctx, cx, cy, r * 0.7, t);
-  else paintBlackHole(ctx, cx, cy, r, t);
-}
-
-// The Outbreak's doom: the Bloom, a vast living cell wrapped in glowing spore clouds
-// and wavy tendrils, with an eye for a nucleus. It pulses; r is its radius (it grows
-// as the station gets closer to being swallowed).
-export function paintBloom(ctx, cx, cy, r, t) {
-  // toxic glow
-  const glow = ctx.createRadialGradient(cx, cy, r * 0.6, cx, cy, r * 3.6);
-  glow.addColorStop(0, 'rgba(140,255,80,0.42)');
-  glow.addColorStop(0.4, 'rgba(110,40,200,0.16)');
-  glow.addColorStop(1, 'rgba(0,0,0,0)');
-  ctx.fillStyle = glow;
-  ctx.fillRect(cx - r * 4, cy - r * 4, r * 8, r * 8);
-
-  // drifting spore clouds round the edge
-  const cloud = ['rgba(150,255,70,', 'rgba(60,230,200,', 'rgba(210,90,255,'];
-  for (let i = 0; i < 26; i++) {
-    const a = i * 2.4 + t * 0.05 * (1 + (i % 3) * 0.3);
-    const d = r * (1.15 + 0.45 * Math.sin(i * 1.7));
-    const rr = r * (0.2 + 0.1 * Math.sin(i * 2.3 + t * 0.8));
-    const x = cx + Math.cos(a) * d;
-    const y = cy + Math.sin(a) * d * 0.9;
-    const g = ctx.createRadialGradient(x, y, 0, x, y, rr);
-    g.addColorStop(0, `${cloud[i % 3]}0.5)`);
-    g.addColorStop(1, `${cloud[i % 3]}0)`);
-    ctx.fillStyle = g;
-    ctx.fillRect(x - rr, y - rr, rr * 2, rr * 2);
+  // the face
+  const fr = r * CAP_RADIUS;
+  ctx.drawImage(grinFaceCanvas(1024), cx - fr, cy - fr, fr * 2, fr * 2);
+  const glow = grinGlowCanvases(1024);
+  ctx.globalCompositeOperation = 'lighter';
+  ctx.globalAlpha = Math.min(1, 0.55 + 0.18 * Math.sin(t * 9) * Math.sin(t * 3.7));
+  ctx.drawImage(glow.maw, cx - fr, cy - fr, fr * 2, fr * 2);
+  ctx.globalAlpha = Math.min(1, 0.5 + beat * 0.6);
+  ctx.drawImage(glow.ember, cx - fr, cy - fr, fr * 2, fr * 2);
+  ctx.globalAlpha = 1;
+  ctx.globalCompositeOperation = 'source-over';
+  // slit pupils that follow whoever is looking
+  for (const s of [-1, 1]) {
+    const ex = cx + s * FACE.eye.x * 0.96 * fr + Math.sin(t * 0.6) * fr * 0.03;
+    const ey = cy + FACE.eye.y * 0.96 * fr + Math.cos(t * 0.5) * fr * 0.02;
+    ctx.fillStyle = '#000';
+    ctx.beginPath();
+    ctx.ellipse(ex, ey, Math.max(1, fr * 0.02), fr * 0.1, s * 0.18, 0, Math.PI * 2);
+    ctx.fill();
   }
+  // the bloody rim, bright on the dark side
+  const rim = ctx.createRadialGradient(cx, cy, r * 0.82, cx, cy, r * 1.04);
+  rim.addColorStop(0, 'rgba(255,40,40,0)');
+  rim.addColorStop(0.8, `rgba(230,30,40,${0.35 + beat * 0.25})`);
+  rim.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = rim;
+  ctx.beginPath();
+  ctx.arc(cx, cy, r * 1.04, 0, Math.PI * 2);
+  ctx.fill();
+  debris(false);
+  ctx.restore();
+}
 
-  // wavy tendrils reaching out
+// 🦠 The Bloom: a vast, scary gas cloud. Layers of turning gas, a glowing heart that
+// beats, wavy tendrils, an eye that opens now and then, and flashes of lightning.
+export function paintBloom(ctx, cx, cy, r, t) {
+  const beat = Math.pow(Math.max(0, Math.sin(t * 1.7)), 8) * 0.55 + Math.pow(Math.max(0, Math.sin(t * 1.7 - 0.6)), 8) * 0.3;
+  // lightning: some seconds have a flash in the first quarter-second
+  const slot = Math.floor(t / 5);
+  const into = t - slot * 5;
+  const flashing = hashT(slot) < 0.55 && into < 0.3;
+  const flash = flashing ? (Math.sin(into * 70) > -0.3 ? 1 : 0.25) : 0;
+  ctx.save();
+  const haze = ctx.createRadialGradient(cx, cy, r * 0.5, cx, cy, r * 4);
+  haze.addColorStop(0, 'rgba(120,255,80,0.3)');
+  haze.addColorStop(0.45, 'rgba(110,40,200,0.13)');
+  haze.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = haze;
+  ctx.fillRect(cx - r * 4, cy - r * 4, r * 8, r * 8);
+  // layers of gas, each turning at its own pace: heavy murky body, and every third one glows
+  for (let i = 0; i < 9; i++) {
+    const glows = i % 3 === 2;
+    const size = r * 2 * (2.7 - i * 0.18) * (1 + Math.sin(t * 0.4 + i) * 0.03);
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.rotate(t * (i % 2 ? 0.05 : -0.04) * (0.7 + (i % 4) * 0.3) + i);
+    ctx.globalCompositeOperation = glows ? 'lighter' : 'source-over';
+    ctx.globalAlpha = Math.min(1, (glows ? 0.75 : 0.85) * (1 + flash * (glows ? 1.2 : 0.3)));
+    const tint = glows ? CLOUD_TINTS[((i / 3) | 0) % CLOUD_TINTS.length] : CLOUD_DARK[i % CLOUD_DARK.length];
+    ctx.drawImage(cloudCanvas(1 + (i % 4) * 5, tint, 256, glows ? 'veins' : 'smoke'), -size / 2, -size / 2, size, size);
+    ctx.restore();
+  }
+  ctx.globalCompositeOperation = 'lighter';
+  ctx.globalAlpha = 1;
+  // wavy tendrils
   ctx.lineCap = 'round';
-  for (let i = 0; i < 14; i++) {
-    const a = (i / 14) * Math.PI * 2 + t * 0.04;
+  for (let i = 0; i < 12; i++) {
+    const a = (i / 12) * Math.PI * 2 + Math.sin(t * 0.2 + i) * 0.1;
     ctx.strokeStyle = `rgba(${i % 2 ? '150,255,70' : '90,240,190'},0.55)`;
-    ctx.lineWidth = Math.max(1.5, r * 0.06);
+    ctx.lineWidth = Math.max(1.2, r * 0.04);
     ctx.beginPath();
     for (let k = 0; k <= 12; k++) {
       const u = k / 12;
-      const dist = r * (1 + u * (0.9 + 0.3 * Math.sin(i * 3.1)));
-      const wob = Math.sin(u * 6 + t * 1.5 + i) * r * 0.12 * u;
+      const dist = r * (0.9 + u * (1.4 + 0.3 * Math.sin(i * 3.1)));
+      const wob = Math.sin(u * 6 + t * 1.5 + i) * r * 0.14 * u;
       const px = cx + Math.cos(a) * dist - Math.sin(a) * wob;
       const py = cy + Math.sin(a) * dist + Math.cos(a) * wob;
       if (k === 0) ctx.moveTo(px, py);
       else ctx.lineTo(px, py);
     }
     ctx.stroke();
-    // a glowing bulb on the end
-    const ex = cx + Math.cos(a) * r * 1.9;
-    const ey = cy + Math.sin(a) * r * 1.9;
-    ctx.fillStyle = 'rgba(210,255,120,0.8)';
-    ctx.beginPath();
-    ctx.arc(ex, ey, Math.max(1.5, r * 0.05), 0, Math.PI * 2);
-    ctx.fill();
   }
-
-  // the cell: a glowing body with a thick membrane
-  const beat = 1 + Math.sin(t * 2.2) * 0.025;
-  const body = ctx.createRadialGradient(cx - r * 0.2, cy - r * 0.25, r * 0.1, cx, cy, r * beat);
-  body.addColorStop(0, '#e6ff8a');
-  body.addColorStop(0.6, '#6ee03a');
-  body.addColorStop(1, '#2a8f34');
-  ctx.fillStyle = body;
-  ctx.beginPath();
-  ctx.arc(cx, cy, r * beat, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.strokeStyle = 'rgba(30,110,40,0.9)';
-  ctx.lineWidth = Math.max(2, r * 0.1);
-  ctx.stroke();
-  // organelles
-  for (let i = 0; i < 9; i++) {
-    const a = i * 2.1 + 0.4;
-    const d = r * (0.45 + 0.25 * ((i * 37) % 10) / 10);
-    ctx.fillStyle = i % 2 ? 'rgba(210,255,120,0.55)' : 'rgba(40,120,60,0.5)';
-    ctx.beginPath();
-    ctx.arc(cx + Math.cos(a) * d * 1.1, cy + Math.sin(a) * d, r * (0.06 + (i % 3) * 0.02), 0, Math.PI * 2);
-    ctx.fill();
+  // the beating heart of the cloud
+  const core = r * 1.0 * (1 + beat * 0.2 + flash * 0.6);
+  ctx.globalAlpha = Math.min(1, 0.6 + beat * 0.3 + flash * 0.3);
+  ctx.drawImage(glowCanvas('rgba(255,255,170,1)', 'rgba(150,255,70,0.45)', 256), cx - core, cy - core, core * 2, core * 2);
+  ctx.globalAlpha = 1;
+  // an eye looks out of it every so often
+  const phase = (t % 17) / 17;
+  const open = phase < 0.35 ? Math.sin((phase / 0.35) * Math.PI) : 0;
+  if (open > 0.02) {
+    const es = r * 1.6;
+    ctx.globalAlpha = open;
+    ctx.drawImage(eyeCanvas(256), cx - es / 2 + Math.sin(t * 0.7) * r * 0.1, cy - es / 2, es, es);
+    ctx.globalAlpha = 1;
   }
-  // the nucleus is an eye: a purple iris with a slit pupil that sweeps and blinks
-  const ex = cx + Math.sin(t * 0.5) * r * 0.05;
-  const iris = ctx.createRadialGradient(ex, cy, r * 0.05, ex, cy, r * 0.42);
-  iris.addColorStop(0, '#fff27a');
-  iris.addColorStop(0.55, '#a45bff');
-  iris.addColorStop(1, '#4a1d8a');
-  ctx.fillStyle = iris;
-  const blink = (t % 6.5) > 6.35 ? 0.1 : 1;
-  ctx.beginPath();
-  ctx.ellipse(ex, cy, r * 0.42, r * 0.42 * blink, 0, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.fillStyle = '#05000c';
-  ctx.beginPath();
-  ctx.ellipse(ex, cy, r * 0.09, r * 0.34 * blink, 0, 0, Math.PI * 2);
-  ctx.fill();
-}
-
-export function paintBlackHole(ctx, cx, cy, r, t) {
-  // Glow
-  const glow = ctx.createRadialGradient(cx, cy, r * 0.6, cx, cy, r * 3.2);
-  glow.addColorStop(0, 'rgba(255,140,60,0.45)');
-  glow.addColorStop(0.35, 'rgba(200,40,80,0.18)');
-  glow.addColorStop(1, 'rgba(0,0,0,0)');
-  ctx.fillStyle = glow;
-  ctx.fillRect(cx - r * 4, cy - r * 4, r * 8, r * 8);
-
-  // Accretion disk (back half)
-  ctx.save();
-  ctx.translate(cx, cy);
-  ctx.rotate(-0.18 + Math.sin(t * 0.2) * 0.02);
-  for (let i = 0; i < 6; i++) {
-    ctx.strokeStyle = `rgba(${255 - i * 10},${150 - i * 18},${70 - i * 8},${0.55 - i * 0.07})`;
-    ctx.lineWidth = r * (0.22 - i * 0.025);
-    ctx.beginPath();
-    ctx.ellipse(0, 0, r * (2.1 - i * 0.12), r * (0.55 - i * 0.03), 0, Math.PI, Math.PI * 2);
-    ctx.stroke();
+  // a bolt of lightning
+  if (flashing) {
+    ctx.strokeStyle = 'rgba(235,255,215,0.95)';
+    ctx.lineWidth = Math.max(1.5, r * 0.03);
+    for (let b = 0; b < 2; b++) {
+      let a = hashT(slot * 3 + b) * Math.PI * 2;
+      let x = cx;
+      let y = cy;
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      for (let i = 0; i < 9; i++) {
+        a += (hashT(slot * 11 + b * 5 + i) - 0.5) * 1.0;
+        x += Math.cos(a) * r * 0.35;
+        y += Math.sin(a) * r * 0.35;
+        ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+    }
   }
   ctx.restore();
+}
 
-  // Lensed ring over the top
-  ctx.strokeStyle = 'rgba(255,190,120,0.75)';
-  ctx.lineWidth = r * 0.14;
+// 🕳️ The black hole: a hot, swirling accretion disk that streaks as it orbits (the matter
+// close in orbits fastest), a bright lensed ring, jets, and sparks spiralling in.
+export function paintBlackHole(ctx, cx, cy, r, t) {
+  ctx.save();
+  const halo = ctx.createRadialGradient(cx, cy, r * 0.8, cx, cy, r * 4.2);
+  halo.addColorStop(0, 'rgba(255,150,70,0.4)');
+  halo.addColorStop(0.35, 'rgba(210,50,70,0.16)');
+  halo.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = halo;
+  ctx.fillRect(cx - r * 4.4, cy - r * 4.4, r * 8.8, r * 8.8);
+  const tilt = 0.3;
+  const rot = -0.16 + Math.sin(t * 0.07) * 0.04;
+  // a soft sheet of hot gas under the streaks, so the disk reads as one glowing thing
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.rotate(rot);
+  ctx.scale(1, tilt);
+  const sheet = ctx.createRadialGradient(0, 0, r * 1.3, 0, 0, r * 4.9);
+  sheet.addColorStop(0, 'rgba(255,215,160,0.6)');
+  sheet.addColorStop(0.25, 'rgba(255,130,50,0.4)');
+  sheet.addColorStop(0.6, 'rgba(170,40,50,0.18)');
+  sheet.addColorStop(1, 'rgba(60,10,90,0)');
+  ctx.fillStyle = sheet;
   ctx.beginPath();
-  ctx.arc(cx, cy, r * 1.12, 0, Math.PI * 2);
+  ctx.arc(0, 0, r * 4.9, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+  // the disk, as streaks that orbit at their own speed
+  const streaks = (front) => {
+    ctx.globalCompositeOperation = 'lighter';
+    for (let i = 0; i < 40; i++) {
+      const u = i / 39;
+      const rr = r * (1.45 + u * 3.3);
+      const w = 1.5 / Math.pow(rr / r, 1.5);
+      const dash = rr * (0.5 + hashT(i) * 1.4);
+      ctx.setLineDash([dash, rr * (0.25 + hashT(i + 40) * 0.8)]);
+      ctx.lineDashOffset = -t * w * rr * 2.2;
+      const g = Math.round(235 - u * 175);
+      const b = Math.round(185 - u * 175);
+      ctx.strokeStyle = `rgba(255,${g},${Math.max(10, b)},${0.7 - u * 0.5})`;
+      ctx.lineWidth = Math.max(1, r * 0.075 * (1 - u * 0.45));
+      ctx.beginPath();
+      ctx.ellipse(cx, cy, rr, rr * tilt, rot, front ? 0 : Math.PI, front ? Math.PI : Math.PI * 2);
+      ctx.stroke();
+    }
+    ctx.setLineDash([]);
+    ctx.globalCompositeOperation = 'source-over';
+  };
+  streaks(false);
+  // the far side of the disk, bent over the top and under the bottom by the hole's gravity
+  for (let i = 0; i < 7; i++) {
+    const rr = r * (1.25 + i * 0.16);
+    ctx.strokeStyle = `rgba(255,${190 - i * 14},${110 - i * 10},${0.55 - i * 0.06})`;
+    ctx.lineWidth = r * 0.07;
+    ctx.beginPath();
+    ctx.ellipse(cx, cy, rr, rr * 0.95, 0, Math.PI * 1.05, Math.PI * 1.95);
+    ctx.stroke();
+  }
+  // jets
+  const flick = 0.7 + 0.3 * Math.sin(t * 7);
+  for (const dir of [-1, 1]) {
+    const jet = ctx.createLinearGradient(cx, cy, cx, cy + dir * r * 5);
+    jet.addColorStop(0, `rgba(150,160,255,${0.16 * flick})`);
+    jet.addColorStop(0.5, `rgba(150,160,255,${0.05 * flick})`);
+    jet.addColorStop(1, 'rgba(150,160,255,0)');
+    ctx.fillStyle = jet;
+    ctx.beginPath();
+    ctx.moveTo(cx - r * 0.35, cy);
+    ctx.lineTo(cx + r * 0.35, cy);
+    ctx.lineTo(cx + r * 0.1, cy + dir * r * 5);
+    ctx.lineTo(cx - r * 0.1, cy + dir * r * 5);
+    ctx.closePath();
+    ctx.fill();
+  }
+  // the photon ring
+  ctx.strokeStyle = 'rgba(255,215,160,0.85)';
+  ctx.lineWidth = r * 0.12;
+  ctx.beginPath();
+  ctx.arc(cx, cy, r * 1.1, 0, Math.PI * 2);
   ctx.stroke();
-
-  // The hole itself
+  ctx.strokeStyle = 'rgba(255,250,240,0.95)';
+  ctx.lineWidth = r * 0.04;
+  ctx.stroke();
+  // the hole itself
   ctx.fillStyle = '#000';
   ctx.beginPath();
   ctx.arc(cx, cy, r, 0, Math.PI * 2);
   ctx.fill();
-
-  // Accretion disk (front half)
-  ctx.save();
-  ctx.translate(cx, cy);
-  ctx.rotate(-0.18 + Math.sin(t * 0.2) * 0.02);
-  const front = ctx.createLinearGradient(-r * 2, 0, r * 2, 0);
-  front.addColorStop(0, 'rgba(255,90,40,0.3)');
-  front.addColorStop(0.5, 'rgba(255,220,160,0.95)');
-  front.addColorStop(1, 'rgba(255,90,40,0.3)');
-  ctx.strokeStyle = front;
-  ctx.lineWidth = r * 0.24;
-  ctx.beginPath();
-  ctx.ellipse(0, 0, r * 2.1, r * 0.55, 0, 0, Math.PI);
-  ctx.stroke();
+  streaks(true);
+  // sparks of matter spiralling in
+  for (let i = 0; i < 34; i++) {
+    const ph = (t * (0.07 + hashT(i) * 0.08) + i / 34) % 1;
+    const rr = r * (4.4 - ph * 3.3);
+    const a = i * 2.39 + (t * 1.5) / Math.pow(rr / r, 1.5);
+    const x = cx + Math.cos(a) * rr;
+    const y = cy + Math.sin(a) * rr * tilt;
+    ctx.fillStyle = `rgba(255,${Math.round(150 + ph * 100)},${Math.round(80 + ph * 140)},${Math.min(1, ph * 3) * (1 - ph * 0.2)})`;
+    ctx.fillRect(x, y, Math.max(1.2, r * 0.04), Math.max(1.2, r * 0.04));
+  }
   ctx.restore();
+}
+
+// Whichever doom this script is about (the black hole, the Great Grin or the Bloom).
+export function paintDoom(ctx, cx, cy, r, t, script = 'classic') {
+  if (script === 'carnival') paintGrin(ctx, cx, cy, r * 0.95, t);
+  else if (script === 'outbreak') paintBloom(ctx, cx, cy, r * 0.7, t);
+  else paintBlackHole(ctx, cx, cy, r, t);
 }
 
 export function paintConstellation(ctx, cx, cy, size, emoji, living, t) {
@@ -490,8 +511,9 @@ export class SpaceCanvases {
   }
 }
 
-// Stars and the black hole far below the ship, visible between rooms.
-export function buildBackdrop(scene) {
+// Stars far below the ship, and the disaster the script is about (a black hole, the
+// Great Grin or the Bloom), as animated 3D scenery (see doom.js).
+export function buildBackdrop(scene, { lowFx = false } = {}) {
   const group = new THREE.Group();
   const count = 2600;
   const positions = new Float32Array(count * 3);
@@ -508,76 +530,25 @@ export function buildBackdrop(scene) {
   geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
   const stars = new THREE.Points(geo, new THREE.PointsMaterial({ size: 1.6, vertexColors: true, sizeAttenuation: true, transparent: true, opacity: 0.9, depthWrite: false }));
   group.add(stars);
-
-  // Black hole seen from above: a glowing disk with a black centre.
-  const c = document.createElement('canvas');
-  c.width = c.height = 1024;
-  const g = c.getContext('2d');
-  const mid = 512;
-  const disk = g.createRadialGradient(mid, mid, 90, mid, mid, 500);
-  disk.addColorStop(0, 'rgba(0,0,0,1)');
-  disk.addColorStop(0.18, 'rgba(0,0,0,1)');
-  disk.addColorStop(0.2, 'rgba(255,230,180,1)');
-  disk.addColorStop(0.3, 'rgba(255,140,60,0.9)');
-  disk.addColorStop(0.5, 'rgba(200,40,90,0.5)');
-  disk.addColorStop(0.75, 'rgba(80,20,120,0.2)');
-  disk.addColorStop(1, 'rgba(0,0,0,0)');
-  g.fillStyle = disk;
-  g.fillRect(0, 0, 1024, 1024);
-  // swirl streaks
-  for (let i = 0; i < 160; i++) {
-    const a = Math.random() * Math.PI * 2;
-    const r = 110 + Math.random() * 300;
-    g.strokeStyle = `rgba(255,${120 + Math.random() * 100},80,${0.08 + Math.random() * 0.15})`;
-    g.lineWidth = 1 + Math.random() * 3;
-    g.beginPath();
-    g.arc(mid, mid, r, a, a + 0.4 + Math.random() * 0.8);
-    g.stroke();
-  }
-  const tex = new THREE.CanvasTexture(c);
-  tex.colorSpace = THREE.SRGBColorSpace;
-  // the Cosmic Carnival's version: the Great Grin, seen from above
-  const gc = document.createElement('canvas');
-  gc.width = gc.height = 1024;
-  paintGrin(gc.getContext('2d'), 512, 512, 150, 1.2);
-  const grinTex = new THREE.CanvasTexture(gc);
-  grinTex.colorSpace = THREE.SRGBColorSpace;
-  // and the Outbreak's: the Bloom
-  const bc = document.createElement('canvas');
-  bc.width = bc.height = 1024;
-  paintBloom(bc.getContext('2d'), 512, 512, 130, 1.2);
-  const bloomTex = new THREE.CanvasTexture(bc);
-  bloomTex.colorSpace = THREE.SRGBColorSpace;
-  let script = 'classic';
-  const hole = new THREE.Mesh(
-    new THREE.PlaneGeometry(1, 1),
-    new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }),
-  );
-  hole.rotation.x = -Math.PI / 2;
-  hole.position.set(10, -120, -60);
-  // The plane lies in its own XY plane, so the black core just sits a hair above it.
-  const core = new THREE.Mesh(new THREE.CircleGeometry(0.17, 48), new THREE.MeshBasicMaterial({ color: 0x000000 }));
-  core.position.z = 0.002;
-  hole.add(core);
-  group.add(hole);
   scene.add(group);
+  const doom = new Doom(group, { lowFx });
 
   return {
     group,
+    doom,
     setProgress(p) {
-      const s = 220 + p * 900;
-      hole.scale.set(s, s, 1);
+      doom.setProgress(p);
     },
-    // the Cosmic Carnival swaps the black hole for the Great Grin, the Outbreak for the Bloom
+    // the black hole, the Great Grin or the Bloom
     setScript(id) {
-      script = id || 'classic';
-      hole.material.map = { carnival: grinTex, outbreak: bloomTex }[script] || tex;
-      hole.material.needsUpdate = true;
-      core.visible = script !== 'carnival' && script !== 'outbreak';
+      doom.setScript(id);
     },
-    update(time) {
-      hole.rotation.z = script === 'carnival' ? Math.sin(time * 0.15) * 0.12 : script === 'outbreak' ? time * 0.012 : time * 0.03;
+    flash() {
+      doom.flash();
+    },
+    update(time, dt = 0.016, camera = null) {
       stars.rotation.y = time * 0.002;
+      doom.update(time, dt, camera);
     },
   };
 }

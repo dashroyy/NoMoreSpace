@@ -313,7 +313,7 @@ function onPhaseChange(state, prev, world, reveal) {
       flushDrawing(); // a picture still being drawn as the night ended
       sfx('dawn');
       // every night the ship drifts closer to the black hole (or the Great Grin)
-      world.rumble(1.8);
+      world.lurch();
       setTimeout(() => sfx('creak'), 300);
       const theme = themeInfo(state.script);
       setTimeout(() => toast(`${theme.doomIcon} ${theme.lurch.replace('{pct}', Math.round(blackHoleProgress(state) * 100))}`, 'death', 6000), 1800);

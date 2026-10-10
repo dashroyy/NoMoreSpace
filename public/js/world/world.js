@@ -13,6 +13,7 @@ import { CarnivalRooms } from './carnival-rooms.js';
 import { CarnivalExterior } from './carnival-exterior.js';
 import { OutbreakRooms } from './outbreak-rooms.js';
 import { OutbreakExterior } from './outbreak-exterior.js';
+import { DoomFx } from './doomfx.js';
 import { moveWithCollision, roomAt, roomById, walkable, seatPosition, TASK_STATIONS, SPAWN, DRAWING_SLOTS } from './layout.js';
 
 const SEATED = ['dawn', 'meeting', 'nominations', 'lastwords', 'dusk'];
@@ -85,7 +86,7 @@ export class World {
     this.scene.add(moon);
 
     this.space = new SpaceCanvases();
-    this.backdrop = buildBackdrop(this.scene);
+    this.backdrop = buildBackdrop(this.scene, { lowFx: this.lowFx });
     this.backdrop.group.traverse((o) => o.material && (o.material.fog = false));
     this.ship = buildShip(this.scene, this.space);
     // the rooms' little moving details, and their sounds (louder the closer you are)
@@ -95,6 +96,7 @@ export class World {
     this.carnivalExterior = new CarnivalExterior(this.ship.group, { lowFx: this.lowFx }); // the fairground outside (same)
     this.outbreakRooms = new OutbreakRooms(this.ship.group, { lowFx: this.lowFx }); // the lab gone wrong: dressing for every room (Outbreak script only)
     this.outbreakExterior = new OutbreakExterior(this.ship.group, { lowFx: this.lowFx }); // the research complex outside (same)
+    this.doomFx = new DoomFx(this); // the disaster outside: underglow, vignette, lightning, laughs and shudders
     this.soundscape = new Soundscape();
     this.ambience.onVent = (x, z) => this.soundscape.oneShot('vent', { x, z }, this.listener());
     this.ambience.onChirp = (x, z) => this.soundscape.oneShot('chirp', { x, z }, this.listener());
@@ -423,7 +425,7 @@ export class World {
     this.outbreakRooms.update(t, dt);
     this.outbreakExterior.update(t, dt);
     if (this.ambience.root.visible) this.ambience.update(dt, t, { night: this.night, progress: this.progress, alarm: t < this.alarmUntil });
-    this.soundscape.update({ ...this.listener(), phase: this.phase, night: this.phase === 'night' });
+    this.soundscape.update({ ...this.listener(), phase: this.phase, night: this.phase === 'night', progress: this.progress });
     this.ship.exterior.update(t);
     this.updateBeams(dt);
     this.fx.update(dt, t);
@@ -433,7 +435,8 @@ export class World {
     // the big Observation Deck window (where clues appear) only needs repainting when it can be seen
     this.space.bigVisible = this.phase === 'home' || this.phase === 'night' || this.spectator || this.camTarget.z < -12;
     this.space.update(t);
-    this.backdrop.update(t);
+    this.backdrop.update(t, dt, this.camera);
+    this.doomFx.update(t, dt);
     this.renderer.render(this.scene, this.camera);
   }
 
@@ -687,6 +690,7 @@ export class World {
     this.backdrop.setScript(id);
     this.ship.setTheme(id);
     this.soundscape.setScript(id);
+    this.doomFx.setScript(id);
     this.carnivalRooms.setActive(id === 'carnival');
     this.carnivalExterior.setActive(id === 'carnival');
     this.outbreakRooms.setActive(id === 'outbreak');
@@ -700,6 +704,12 @@ export class World {
     if (SEATED.includes(this.phase)) return { x: 0, z: 0 };
     if (this.spectator) return { x: this.camTarget.x, z: this.camTarget.z };
     return { x: this.local.x, z: this.local.z };
+  }
+
+  // Dawn: the disaster lurches closer. The ship shudders, and the thing outside flashes and sounds off.
+  lurch() {
+    this.rumble(1.8);
+    this.doomFx.fire(1, false);
   }
 
   rumble(seconds = 1.6) {

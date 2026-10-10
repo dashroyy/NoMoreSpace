@@ -129,6 +129,11 @@ export class OutbreakExterior {
 
     // ---------- the Bloom's tendrils: glowing vines creeping up from below ----------
     const TENDRILS = lowFx ? 10 : 18;
+    // (these glow, so the fog must not turn them black from far away)
+    const glowing = (color, e) => new THREE.MeshStandardMaterial({ color, emissive: color, emissiveIntensity: e, roughness: 0.5, fog: false });
+    const vineA = glowing(0x3aa02a, 0.5);
+    const vineB = glowing(0x2fa68a, 0.5);
+    const vineTip = glowing(0xb8ff6a, 1.1);
     for (let i = 0; i < TENDRILS; i++) {
       const a = (i / TENDRILS) * Math.PI * 2 + (i % 3) * 0.2;
       const r0 = 38 + (i % 4) * 12;
@@ -140,9 +145,9 @@ export class OutbreakExterior {
         pts.push(new THREE.Vector3(Math.cos(aa) * rr * (1 + 0.5 * Math.abs(Math.cos(aa))), -40 + u * 38 + Math.sin(u * 5 + i) * 2, Math.sin(aa) * rr * 0.9));
       }
       const curve = new THREE.CatmullRomCurve3(pts);
-      add(S, new THREE.TubeGeometry(curve, 24, 0.5 + (i % 3) * 0.2, 5, false), M(i % 2 ? TOXIC : 0x6bffd8, { e: 0.9, r: 0.5 }), 0, 0, 0);
+      add(S, new THREE.TubeGeometry(curve, 24, 0.5 + (i % 3) * 0.2, 5, false), i % 2 ? vineA : vineB, 0, 0, 0);
       const tip = curve.getPoint(1);
-      add(S, ball(0.9, 8), M(0xd9ff9a, { e: 1.4 }), tip.x, tip.y, tip.z);
+      add(S, ball(0.9, 8), vineTip, tip.x, tip.y, tip.z);
     }
 
     this.group.add(mergeStatic(S));
