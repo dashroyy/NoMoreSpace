@@ -152,6 +152,7 @@ function describe(e) {
     case 'net': return `🤸 ${name(e.id)} was airlocked, but a safety net caught them: they are the Acrobat!`;
     case 'pie': return `🥧 ${name(e.a)} the Clown threw a pie at ${name(e.t)}${e.evil ? ' (an infiltrator: the crew loses!)' : ' (a good player)'}.`;
     case 'revive': return `✨ ${name(e.id)} came back from the dead!`;
+    case 'spores': return `🍄 As ${name(e.id)} went out of the airlock, a cloud of spores puffed out: ${name(e.t)} breathed it in!`;
     default: return null;
   }
 }

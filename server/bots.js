@@ -60,7 +60,7 @@ function teammates(g, p) {
   return new Set(team ? team.map((t) => t.id) : [p.id]);
 }
 
-const EVIL_ROLE = /(Hacker|Mimic|Incubator|Smuggler|Holo-Jester|The Parasite|The Reflection|Knife Thrower|Stage Double|Hexer)/;
+const EVIL_ROLE = /(Hacker|Mimic|Incubator|Smuggler|Holo-Jester|The Parasite|The Reflection|Knife Thrower|Stage Double|Hexer|The Carrier|Bioterrorist|Quack Doctor|Spore Host)/;
 
 // What a clue (a role's private info, or one shared at the meeting) says about
 // one player: positive = suspicious, negative = probably good.
@@ -132,6 +132,31 @@ function nightTargets(g, p, prompt, brain) {
     case 'parasite':
     case 'reflection':
       list = ranked(others.filter((t) => !team.has(t.id)), infoClaim); // hunt whoever claims to know things
+      break;
+    case 'carrier':
+    case 'bioterrorist':
+      // infect someone healthy who claims to know things
+      list = ranked(others.filter((t) => !team.has(t.id) && t.infected == null), infoClaim);
+      break;
+    case 'quack':
+      list = ranked(others.filter((t) => !team.has(t.id)), infoClaim);
+      break;
+    case 'vaccinator': {
+      // sick players say so at the table, so a good robot usually finds them; otherwise shield someone trusted
+      const sick = others.filter((t) => t.infected != null && t.id !== p.lastPick);
+      list = sick.length && Math.random() < 0.75
+        ? ranked(sick, () => 0)
+        : ranked(others.filter((t) => t.id !== p.lastPick), (t) => infoClaim(t) - suspicion(g, p, t, brain));
+      break;
+    }
+    case 'donor': {
+      const sick = others.filter((t) => t.infected != null && !(g.claims[t.id] && suspicion(g, p, t, brain) > 0.9));
+      if (!sick.length) return []; // nobody worth saving: keep the donation for later
+      list = ranked(sick, (t) => infoClaim(t) - suspicion(g, p, t, brain));
+      break;
+    }
+    case 'tracer':
+      list = ranked(others, (t) => suspicion(g, p, t, brain));
       break;
     case 'hacker':
     case 'jester':
@@ -360,7 +385,7 @@ function runBots(room, now, api, dt = 0.25) {
       const prompt = g.prompts[p.id];
       if (prompt && !g.choices[p.id] && !g.draft && now > b.actAt) {
         // a once-per-game ability (Knife Thrower, Magician) is saved some of the time, and never used from night 2 when robots are unsure
-        const save = prompt.once && Math.random() < 0.55;
+        const save = prompt.once && Math.random() < (prompt.role === 'donor' ? 0.1 : 0.55);
         act(() => g.submitChoice(p.id, save ? [] : nightTargets(g, p, prompt, b), now));
       }
       if (!g.deathGuesses[p.id] && !g.draft && now > b.actAt) {
@@ -379,6 +404,12 @@ function runBots(room, now, api, dt = 0.25) {
     }
     // robots read the dawn story at a human's pace, then are ready for the day
     if (g.phase === 'dawn' && !g.ready.has(p.id) && now > b.readyAt + 8000 * tempo) act(() => g.setReady(p.id, true));
+
+    // the Outbreak: an infected (or fevered) robot tells the table, and asks for a Vaccinator
+    if (g.phase === 'meeting' && p.alive && p.infected != null && !b.said.fever && now > b.actAt) {
+      b.said.fever = true;
+      api.say(p, pick(['I woke up with a fever…', 'Cough, cough. I think I am infected!', 'I feel terrible. Is there a Vaccinator aboard?']));
+    }
 
     // claims and sharing information at the emergency meeting
     if (g.phase === 'meeting' && p.alive && now > b.actAt && !b.said.meeting) {

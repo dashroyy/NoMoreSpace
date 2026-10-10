@@ -26,6 +26,8 @@ const LOCK_GRACE_MS = 6000; // a lock with fewer than two of its people inside o
 const KNOCK_GAP_MS = 8000; // between knocks from the same person on the same door
 const TARGET_RULE = { hacker: 'alive', jester: 'alive', medic: 'alive', parasite: 'alive', reflection: 'alive', scanner: 'any', droid: 'any', blackbox: 'any' };
 const DEATH_ANIMS = ['airlock', ...st.NIGHT_ANIMS, 'fainted', 'shot'];
+// What a player is told when they are infected (really, or by a Quack Doctor, or if they are a Hypochondriac).
+const FEVER_TEXT = '🤒 You wake up burning with fever: you are INFECTED! When the coming night ends you will burst, unless a Vaccinator cures you. Until then, your abilities malfunction.';
 const HAUNTS = ['flicker', 'crate', 'cackle']; // a ghost's harmless pranks
 const HAUNTS_PER_DAY = 3;
 const HAUNT_COOLDOWN_MS = 6000;
@@ -65,6 +67,10 @@ function freshPlayerState() {
     used: false, // once-per-game abilities (Gunner, Sentinel)
     systemUsed: false, // once-per-game ship system (see roles.js `system`)
     master: null, // Service Droid's chosen master for today
+    netUsed: false, // the Acrobat's safety net has been used
+    lastPick: null, // the player a "not twice in a row" ability chose last night
+    infected: null, // Outbreak: the night this player was infected (they burst when the next night ends)
+    hazmatWarned: false, // Outbreak: the Hazmat Tech has already been warned once
     notes: [], // private information this player has learned
     haunts: { day: 0, used: 0, lastAt: 0 }, // a ghost's pranks today
     lastActive: 0, // last time this player touched the keyboard or mouse
@@ -192,8 +198,14 @@ class Game {
   }
 
   // Ability does not work: the Space Drunk always, glitched players for a night and a day.
+  // In the Outbreak script, infected players' abilities malfunction too.
   broken(p, glitch = this.glitch) {
-    return p.role === 'drunk' || (!!glitch && glitch.id === p.id);
+    return p.role === 'drunk' || p.infected != null || (!!glitch && glitch.id === p.id);
+  }
+
+  // What the Contact Tracer sees: the infected, and the Hypochondriac who only thinks so.
+  looksInfected(p) {
+    return p.infected != null || p.role === 'hypochondriac';
   }
 
   // The Demon is "the Parasite" in every script, but some scripts have more than one kind (the Reflection).
@@ -434,6 +446,13 @@ class Game {
     const bluffPool = [...goodNotInPlay('crew'), ...goodNotInPlay('drifter').filter((r) => r !== 'drunk')].filter((r) => !inPlay.has(r));
     this.bluffs = st.sample(bluffPool, 3, this.random);
 
+    // Patient Zero starts the game infected (and knows it): they burst when the second night ends.
+    for (const p of this.players) {
+      if (p.role !== 'patientzero') continue;
+      p.infected = 1;
+      this.tell(p, '🤒 You start the game infected: nobody knows how you caught it. You will burst when the second night ends, unless a Vaccinator cures you. Tell the crew! Until then your abilities malfunction.', { kind: 'fever' });
+    }
+
     // The Method Actor believes they are the Demon that is in play.
     const demonRole = roles.find((r) => ROLES[r].type === 'parasite');
     for (const p of this.players) if (p.role === 'actor') p.believed = demonRole;
@@ -471,7 +490,7 @@ class Game {
     const def = ROLES[p.believed].night;
     if (!def || !def.choose || def.onDeath) return null;
     if (this.night === 1 ? !def.first : !def.other) return null;
-    if (ROLES[p.believed].type === 'parasite' && this.night < this.firstKillNight) return null;
+    if (ROLES[p.believed].type === 'parasite' && this.night < this.firstKillNight && !def.first) return null;
     if (def.once && p.used) return null; // a once-per-game ability that has been used
     if (def.target === 'dead' && !this.players.some((o) => !o.alive)) return null; // nobody to choose yet
     return {
@@ -708,7 +727,7 @@ class Game {
     const lies = (p) => this.lies(p, d.glitch);
     const say = (p, role, text, truthful, extra = {}) => {
       d.messages.push({ to: p.id, ...extra, role, text, truthful });
-      d.events.push({ k: 'info', a: p.id, role, text, truthful });
+      d.events.push({ k: 'info', a: p.id, role, text, truthful, sick: p.infected != null || undefined });
     };
 
     // Hacker glitches first, so the glitch affects everyone else tonight.
@@ -803,10 +822,82 @@ class Game {
       d.events.push({ k: 'tame', a: p.id, t, works, hit });
     }
 
+    // ---- Outbreak: vaccines, infections, and the infected who burst ----
+    d.infect = [];
+    d.cures = [];
+    const vaccinated = []; // cured if infected, shielded if healthy
+    for (const p of believers('vaccinator')) {
+      const [t] = choice(p) || [];
+      if (!t) continue;
+      const works = !broken(p);
+      if (works) vaccinated.push(t);
+      d.events.push({ k: 'vaccinate', a: p.id, t, works });
+    }
+    // the Blood Donor swaps places with an infected player (once per game)
+    for (const p of believers('donor')) {
+      const [t] = choice(p) || [];
+      if (!t) continue;
+      const target = this.get(t);
+      const works = !broken(p) && !!target && target.alive && target.infected != null && t !== p.id;
+      if (works) {
+        vaccinated.push(t);
+        d.donor = p.id;
+      }
+      d.events.push({ k: 'donate', a: p.id, t, works });
+    }
+    // an infection attempt, by the Carrier or the Bioterrorist
+    const attempt = (source, target, by) => {
+      let result;
+      if (!target || !target.alive) result = 'gone';
+      else if (target.role === 'hazmat' && !broken(target)) {
+        result = 'hazmat';
+        if (!target.hazmatWarned) {
+          (d.hazmatWarned ||= []).push(target.id);
+          say(target, 'hazmat', 'Something tried to infect you in the night... but your hazmat suit held. Someone is spreading a sickness through this station.', true);
+        }
+      } else if (vaccinated.includes(target.id)) result = 'shielded';
+      else if (target.infected != null || d.infect.includes(target.id)) result = 'already';
+      else {
+        d.infect.push(target.id);
+        result = 'infected';
+      }
+      d.events.push({ k: 'infect', a: source.id, t: target?.id || null, result, by });
+    };
+    const carrier = this.players.find((p) => p.alive && p.role === 'carrier');
+    if (carrier && choice(carrier)) {
+      if (broken(carrier)) d.events.push({ k: 'infect', a: carrier.id, t: choice(carrier)[0], result: 'glitched', by: 'carrier' });
+      else attempt(carrier, this.get(choice(carrier)[0]), 'carrier');
+    }
+    for (const p of this.players.filter((x) => x.alive && x.role === 'bioterrorist')) {
+      const [t] = choice(p) || [];
+      if (!t) continue;
+      if (broken(p)) d.events.push({ k: 'infect', a: p.id, t, result: 'glitched', by: 'bio' });
+      else attempt(p, this.get(t), 'bio');
+    }
+    if (d.donor && !d.infect.includes(d.donor)) d.infect.push(d.donor); // the donor catches it
+    // the Quack Doctor's false fevers
+    for (const p of this.players.filter((x) => x.alive && x.role === 'quack')) {
+      const [t] = choice(p) || [];
+      if (!t) continue;
+      const works = !broken(p);
+      if (works) (d.fever ||= []).push(t);
+      d.events.push({ k: 'fever', a: p.id, t, works });
+    }
+    // cures, and the infected who burst when this night ends (they were infected on an earlier night)
+    for (const p of this.players.filter((x) => x.alive && x.infected != null)) {
+      if (vaccinated.includes(p.id)) {
+        d.cures.push(p.id);
+        d.events.push({ k: 'cure', t: p.id });
+      } else if (p.infected < N) {
+        d.deaths.push({ id: p.id, cause: 'burst' });
+        d.events.push({ k: 'burst', t: p.id });
+      }
+    }
+
     // The Parasite strikes.
     const parasite = this.players.find((p) => p.alive && this.isDemon(p));
     d.parasiteId = parasite?.id || null;
-    if (parasite && choice(parasite)) {
+    if (parasite && parasite.role !== 'carrier' && choice(parasite)) {
       const target = this.get(choice(parasite)[0]);
       const kill = (victim, result, extra = {}) => d.events.push({ k: 'kill', a: parasite.id, t: target.id, result, victim: victim?.id, ...extra });
       const safe = (p) => p.id === d.protectedId || (p.role === 'marine' && !broken(p));
@@ -915,6 +1006,24 @@ class Game {
       say(p, 'engineer', `${value} of your living neighbours (${names}) ${value === 1 ? 'is' : 'are'} evil.`, !lies(p), { value });
     }
 
+    // The Contact Tracer counts the infected among two players.
+    for (const p of believers('tracer')) {
+      if (dying.includes(p.id)) continue;
+      const picked = (choice(p) || []).map((id) => this.get(id));
+      if (picked.length < 2) continue;
+      const truth = picked.filter((o) => this.looksInfected(o)).length;
+      const value = lies(p) ? st.otherNumber(truth, 2, this.random) : truth;
+      say(p, 'tracer', `Contact trace of ${picked[0].name} & ${picked[1].name}: ${value} of them ${value === 1 ? 'is' : 'are'} infected.`, !lies(p), { value, players: picked.map((o) => o.id) });
+    }
+
+    // The Biohazard Sensor learns whether anyone was newly infected tonight.
+    for (const p of believers('sensor')) {
+      if (dying.includes(p.id)) continue;
+      const truth = d.infect.length > 0;
+      const value = lies(p) ? !truth : truth;
+      say(p, 'sensor', value ? 'ALARM: someone was infected last night.' : 'All quiet: nobody was newly infected last night.', !lies(p), { value });
+    }
+
     // Scanner checks two players for the Parasite.
     for (const p of believers('scanner')) {
       if (dying.includes(p.id)) continue;
@@ -963,6 +1072,7 @@ class Game {
     this.glitch = d.glitch;
     this.hexed = d.hexed ? { id: d.hexed } : null; // the Hexer's curse lasts through today
     for (const id of d.netUsed || []) this.get(id).netUsed = true;
+    for (const id of d.hazmatWarned || []) this.get(id).hazmatWarned = true;
 
     for (const m of d.messages) this.tell(this.get(m.to), m.text, { kind: m.role, auto: false });
     for (const [droid, master] of Object.entries(d.masters)) this.get(droid).master = master;
@@ -973,8 +1083,26 @@ class Game {
       const p = this.get(id);
       if (!p.alive) continue;
       this.kill(p, cause);
-      deaths.push({ id, cause, anim: d.anims[id] || st.nightDeathAnim(this.random) });
+      deaths.push({ id, cause, anim: d.anims[id] || (cause === 'burst' ? 'melted' : st.nightDeathAnim(this.random)) });
     }
+    // the Outbreak: cures, new infections and (fake) fevers
+    for (const id of d.cures || []) {
+      const p = this.get(id);
+      if (!p?.alive) continue;
+      p.infected = null;
+      this.tell(p, '💉 Your fever breaks. You are CURED!', { kind: 'vaccinator' });
+    }
+    for (const id of d.infect || []) {
+      const p = this.get(id);
+      if (!p?.alive) continue;
+      p.infected = d.night;
+      this.tell(p, FEVER_TEXT, { kind: 'fever' });
+    }
+    for (const id of d.fever || []) {
+      const p = this.get(id);
+      if (p?.alive && !(d.infect || []).includes(id)) this.tell(p, FEVER_TEXT, { kind: 'fever' });
+    }
+    for (const p of this.players) if (p.alive && p.role === 'hypochondriac') this.tell(p, FEVER_TEXT, { kind: 'fever' });
     if (d.starpass && this.get(d.starpass.to)?.alive) {
       const heir = this.get(d.starpass.to);
       heir.role = d.starpass.role || 'parasite';
@@ -994,7 +1122,7 @@ class Game {
     this.chapter.deaths = deaths;
     this.scoreDeathGuesses(deaths, d.parasiteId);
     this.logEvent({ k: 'dawn', deaths: deaths.map((x) => x.id), day: this.night });
-    let story = d.story || st.dawnStory(deaths.map((x) => ({ name: this.name(x.id), bio: this.get(x.id)?.bio })), this.random, this.script);
+    let story = d.story || st.dawnStory(deaths.map((x) => ({ name: this.name(x.id), bio: this.get(x.id)?.bio, cause: x.cause })), this.random, this.script);
     for (const id of revived) story += ` ${st.reviveStory(this.name(id), this.random)}`;
     this.chapter.story = story;
     this.dawn = { night: this.night, deaths, revived, story, at: now };
@@ -1567,6 +1695,18 @@ class Game {
     this.executedToday = p.id;
     this.announce(`${p.name} is airlocked.`, 'death');
     this.logEvent({ k: cause === 'sentinel' ? 'sentinel' : 'airlock', id: p.id, votes: this.block?.votes || 0 });
+    // the Spore Host's last gift: whoever nominated them breathes in the spores
+    if (p.role === 'sporehost' && !this.isGlitched(p)) {
+      const last = [...this.votesToday].reverse().find((v) => v.nominee === p.id);
+      const nominator = last && this.get(last.nominator);
+      const suited = nominator && nominator.role === 'hazmat' && !this.broken(nominator);
+      if (nominator?.alive && nominator.infected == null && !suited) {
+        nominator.infected = this.night;
+        this.tell(nominator, `🍄 A cloud of spores puffs out of the airlock as ${p.name} goes. ${FEVER_TEXT.slice(2)}`, { kind: 'fever' });
+        this.ev({ k: 'spores', id: p.id, t: nominator.id });
+        this.logEvent({ k: 'spores', id: p.id, t: nominator.id });
+      }
+    }
     if (p.role === 'ambassador' && !this.isGlitched(p)) {
       this.finish('infiltrators', `${p.name} was the Ambassador! Diplomatic incident: the galaxy declares war on the crew.`);
     }
@@ -2440,6 +2580,7 @@ class Game {
       evilTeam: this.evilTeamFor(p),
       bluffs: ROLES[p.believed]?.type === 'parasite' && this.evilInfoShared() ? this.bluffs : null,
       wish: this.wish && this.wish.id === pid ? { role: this.wish.role, until: this.wish.until } : null,
+      infected: p.alive && p.infected != null ? { since: p.infected, bursts: p.infected + 1 } : null,
       manifest: p.role === 'mimic' && p.alive ? this.mimicManifest : null,
       master: p.role === 'droid' && p.alive ? p.master : null,
       ready: this.ready.has(pid),

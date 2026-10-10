@@ -42,18 +42,22 @@ function emojiShape(emoji) {
 }
 
 const CONFETTI = ['rgba(255,120,190,', 'rgba(255,225,90,', 'rgba(110,230,255,', 'rgba(160,255,140,'];
+const SPORES = ['rgba(170,255,90,', 'rgba(110,255,210,', 'rgba(215,130,255,'];
 
 export function paintSpace(ctx, w, h, { t = 0, progress = 0, clue = null, colorOf = () => '#fff', iconOf = () => '★', withHole = true, holeX = 0.5, script = 'classic' } = {}) {
   const carnival = script === 'carnival';
+  const outbreak = script === 'outbreak';
   const bg = ctx.createRadialGradient(w * holeX, h * 0.6, 10, w * 0.5, h * 0.5, Math.max(w, h));
-  bg.addColorStop(0, carnival ? '#2b0b34' : '#1a0b22');
-  bg.addColorStop(0.4, carnival ? '#12071f' : '#070816');
-  bg.addColorStop(1, carnival ? '#05020d' : '#020208');
+  bg.addColorStop(0, carnival ? '#2b0b34' : outbreak ? '#10301a' : '#1a0b22');
+  bg.addColorStop(0.4, carnival ? '#12071f' : outbreak ? '#07160f' : '#070816');
+  bg.addColorStop(1, carnival ? '#05020d' : outbreak ? '#020805' : '#020208');
   ctx.fillStyle = bg;
   ctx.fillRect(0, 0, w, h);
 
   // Nebula wisps.
-  const wisps = carnival
+  const wisps = outbreak
+    ? [[0.2, 0.3, 0.5, 'rgba(90,255,80,0.16)'], [0.8, 0.25, 0.4, 'rgba(60,220,190,0.12)'], [0.6, 0.85, 0.5, 'rgba(170,70,230,0.14)']]
+    : carnival
     ? [[0.2, 0.3, 0.5, 'rgba(230,60,170,0.2)'], [0.8, 0.25, 0.4, 'rgba(255,200,60,0.12)'], [0.6, 0.85, 0.5, 'rgba(60,200,230,0.14)']]
     : [[0.2, 0.3, 0.5, 'rgba(90,40,160,0.18)'], [0.8, 0.25, 0.4, 'rgba(20,120,160,0.14)'], [0.6, 0.85, 0.5, 'rgba(160,30,70,0.12)']];
   for (const [x, y, r, col] of wisps) {
@@ -67,8 +71,8 @@ export function paintSpace(ctx, w, h, { t = 0, progress = 0, clue = null, colorO
   for (let i = 0; i < STARS.length; i++) {
     const s = STARS[i];
     const a = 0.45 + 0.55 * Math.abs(Math.sin(t * 0.8 + s.tw));
-    // in the Carnival, the stars are bits of confetti
-    ctx.fillStyle = `${carnival && i % 3 ? CONFETTI[i % CONFETTI.length] : s.hue}${a})`;
+    // in the Carnival, the stars are bits of confetti; in the Outbreak, glowing spores
+    ctx.fillStyle = `${carnival && i % 3 ? CONFETTI[i % CONFETTI.length] : outbreak && i % 3 ? SPORES[i % SPORES.length] : s.hue}${a})`;
     ctx.beginPath();
     ctx.arc(s.x * w, s.y * h, s.r, 0, Math.PI * 2);
     ctx.fill();
@@ -191,7 +195,100 @@ export function paintGrin(ctx, cx, cy, r, t) {
 // Whichever doom this script is about (the black hole, or the Great Grin).
 export function paintDoom(ctx, cx, cy, r, t, script = 'classic') {
   if (script === 'carnival') paintGrin(ctx, cx, cy, r * 0.8, t);
+  else if (script === 'outbreak') paintBloom(ctx, cx, cy, r * 0.7, t);
   else paintBlackHole(ctx, cx, cy, r, t);
+}
+
+// The Outbreak's doom: the Bloom, a vast living cell wrapped in glowing spore clouds
+// and wavy tendrils, with an eye for a nucleus. It pulses; r is its radius (it grows
+// as the station gets closer to being swallowed).
+export function paintBloom(ctx, cx, cy, r, t) {
+  // toxic glow
+  const glow = ctx.createRadialGradient(cx, cy, r * 0.6, cx, cy, r * 3.6);
+  glow.addColorStop(0, 'rgba(140,255,80,0.42)');
+  glow.addColorStop(0.4, 'rgba(110,40,200,0.16)');
+  glow.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = glow;
+  ctx.fillRect(cx - r * 4, cy - r * 4, r * 8, r * 8);
+
+  // drifting spore clouds round the edge
+  const cloud = ['rgba(150,255,70,', 'rgba(60,230,200,', 'rgba(210,90,255,'];
+  for (let i = 0; i < 26; i++) {
+    const a = i * 2.4 + t * 0.05 * (1 + (i % 3) * 0.3);
+    const d = r * (1.15 + 0.45 * Math.sin(i * 1.7));
+    const rr = r * (0.2 + 0.1 * Math.sin(i * 2.3 + t * 0.8));
+    const x = cx + Math.cos(a) * d;
+    const y = cy + Math.sin(a) * d * 0.9;
+    const g = ctx.createRadialGradient(x, y, 0, x, y, rr);
+    g.addColorStop(0, `${cloud[i % 3]}0.5)`);
+    g.addColorStop(1, `${cloud[i % 3]}0)`);
+    ctx.fillStyle = g;
+    ctx.fillRect(x - rr, y - rr, rr * 2, rr * 2);
+  }
+
+  // wavy tendrils reaching out
+  ctx.lineCap = 'round';
+  for (let i = 0; i < 14; i++) {
+    const a = (i / 14) * Math.PI * 2 + t * 0.04;
+    ctx.strokeStyle = `rgba(${i % 2 ? '150,255,70' : '90,240,190'},0.55)`;
+    ctx.lineWidth = Math.max(1.5, r * 0.06);
+    ctx.beginPath();
+    for (let k = 0; k <= 12; k++) {
+      const u = k / 12;
+      const dist = r * (1 + u * (0.9 + 0.3 * Math.sin(i * 3.1)));
+      const wob = Math.sin(u * 6 + t * 1.5 + i) * r * 0.12 * u;
+      const px = cx + Math.cos(a) * dist - Math.sin(a) * wob;
+      const py = cy + Math.sin(a) * dist + Math.cos(a) * wob;
+      if (k === 0) ctx.moveTo(px, py);
+      else ctx.lineTo(px, py);
+    }
+    ctx.stroke();
+    // a glowing bulb on the end
+    const ex = cx + Math.cos(a) * r * 1.9;
+    const ey = cy + Math.sin(a) * r * 1.9;
+    ctx.fillStyle = 'rgba(210,255,120,0.8)';
+    ctx.beginPath();
+    ctx.arc(ex, ey, Math.max(1.5, r * 0.05), 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // the cell: a glowing body with a thick membrane
+  const beat = 1 + Math.sin(t * 2.2) * 0.025;
+  const body = ctx.createRadialGradient(cx - r * 0.2, cy - r * 0.25, r * 0.1, cx, cy, r * beat);
+  body.addColorStop(0, '#e6ff8a');
+  body.addColorStop(0.6, '#6ee03a');
+  body.addColorStop(1, '#2a8f34');
+  ctx.fillStyle = body;
+  ctx.beginPath();
+  ctx.arc(cx, cy, r * beat, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(30,110,40,0.9)';
+  ctx.lineWidth = Math.max(2, r * 0.1);
+  ctx.stroke();
+  // organelles
+  for (let i = 0; i < 9; i++) {
+    const a = i * 2.1 + 0.4;
+    const d = r * (0.45 + 0.25 * ((i * 37) % 10) / 10);
+    ctx.fillStyle = i % 2 ? 'rgba(210,255,120,0.55)' : 'rgba(40,120,60,0.5)';
+    ctx.beginPath();
+    ctx.arc(cx + Math.cos(a) * d * 1.1, cy + Math.sin(a) * d, r * (0.06 + (i % 3) * 0.02), 0, Math.PI * 2);
+    ctx.fill();
+  }
+  // the nucleus is an eye: a purple iris with a slit pupil that sweeps and blinks
+  const ex = cx + Math.sin(t * 0.5) * r * 0.05;
+  const iris = ctx.createRadialGradient(ex, cy, r * 0.05, ex, cy, r * 0.42);
+  iris.addColorStop(0, '#fff27a');
+  iris.addColorStop(0.55, '#a45bff');
+  iris.addColorStop(1, '#4a1d8a');
+  ctx.fillStyle = iris;
+  const blink = (t % 6.5) > 6.35 ? 0.1 : 1;
+  ctx.beginPath();
+  ctx.ellipse(ex, cy, r * 0.42, r * 0.42 * blink, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#05000c';
+  ctx.beginPath();
+  ctx.ellipse(ex, cy, r * 0.09, r * 0.34 * blink, 0, 0, Math.PI * 2);
+  ctx.fill();
 }
 
 export function paintBlackHole(ctx, cx, cy, r, t) {
@@ -445,7 +542,13 @@ export function buildBackdrop(scene) {
   paintGrin(gc.getContext('2d'), 512, 512, 150, 1.2);
   const grinTex = new THREE.CanvasTexture(gc);
   grinTex.colorSpace = THREE.SRGBColorSpace;
-  let carnival = false;
+  // and the Outbreak's: the Bloom
+  const bc = document.createElement('canvas');
+  bc.width = bc.height = 1024;
+  paintBloom(bc.getContext('2d'), 512, 512, 130, 1.2);
+  const bloomTex = new THREE.CanvasTexture(bc);
+  bloomTex.colorSpace = THREE.SRGBColorSpace;
+  let script = 'classic';
   const hole = new THREE.Mesh(
     new THREE.PlaneGeometry(1, 1),
     new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }),
@@ -465,15 +568,15 @@ export function buildBackdrop(scene) {
       const s = 220 + p * 900;
       hole.scale.set(s, s, 1);
     },
-    // the Cosmic Carnival swaps the black hole for the Great Grin
+    // the Cosmic Carnival swaps the black hole for the Great Grin, the Outbreak for the Bloom
     setScript(id) {
-      carnival = id === 'carnival';
-      hole.material.map = carnival ? grinTex : tex;
+      script = id || 'classic';
+      hole.material.map = { carnival: grinTex, outbreak: bloomTex }[script] || tex;
       hole.material.needsUpdate = true;
-      core.visible = !carnival;
+      core.visible = script !== 'carnival' && script !== 'outbreak';
     },
     update(time) {
-      hole.rotation.z = carnival ? Math.sin(time * 0.15) * 0.12 : time * 0.03;
+      hole.rotation.z = script === 'carnival' ? Math.sin(time * 0.15) * 0.12 : script === 'outbreak' ? time * 0.012 : time * 0.03;
       stars.rotation.y = time * 0.002;
     },
   };

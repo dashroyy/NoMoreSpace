@@ -11,6 +11,8 @@ import { Soundscape } from './soundscape.js';
 import { CarnivalDecor } from './carnival.js';
 import { CarnivalRooms } from './carnival-rooms.js';
 import { CarnivalExterior } from './carnival-exterior.js';
+import { OutbreakRooms } from './outbreak-rooms.js';
+import { OutbreakExterior } from './outbreak-exterior.js';
 import { moveWithCollision, roomAt, roomById, walkable, seatPosition, TASK_STATIONS, SPAWN, DRAWING_SLOTS } from './layout.js';
 
 const SEATED = ['dawn', 'meeting', 'nominations', 'lastwords', 'dusk'];
@@ -91,6 +93,8 @@ export class World {
     this.carnival = new CarnivalDecor(this.scene, { lowFx: this.lowFx }); // the circus ring (only shown for the Cosmic Carnival script)
     this.carnivalRooms = new CarnivalRooms(this.ship.group, { lowFx: this.lowFx }); // circus dressing for every room (same)
     this.carnivalExterior = new CarnivalExterior(this.ship.group, { lowFx: this.lowFx }); // the fairground outside (same)
+    this.outbreakRooms = new OutbreakRooms(this.ship.group, { lowFx: this.lowFx }); // the lab gone wrong: dressing for every room (Outbreak script only)
+    this.outbreakExterior = new OutbreakExterior(this.ship.group, { lowFx: this.lowFx }); // the research complex outside (same)
     this.soundscape = new Soundscape();
     this.ambience.onVent = (x, z) => this.soundscape.oneShot('vent', { x, z }, this.listener());
     this.ambience.onChirp = (x, z) => this.soundscape.oneShot('chirp', { x, z }, this.listener());
@@ -416,6 +420,8 @@ export class World {
     this.carnival.update(t, dt);
     this.carnivalRooms.update(t, dt);
     this.carnivalExterior.update(t, dt);
+    this.outbreakRooms.update(t, dt);
+    this.outbreakExterior.update(t, dt);
     if (this.ambience.root.visible) this.ambience.update(dt, t, { night: this.night, progress: this.progress, alarm: t < this.alarmUntil });
     this.soundscape.update({ ...this.listener(), phase: this.phase, night: this.phase === 'night' });
     this.ship.exterior.update(t);
@@ -679,11 +685,13 @@ export class World {
     if (this.space.script === (id || 'classic')) return;
     this.space.script = id || 'classic';
     this.backdrop.setScript(id);
-    this.ship.setTheme(id === 'carnival');
+    this.ship.setTheme(id);
     this.soundscape.setScript(id);
     this.carnivalRooms.setActive(id === 'carnival');
     this.carnivalExterior.setActive(id === 'carnival');
-    this.ambience.root.visible = id !== 'carnival'; // steam, sparks and robots belong to the space station
+    this.outbreakRooms.setActive(id === 'outbreak');
+    this.outbreakExterior.setActive(id === 'outbreak');
+    this.ambience.root.visible = !['carnival', 'outbreak'].includes(id); // steam, sparks and robots belong to the space station
     this.space.last = -1; // repaint the windows now
   }
 

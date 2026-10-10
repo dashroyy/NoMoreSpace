@@ -60,7 +60,7 @@ function basics() {
     el('div', { className: 'wiki-goal' }, goal),
   );
   return el('div', {},
-    el('p', { className: 'wiki-lead' }, `${themeInfo().howIntro} Hidden among the crew is The Parasite, helped by its Saboteurs. Every night it kills. Every day the crew can vote to airlock one suspect.`),
+    el('p', { className: 'wiki-lead' }, `${themeInfo().howIntro} Hidden among the crew is ${themeInfo().demonName}, helped by its Saboteurs. ${themeInfo().demonDoes} Every day the crew can vote to airlock one suspect.`),
     el('div', { className: 'wiki-teams' },
       team(['crew', 'drifter'], 'good', '😇 Good team', '🏆 Wins when the Parasite is dead.'),
       el('div', { className: 'wiki-vs' }, 'VS'),
@@ -180,15 +180,6 @@ function roles() {
 }
 
 // The scripts: each one is a whole cast of characters and a story, like Blood on the Clocktower's Trouble Brewing and Bad Moon Rising.
-const SCENARIOS = [
-  ['🥧', 'The Great Pie Fight', 'The crew airlocks the Clown. A hush falls. The Clown, with one last pie, points at the player everybody trusts... who turns out to be the Stage Double. The crew loses to a custard pie.'],
-  ['🦁', 'The Lion Tamer\'s gamble', 'Night 3: the Lion Tamer picks Dana and nobody dies. Night 4 she cannot pick Dana again, so she picks Priya... a death. Was it Dana all along? (Or did the Parasite simply have a quiet night?)'],
-  ['👯', 'Twin trouble', 'You have been secretly told that Sam is your evil twin. Sam is claiming YOUR role, loudly, and everyone believes Sam. The crew must not airlock you... and cannot win while you both live.'],
-  ['🎬', 'The method actor', 'Rex is absolutely certain he is the Parasite. Every night he "kills" someone. Nobody dies. He is getting suspicious of himself. The real Parasite is delighted.'],
-  ['💥', 'Poof!', 'Everyone nominates carefully, except Kit, who nominates the second the clock starts and vanishes in purple smoke. Now everyone knows there is a Hexer... and nobody dares speak first.'],
-  ['🪞', 'The mirror cracks', 'Every clue the crew has is a lie, and the Reflection wins if a day ends with nobody airlocked. Trust nothing, and airlock somebody. Anybody. Quickly.'],
-];
-
 function scripts() {
   const data = store.data;
   const mine = store.state?.script;
@@ -205,8 +196,10 @@ function scripts() {
       el('div', { className: 'wiki-script-roles' }, ...s.roles.map((id) => el('span', { title: `${data.roles[id].name}: ${data.roles[id].ability}` }, data.roles[id].icon))),
       el('button', { className: 'small', onclick: () => { scriptFilter = s.id; roleFilter = 'all'; page = 'roles'; render(); $('modal-body').scrollTop = 0; } }, `See the ${s.name} roles`),
     )),
-    el('h3', {}, '🎪 Moments the Cosmic Carnival is made of'),
-    el('div', { className: 'wiki-scenarios' }, ...SCENARIOS.map(([icon, title, text]) => el('div', { className: 'wiki-scenario' }, el('span', { className: 'wiki-role-icon' }, icon), el('div', {}, el('b', {}, title), el('p', {}, text))))),
+    ...Object.values(data.scripts || {}).filter((s) => s.moments?.length).flatMap((s) => [
+      el('h3', {}, `${s.icon} Moments ${s.name} is made of`),
+      el('div', { className: 'wiki-scenarios' }, ...s.moments.map(([icon, title, text]) => el('div', { className: 'wiki-scenario' }, el('span', { className: 'wiki-role-icon' }, icon), el('div', {}, el('b', {}, title), el('p', {}, text))))),
+    ]),
   );
 }
 

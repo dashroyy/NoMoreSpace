@@ -455,6 +455,186 @@ export function buildRoleModel(roleId, accentHex = '#ffffff') {
       root = g;
       break;
     }
+    // ---------------- Outbreak ----------------
+    case 'vaccinator': {
+      const p = person({ outfit: 0xf4f7fb, pants: 0x3a6a8a, skin: SKINS[1] });
+      // a very large syringe
+      part(p.hand, new THREE.CylinderGeometry(0.07, 0.07, 0.55, 10), m(0xcfe9ff, { transparent: true, opacity: 0.55 }), 0, 0.15, 0.15, [Math.PI / 2, 0, 0]);
+      part(p.hand, new THREE.CylinderGeometry(0.045, 0.045, 0.4, 10), glow(0x7dff6b, 1.2), 0, 0.15, 0.15, [Math.PI / 2, 0, 0]);
+      part(p.hand, new THREE.CylinderGeometry(0.012, 0.012, 0.3, 5), m(0xcfd8dc, { metalness: 0.9 }), 0, 0.15, 0.58, [Math.PI / 2, 0, 0]);
+      part(p.hand, new THREE.BoxGeometry(0.2, 0.03, 0.03), m(0xcfd8dc), 0, 0.15, -0.14);
+      part(p.g, new THREE.BoxGeometry(0.22, 0.06, 0.02), glow(0x7dff6b, 1), -0.14, 1.12, 0.31);
+      part(p.g, new THREE.BoxGeometry(0.06, 0.22, 0.02), glow(0x7dff6b, 1), -0.14, 1.12, 0.31);
+      part(p.hatAt, new THREE.TorusGeometry(0.17, 0.035, 6, 14), m(accent), 0, -0.1, 0, [Math.PI / 2, 0, 0]);
+      root = p.g;
+      break;
+    }
+    case 'tracer': {
+      const p = person({ outfit: 0x2c5f8a, pants: 0x222a3a, skin: SKINS[0] });
+      part(p.hatAt, new THREE.TorusGeometry(0.27, 0.025, 6, 20, Math.PI), m(0x222222), 0, -0.12, 0, [0, 0, 0]);
+      part(p.hatAt, new THREE.CylinderGeometry(0.06, 0.06, 0.09, 10), m(0x222222), -0.27, -0.28, 0.02, [0, 0, Math.PI / 2]);
+      part(p.hand, new THREE.BoxGeometry(0.34, 0.45, 0.04), m(0xe9dfc8), 0, 0.1, 0.1);
+      part(p.hand, new THREE.BoxGeometry(0.28, 0.02, 0.05), m(0xd7263d), 0, 0.24, 0.12);
+      // a web of red string around them, with a glowing dot on each contact
+      const web = new THREE.Group();
+      web.position.y = 1.1;
+      for (let i = 0; i < 5; i++) {
+        const a = (i / 5) * Math.PI * 2;
+        const b = ((i + 2) / 5) * Math.PI * 2;
+        web.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(Math.cos(a) * 0.7, 0.1 * i - 0.2, Math.sin(a) * 0.7), new THREE.Vector3(Math.cos(b) * 0.7, 0.1 * (i + 2) - 0.2, Math.sin(b) * 0.7)]), new THREE.LineBasicMaterial({ color: 0xff4f5f })));
+        part(web, new THREE.SphereGeometry(0.05, 8, 6), glow(0x7dff6b, 1.6), Math.cos(a) * 0.7, 0.1 * i - 0.2, Math.sin(a) * 0.7);
+      }
+      p.g.add(web);
+      anim.orbit = web;
+      root = p.g;
+      break;
+    }
+    case 'hazmat': {
+      const p = person({ outfit: 0xe8c52a, pants: 0xe8c52a, skin: SKINS[2] });
+      part(p.g, new THREE.SphereGeometry(0.36, 18, 14), m(0xcfe9ff, { transparent: true, opacity: 0.35, roughness: 0.1 }), 0, 1.55, 0);
+      for (const s2 of [-1, 1]) part(p.g, new THREE.CylinderGeometry(0.07, 0.07, 0.12, 10), m(0x333333), s2 * 0.14, 1.45, 0.3, [Math.PI / 2, 0, 0]);
+      part(p.g, new THREE.TorusGeometry(0.31, 0.03, 6, 20), m(0x333333), 0, 1.27, 0, [Math.PI / 2, 0, 0]);
+      part(p.g, new THREE.CylinderGeometry(0.1, 0.1, 0.5, 10), m(0xd7263d), 0, 1.0, -0.34); // oxygen tank
+      part(p.g, new THREE.CircleGeometry(0.12, 3), glow(0x111111, 0.2), 0, 1.0, 0.31); // the biohazard mark
+      part(p.g, new THREE.TorusGeometry(0.1, 0.02, 6, 3), m(0x111111), 0, 1.0, 0.315);
+      part(p.hatAt, new THREE.TorusGeometry(0.17, 0.035, 6, 14), m(accent), 0, -0.4, 0, [Math.PI / 2, 0, 0]);
+      root = p.g;
+      break;
+    }
+    case 'donor': {
+      const p = person({ outfit: 0xf2d7d5, pants: 0x3a4a6a, skin: SKINS[4] });
+      // a drip stand with a bag of blood, and a plaster on the arm
+      part(p.hand, new THREE.CylinderGeometry(0.02, 0.02, 1.6, 6), m(0xcfd8dc, { metalness: 0.8 }), 0.1, 0.5, 0);
+      part(p.hand, new THREE.SphereGeometry(0.2, 14, 10), m(0xb3122c, { emissive: 0x4a0010, emissiveIntensity: 0.6, roughness: 0.25 }), 0.1, 1.35, 0, null, [0.7, 1.1, 0.5]);
+      part(p.armL, new THREE.BoxGeometry(0.2, 0.08, 0.2), m(0xffe0bd), 0, -0.05, 0.02);
+      const heart = new THREE.Group();
+      heart.position.set(-0.5, 1.9, 0);
+      part(heart, new THREE.SphereGeometry(0.13, 10, 8), glow(0xff3b5c, 1.6), -0.08, 0, 0);
+      part(heart, new THREE.SphereGeometry(0.13, 10, 8), glow(0xff3b5c, 1.6), 0.08, 0, 0);
+      part(heart, new THREE.ConeGeometry(0.2, 0.28, 4), glow(0xff3b5c, 1.6), 0, -0.14, 0, [Math.PI, 0, Math.PI / 4]);
+      p.g.add(heart);
+      anim.blob = heart;
+      root = p.g;
+      break;
+    }
+    case 'sensor': {
+      const p = person({ outfit: 0x8a6a2c, pants: 0x2b2f3a, skin: SKINS[1] });
+      // a flashing siren on the head
+      part(p.hatAt, new THREE.CylinderGeometry(0.17, 0.2, 0.08, 14), m(0x333333), 0, 0.02, 0);
+      const dome = part(p.hatAt, new THREE.SphereGeometry(0.17, 14, 10, 0, Math.PI * 2, 0, Math.PI / 2), glow(0xff3030, 2.2), 0, 0.06, 0);
+      anim.pulse = true;
+      void dome;
+      // a handheld sensor dish
+      part(p.hand, new THREE.CylinderGeometry(0.03, 0.03, 0.35, 8), m(0x555566), 0, 0.1, 0.1);
+      part(p.hand, new THREE.SphereGeometry(0.2, 14, 8, 0, Math.PI * 2, 0, Math.PI / 2.5), m(0xc8d0e0, { metalness: 0.6, side: THREE.DoubleSide }), 0, 0.3, 0.25, [-1.2, 0, 0]);
+      part(p.hand, new THREE.SphereGeometry(0.04, 8, 6), glow(0x7dff3a, 2), 0, 0.3, 0.38);
+      root = p.g;
+      break;
+    }
+    case 'patientzero': {
+      const p = person({ outfit: 0xa9d0e8, pants: 0xa9d0e8, skin: 0xc8e0b0 });
+      part(p.hand, new THREE.CylinderGeometry(0.012, 0.012, 0.4, 5), m(0xe9eef2), 0.02, 0.2, 0.1, [0.4, 0, 0]);
+      part(p.hand, new THREE.CylinderGeometry(0.02, 0.02, 0.1, 6), glow(0xff3030, 1.6), 0.02, 0.05, 0.19, [0.4, 0, 0]);
+      for (const [x, y] of [[0.22, 1.5], [-0.24, 1.62], [0.18, 1.78]]) part(p.g, new THREE.SphereGeometry(0.035, 8, 6), m(0x9ad06b, { emissive: 0x4a7a1a, emissiveIntensity: 0.8 }), x, y, 0.2); // green sweat
+      part(p.hatAt, new THREE.BoxGeometry(0.34, 0.07, 0.1), m(0xe0f0ff), 0, -0.02, 0.2); // an ice pack
+      const spores = new THREE.Group();
+      spores.position.y = 1.1;
+      for (let i = 0; i < 6; i++) part(spores, new THREE.SphereGeometry(0.045, 8, 6), glow(0x7dff3a, 1.4), Math.cos(i) * 0.6, (i % 3) * 0.25, Math.sin(i) * 0.6);
+      p.g.add(spores);
+      anim.orbit = spores;
+      root = p.g;
+      break;
+    }
+    case 'hypochondriac': {
+      const p = person({ outfit: 0x6a5f9a, pants: 0x2b2f3a, skin: SKINS[0] });
+      part(p.g, new THREE.BoxGeometry(0.34, 0.2, 0.08), m(0xeaf2f7), 0, 1.47, 0.27); // surgical mask
+      part(p.g, new THREE.TorusGeometry(0.24, 0.05, 8, 18, Math.PI * 1.2), m(0xd85a5a), 0, 1.28, 0, [Math.PI / 2, 0, 0.2]); // a scarf
+      part(p.hand, new THREE.CylinderGeometry(0.012, 0.012, 0.35, 5), m(0xe9eef2), 0, 0.2, 0.1, [0.5, 0, 0]);
+      for (const [x, z, c] of [[0.1, 0.0, 0xd7263d], [-0.02, 0.06, 0xffd23f], [0.2, 0.06, 0x7dff6b]]) part(p.hand, new THREE.CylinderGeometry(0.06, 0.06, 0.15, 10), m(c), x - 0.1, -0.12, z);
+      part(p.hatAt, new THREE.SphereGeometry(0.2, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2), m(0x4a3f7a), 0, -0.02, 0); // a woolly hat
+      part(p.hatAt, new THREE.SphereGeometry(0.06, 8, 6), m(0xffd23f), 0, 0.18, 0);
+      root = p.g;
+      break;
+    }
+    case 'bioterrorist': {
+      const p = person({ outfit: 0x2a3a2a, pants: 0x1a1a1a, skin: SKINS[2] });
+      part(p.g, new THREE.CylinderGeometry(0.2, 0.22, 0.2, 12), m(0x333333), 0, 1.47, 0.18, [Math.PI / 2, 0, 0]); // gas mask
+      for (const s2 of [-1, 1]) part(p.g, new THREE.SphereGeometry(0.07, 10, 8), m(0x9ad06b, { transparent: true, opacity: 0.8, emissive: 0x2a5a1a, emissiveIntensity: 0.6 }), s2 * 0.1, 1.6, 0.26);
+      // a flask of something glowing green, and one more bubbling in the other hand
+      part(p.hand, new THREE.SphereGeometry(0.15, 14, 10), m(0xcfe9ff, { transparent: true, opacity: 0.4 }), 0, 0.05, 0.15);
+      part(p.hand, new THREE.SphereGeometry(0.11, 12, 8), glow(0x7dff3a, 1.8), 0, 0.03, 0.15);
+      part(p.hand, new THREE.CylinderGeometry(0.04, 0.04, 0.18, 8), m(0xcfe9ff, { transparent: true, opacity: 0.45 }), 0, 0.22, 0.15);
+      part(p.armL, new THREE.SphereGeometry(0.09, 10, 8), glow(0x7dff3a, 1.4), 0, -0.3, 0.1);
+      part(p.hatAt, new THREE.TorusGeometry(0.17, 0.035, 6, 14), m(accent), 0, -0.2, 0, [Math.PI / 2, 0, 0]);
+      root = p.g;
+      break;
+    }
+    case 'quack': {
+      const p = person({ outfit: 0x6b3f2a, pants: 0x2b2f3a, skin: SKINS[3] });
+      part(p.hatAt, new THREE.CylinderGeometry(0.2, 0.2, 0.3, 14), m(0x2a1a14), 0, 0.12, 0);
+      part(p.hatAt, new THREE.CylinderGeometry(0.31, 0.31, 0.03, 16), m(0x2a1a14), 0, -0.03, 0);
+      part(p.hatAt, new THREE.TorusGeometry(0.09, 0.015, 6, 14), m(0xcfd8dc, { metalness: 0.9 }), 0, -0.12, 0.24); // a head mirror
+      part(p.g, new THREE.CapsuleGeometry(0.05, 0.22, 4, 8), m(0x2a1a14), 0, 1.45, 0.28, [0, 0, Math.PI / 2]); // an enormous moustache
+      part(p.hand, new THREE.CylinderGeometry(0.1, 0.1, 0.3, 12), m(0x6a2f9a, { transparent: true, opacity: 0.8 }), 0, 0.02, 0.15); // snake oil
+      part(p.hand, new THREE.CylinderGeometry(0.04, 0.04, 0.12, 8), m(0xc9a24a), 0, 0.25, 0.15);
+      part(p.hand, new THREE.BoxGeometry(0.16, 0.12, 0.02), m(0xffd23f), 0, 0.02, 0.26);
+      part(p.g, new THREE.TorusGeometry(0.2, 0.02, 6, 20, Math.PI), m(0x555555), 0, 1.15, 0.29, [0, 0, Math.PI]); // a stethoscope
+      root = p.g;
+      break;
+    }
+    case 'sporehost': {
+      const p = person({ outfit: 0x7a5a3a, pants: 0x4a3a2a, skin: SKINS[1] });
+      // a big red mushroom cap with white spots, and spores drifting off it
+      part(p.hatAt, new THREE.SphereGeometry(0.55, 18, 12, 0, Math.PI * 2, 0, Math.PI / 2), m(0xd7263d), 0, -0.02, 0, null, [1, 0.75, 1]);
+      for (const [x, y, z, r] of [[0.2, 0.3, 0.2, 0.07], [-0.25, 0.25, 0.15, 0.06], [0.0, 0.38, -0.22, 0.08], [-0.1, 0.4, 0.28, 0.05], [0.38, 0.12, -0.05, 0.05]]) part(p.hatAt, new THREE.SphereGeometry(r, 8, 6), m(0xfff5e0), x, y, z);
+      part(p.hatAt, new THREE.TorusGeometry(0.45, 0.03, 6, 20), m(0xf2e2c0), 0, -0.04, 0, [Math.PI / 2, 0, 0]);
+      const spores = new THREE.Group();
+      spores.position.y = 2.1;
+      for (let i = 0; i < 7; i++) part(spores, new THREE.SphereGeometry(0.04, 8, 6), glow(0xfff0a0, 1.2), Math.cos(i * 1.3) * 0.7, (i % 3) * 0.15, Math.sin(i * 1.3) * 0.7);
+      p.g.add(spores);
+      anim.orbit = spores;
+      root = p.g;
+      break;
+    }
+    case 'carrier': {
+      const g = new THREE.Group();
+      const flesh = m(0x2f8a3a, { emissive: 0x0f4a1a, emissiveIntensity: 0.7, roughness: 0.5 });
+      const body = part(g, new THREE.SphereGeometry(0.7, 22, 16), flesh, 0, 1.0, 0, null, [1, 1.15, 1]);
+      // glowing spots, and a rim of mould spikes
+      for (let i = 0; i < 12; i++) {
+        const a = i * 2.4;
+        const y = 1.0 + Math.sin(i * 1.7) * 0.5;
+        const r = Math.sqrt(0.7 ** 2 - (Math.min(0.69, Math.abs(y - 1.0)) ** 2));
+        part(g, new THREE.SphereGeometry(0.07 + (i % 3) * 0.03, 8, 6), glow([0xb8ff3a, 0xffe14f, 0x7dffd8][i % 3], 1.6), Math.sin(a) * r * 0.97, y, Math.cos(a) * r * 0.97);
+      }
+      const spikes = [];
+      for (let i = 0; i < 10; i++) {
+        const a = (i / 10) * Math.PI * 2;
+        const t = new THREE.Group();
+        t.position.set(Math.cos(a) * 0.55, 0.45, Math.sin(a) * 0.55);
+        t.rotation.y = -a;
+        part(t, new THREE.ConeGeometry(0.1, 0.55, 6), glow(0x7dff3a, 0.9), 0.3, -0.1, 0, [0, 0, 1.2]);
+        g.add(t);
+        spikes.push(t);
+      }
+      // two big hollow eyes and a mouth that coughs out spores
+      for (const s2 of [-1, 1]) {
+        part(g, new THREE.SphereGeometry(0.13, 10, 8), m(0xffffff, { emissive: 0xeaffb0, emissiveIntensity: 0.5 }), s2 * 0.25, 1.25, 0.58);
+        part(g, new THREE.SphereGeometry(0.05, 8, 6), m(0x000000), s2 * 0.25, 1.25, 0.69);
+      }
+      part(g, new THREE.TorusGeometry(0.2, 0.05, 6, 16, Math.PI), m(0x1a3a14), 0, 0.82, 0.62, [0, 0, Math.PI]);
+      const cloud = new THREE.Group();
+      cloud.position.y = 1.2;
+      for (let i = 0; i < 10; i++) part(cloud, new THREE.SphereGeometry(0.05, 8, 6), glow(0xb8ff3a, 1.4), Math.cos(i * 0.9) * 0.95, (i % 4) * 0.2 - 0.2, Math.sin(i * 0.9) * 0.95);
+      g.add(cloud);
+      part(g, new THREE.TorusGeometry(0.8, 0.05, 6, 24), m(accent, { emissive: accent, emissiveIntensity: 0.5 }), 0, 0.2, 0, [Math.PI / 2, 0, 0]);
+      anim.tentacles = spikes;
+      anim.body = body;
+      anim.orbit = cloud;
+      g.scale.setScalar(1.25);
+      root = g;
+      break;
+    }
     case 'parasite':
     default: {
       const g = new THREE.Group();

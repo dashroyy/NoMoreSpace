@@ -6,6 +6,7 @@ import { buildExterior } from './station.js';
 import { buildDecor } from './decor.js';
 import { makeTextSprite } from './avatar.js';
 import { CARNIVAL_LIGHTS } from './carnival-rooms.js';
+import { OUTBREAK_LIGHTS } from './outbreak-rooms.js';
 
 const WALL_H = 2.4;
 const LOW_WALL_H = 0.9; // south-facing walls are low so they don't hide players from the camera
@@ -262,15 +263,19 @@ export function buildShip(scene, space) {
   holo.userData.dynamic = true;
   // the Cosmic Carnival turns the table's little black hole into a bobbing red clown nose
   const holoColors = holo.children.map((m) => m.material.color.getHex());
-  const carnivalColors = [0xe8203a, 0xffd23f, 0xff4fa3, 0xff4fa3];
-  // the Cosmic Carnival: no space-station props, circus-coloured room lights, a clown-nose hologram
-  const setTheme = (carnival) => {
-    holo.children.forEach((m, i) => m.material.color.setHex((carnival ? carnivalColors : holoColors)[i]));
-    sciProps.visible = !carnival;
-    exterior.group.visible = !carnival; // the solar wings, mast and shuttle make way for the fairground
-    decor.setTheme(carnival);
+  const themes = {
+    carnival: { holo: [0xe8203a, 0xffd23f, 0xff4fa3, 0xff4fa3], lights: CARNIVAL_LIGHTS },
+    outbreak: { holo: [0x7dff3a, 0xb8ff3a, 0x6bffd8, 0x9a5bff], lights: OUTBREAK_LIGHTS }, // a glowing spore
+  };
+  // A themed script (the Cosmic Carnival, the Outbreak): no space-station props, its own room lights and hologram.
+  const setTheme = (id) => {
+    const theme = themes[id];
+    holo.children.forEach((m, i) => m.material.color.setHex((theme ? theme.holo : holoColors)[i]));
+    sciProps.visible = !theme;
+    exterior.group.visible = !theme; // the solar wings, mast and shuttle make way for the script's own outside
+    decor.setTheme(!!theme);
     lights.forEach((light, i) => {
-      light.color.setHex(carnival ? CARNIVAL_LIGHTS[ROOMS[i].id] : ROOMS[i].light);
+      light.color.setHex(theme ? theme.lights[ROOMS[i].id] : ROOMS[i].light);
     });
   };
   const seats = new THREE.Group();

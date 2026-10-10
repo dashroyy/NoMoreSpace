@@ -296,6 +296,8 @@ const ROLES = {
 
 // The Cosmic Carnival script's extra roles (scripts.js says which roles each script uses).
 Object.assign(ROLES, require('./roles-carnival').CARNIVAL_ROLES);
+// The Outbreak script's extra roles.
+Object.assign(ROLES, require('./roles-outbreak').OUTBREAK_ROLES);
 
 // Blood on the Clocktower's setup table, extended down to 3 players ("Short Haul").
 //               crew drifters saboteurs parasite

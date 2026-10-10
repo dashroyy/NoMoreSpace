@@ -126,6 +126,11 @@ export function renderHud(state) {
   const hole = Math.round(blackHoleProgress(state) * 100);
   const theme = themeInfo(state.script);
   $('hud-horizon').replaceChildren(el('span', { title: theme.doomTip }, `${theme.doomIcon} ${hole}% · `), el('b', {}, `${alive} alive`), ` · ${state.threshold} votes to airlock`);
+  // the Outbreak: you can see that you are infected, and when you burst
+  const sick = state.you?.infected;
+  if (sick) {
+    $('hud-horizon').append(el('span', { className: 'infected-badge', style: { color: '#7dff3a', fontWeight: 'bold' }, title: `You are infected! You burst when night ${sick.bursts} ends unless a Vaccinator cures you. Your abilities malfunction until then.` }, ' · 🤒 INFECTED'));
+  }
   document.body.classList.toggle('horizon-close', state.phase !== 'lobby' && alive <= 4);
   const pct = Math.min(100, Math.round((state.charge / state.chargeNeeded) * 100));
   $('hud-charge').querySelector('span').style.width = `${pct}%`;

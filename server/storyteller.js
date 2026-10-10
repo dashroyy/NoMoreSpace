@@ -186,18 +186,44 @@ function reviveStory(name, random = Math.random) {
   return fill(pick(REVIVE_LINES, random), name);
 }
 
+// The Outbreak script's stories: bursts, quiet nights and decontamination.
+const OUTBREAK_BURST_LINES = [
+  '{name} coughed once, twice, and then, with a wet pop, was gone. The vents are full of glittering spores.',
+  'Sick Bay found only a puddle, a stethoscope and a name tag that read "{name}".',
+  '{name} burst in the night like a very sad balloon. The janitor is on the way, and he is not happy.',
+  'The fever took {name} at 03:00. All that is left is a bright green smear and a faint smell of mushrooms.',
+  '{name} was sneezing glitter at midnight. By dawn, the glitter was all that remained.',
+  'Something in {name} bloomed in the night. It was not a flower.',
+];
+
+const OUTBREAK_QUIET_NIGHT_LINES = [
+  'A quiet night in the station. The only sound is somebody coughing in the vents. Somebody, or something.',
+  'Nobody burst overnight. The lab smells of disinfectant and held breath.',
+  'The fever dreams passed, and every bunk is still occupied. The Carrier must be feeling patient.',
+  'No bursts, no screams, no mess. The janitor is deeply suspicious.',
+];
+
+const OUTBREAK_EXECUTION_LINES = [
+  '{name} is marched into the decontamination chamber and sealed in. The shower runs for a long time. The red light does not come back on.',
+  '{name} is led to the airlock in a hazmat suit two sizes too small. "I feel fine!" they protest. (That is exactly what an infected person would say.)',
+  'With a hiss of disinfectant, the airlock cycles and {name} goes out into the Bloom.',
+  '{name} is quarantined... permanently. The door is welded shut by committee.',
+];
+
 function dawnStory(dead, random = Math.random, scriptId = 'classic') {
   const carnival = scriptId === 'carnival';
-  if (!dead.length) return pick(carnival ? CARNIVAL_QUIET_NIGHT_LINES : QUIET_NIGHT_LINES, random);
+  const outbreak = scriptId === 'outbreak';
+  if (!dead.length) return pick(outbreak ? OUTBREAK_QUIET_NIGHT_LINES : carnival ? CARNIVAL_QUIET_NIGHT_LINES : QUIET_NIGHT_LINES, random);
+  const lines = outbreak ? OUTBREAK_BURST_LINES : carnival ? CARNIVAL_NIGHT_DEATH_LINES : NIGHT_DEATH_LINES;
   return dead
     .map((d) => (typeof d === 'string' ? { name: d } : d))
-    .map(({ name, bio }) => (bio && random() < 0.7 ? fillBio(pick(BIO_DEATH_LINES, random), name, bio) : fill(pick(carnival ? CARNIVAL_NIGHT_DEATH_LINES : NIGHT_DEATH_LINES, random), name)))
+    .map(({ name, bio }) => (bio && random() < 0.7 ? fillBio(pick(BIO_DEATH_LINES, random), name, bio) : fill(pick(lines, random), name)))
     .join(' ');
 }
 
 function executionStory(name, random = Math.random, bio = '', scriptId = 'classic') {
   if (bio && random() < 0.5) return fillBio(pick(BIO_EXECUTION_LINES, random), name, bio);
-  return fill(pick(scriptId === 'carnival' ? CARNIVAL_EXECUTION_LINES : EXECUTION_LINES, random), name);
+  return fill(pick(scriptId === 'outbreak' ? OUTBREAK_EXECUTION_LINES : scriptId === 'carnival' ? CARNIVAL_EXECUTION_LINES : EXECUTION_LINES, random), name);
 }
 
 const SHIP_NAMES = [

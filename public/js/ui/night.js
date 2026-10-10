@@ -17,6 +17,12 @@ const INSTRUCTIONS = {
   magician: () => 'Once per game: choose a DEAD player. If they were Crew, they come back to life at dawn. Or save your trick for later.',
   knifethrower: () => 'Once per game: choose a player. They die tonight, even if protected. Or save your knife for later.',
   hexer: () => 'Choose a player to hex. If they nominate tomorrow, they die on the spot. (They are not told.)',
+  carrier: () => 'Choose a player to infect. They are told at once, and burst when the next night ends unless a Vaccinator cures them.',
+  vaccinator: () => 'Choose a player (not yourself, and not the same one as last night). If they are infected they are cured; if not, they cannot be infected tonight.',
+  tracer: () => 'Choose 2 players (not yourself): you learn how many of them are infected.',
+  donor: () => 'Once per game: choose an INFECTED player. They are cured, and you catch it instead. Or save your blood for later.',
+  bioterrorist: () => 'Once per game: choose a player. They are infected too, as if the Carrier had picked them. Or save it for later.',
+  quack: () => 'Choose a player. They are told they have a fever, but they are NOT infected.',
 };
 
 let chosen = [];

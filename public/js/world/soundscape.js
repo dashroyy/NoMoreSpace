@@ -320,6 +320,103 @@ const CARNIVAL_SOUNDS = {
   },
 };
 
+// ---------- the Outbreak's rooms: a research lab where something has gone wrong ----------
+const CHIME = [659, 523]; // the PA's two-tone "ding-dong"
+const geiger = { every: [0.12, 0.9], play: (k, o, t) => burst(k, o, t, { type: 'highpass', freq: 3200, q: 0.8, dur: 0.012, vol: 0.04 }) };
+const cough = (k, o, t) => { // a muffled cough through a wall
+  for (let i = 0, n = 2 + Math.floor(Math.random() * 3); i < n; i++) burst(k, o, t + i * 0.16, { type: 'bandpass', freq: rand(350, 600), q: 1.2, dur: 0.1, vol: 0.03 });
+};
+const OUTBREAK_SOUNDS = {
+  bridge: {
+    gain: 0.5,
+    bed: (k, o) => [...drone(k, o, 55, 'sine', 0.03), ...hiss(k, o, 'lowpass', 400, 0.5, 0.012, { swell: [0.15, 0.6] })], // the hub's low hum
+    events: [
+      { every: [1.15, 1.15], play: (k, o, t) => { blip(k, o, t, { freq: 62, dur: 0.12, vol: 0.05 }); blip(k, o, t + 0.22, { freq: 55, dur: 0.12, vol: 0.035 }); } }, // a slow heartbeat
+      { every: [14, 24], play: (k, o, t) => CHIME.forEach((f, i) => blip(k, o, t + i * 0.45, { freq: f, dur: 0.9, vol: 0.018, type: 'triangle' })) }, // the PA chimes
+    ],
+  },
+  observation: {
+    gain: 1.6,
+    bed: (k, o) => [...hiss(k, o, 'bandpass', 900, 0.8, 0.012, { swell: [0.4, 0.6] }), ...drone(k, o, 90, 'sine', 0.01, { swell: [0.2, 0.7] })], // bubbling glass cases
+    events: [
+      geiger,
+      { every: [0.5, 1.4], play: (k, o, t) => blip(k, o, t, { freq: rand(500, 1100), to: rand(200, 500), dur: 0.08, vol: 0.02 }) }, // bubbles
+    ],
+  },
+  navigation: {
+    gain: 1.4,
+    bed: (k, o) => [...drone(k, o, 180, 'sawtooth', 0.006, { lp: 500, swell: [3.5, 0.5] }), ...hiss(k, o, 'bandpass', 2400, 1.5, 0.006, { swell: [8, 0.5] })], // the centrifuge whirring
+    events: [{ every: [0.4, 1.4], play: (k, o, t) => { for (let i = 0; i < 3 + Math.floor(Math.random() * 4); i++) blip(k, o, t + i * 0.07, { freq: pick(PENTA), dur: 0.04, vol: 0.012, type: 'square' }); } }], // the sequencer chatters
+  },
+  comms: {
+    gain: 2.2,
+    bed: (k, o) => hiss(k, o, 'bandpass', 700, 1.2, 0.01, { sweep: [0.12, 350] }), // a siren winding up and down, far off
+    events: [
+      { every: [5, 8], play: (k, o, t) => { blip(k, o, t, { freq: 440, to: 880, dur: 1.1, vol: 0.02, type: 'triangle', attack: 0.3 }); blip(k, o, t + 1.2, { freq: 880, to: 440, dur: 1.1, vol: 0.02, type: 'triangle', attack: 0.3 }); } }, // WEEE-OOO
+      { every: [16, 26], play: (k, o, t) => CHIME.forEach((f, i) => blip(k, o, t + i * 0.45, { freq: f, dur: 0.9, vol: 0.02, type: 'triangle' })) },
+    ],
+  },
+  medbay: {
+    gain: 3.2,
+    bed: (k, o) => hiss(k, o, 'lowpass', 600, 0.5, 0.014),
+    events: [
+      { every: [0.8, 1.15], play: (k, o, t) => blip(k, o, t, { freq: 988, dur: 0.09, vol: 0.028 }) }, // heart monitors, not quite in time
+      { every: [5, 9], play: (k, o, t) => burst(k, o, t, { type: 'lowpass', freq: 600, q: 0.5, dur: 1.4, vol: 0.03, attack: 0.5 }) }, // a ventilator sighs
+      { every: [9, 16], play: (k, o, t) => cough(k, o, t) },
+    ],
+  },
+  galley: {
+    gain: 1.5,
+    bed: (k, o) => [...drone(k, o, 58, 'sine', 0.02), ...hiss(k, o, 'lowpass', 500, 0.6, 0.012)],
+    events: [
+      { every: [0.25, 0.9], play: (k, o, t) => { const f = rand(120, 300); blip(k, o, t, { freq: f, to: f * 2.2, dur: 0.12, vol: 0.03 }); } }, // goo, bubbling
+      { every: [8, 15], play: (k, o, t) => burst(k, o, t, { type: 'bandpass', freq: 500, q: 1, dur: 0.35, vol: 0.04, attack: 0.02 }) }, // a squelch
+    ],
+  },
+  reactor: {
+    gain: 1.2,
+    bed: (k, o) => [...hiss(k, o, 'lowpass', 280, 0.6, 0.08, { swell: [0.6, 0.4] }), ...drone(k, o, 46, 'sawtooth', 0.025, { lp: 150 })], // the furnace roars
+    events: [{ every: [0.2, 1.1], play: (k, o, t) => burst(k, o, t, { freq: rand(1500, 3200), q: 1.5, dur: 0.03, vol: 0.035 }) }], // fire cracks
+  },
+  engine: {
+    gain: 1.2,
+    bed: (k, o) => [...drone(k, o, 110, 'triangle', 0.02, { lp: 300, swell: [5, 0.5] }), ...hiss(k, o, 'lowpass', 600, 0.5, 0.05, { swell: [5.5, 0.5] })], // the big fans chopping the air
+    events: [{ every: [9, 16], play: (k, o, t) => burst(k, o, t, { type: 'highpass', freq: 4000, q: 0.5, dur: 1.2, vol: 0.02, attack: 0.3 }) }], // the filters flush
+  },
+  hydroponics: {
+    gain: 3.2,
+    bed: (k, o) => [...drone(k, o, 75, 'sine', 0.018, { swell: [0.25, 0.7] }), ...hiss(k, o, 'bandpass', 1200, 1, 0.012, { swell: [0.5, 0.6] })], // a damp, living hum
+    events: [
+      { every: [0.4, 1.6], play: (k, o, t) => blip(k, o, t, { freq: rand(250, 600), to: rand(700, 1200), dur: 0.09, vol: 0.024 }) }, // wet pops
+      { every: [4, 9], play: (k, o, t) => burst(k, o, t, { type: 'highpass', freq: 3500, q: 0.5, dur: 0.7, vol: 0.02, attack: 0.15 }) }, // a puff of spores
+    ],
+  },
+  airlock: {
+    gain: 1.8,
+    bed: (k, o) => hiss(k, o, 'highpass', 4000, 0.5, 0.012, { swell: [0.3, 0.5] }), // the decon shower
+    events: [
+      { every: [8, 14], play: (k, o, t) => burst(k, o, t, { type: 'highpass', freq: 3000, q: 0.5, dur: 1.6, vol: 0.03, attack: 0.3 }) }, // a valve hisses
+      { every: [12, 18], play: (k, o, t) => { blip(k, o, t, { freq: 90, dur: 0.12, vol: 0.035, type: 'square' }); burst(k, o, t, { freq: 600, q: 1, dur: 0.15, vol: 0.035 }); } }, // ka-chunk
+    ],
+  },
+  quarters: {
+    gain: 2.2,
+    bed: (k, o) => hiss(k, o, 'lowpass', 280, 0.7, 0.025, { swell: [0.18, 0.5] }),
+    events: [
+      { every: [7, 13], play: (k, o, t) => cough(k, o, t) },
+      { every: [2.5, 4], play: (k, o, t) => blip(k, o, t, { freq: 988, dur: 0.07, vol: 0.016 }) }, // a monitor, down the hall
+    ],
+  },
+  cargo: {
+    gain: 1.5,
+    bed: (k, o) => [...drone(k, o, 50, 'sine', 0.03), ...hiss(k, o, 'lowpass', 220, 0.7, 0.04)], // freezers humming
+    events: [
+      { every: [0.5, 2.2], play: (k, o, t) => burst(k, o, t, { type: 'highpass', freq: 4500, q: 1, dur: 0.015, vol: 0.03 }) }, // ice crackles
+      { every: [8, 14], play: (k, o, t) => burst(k, o, t, { type: 'highpass', freq: 3000, q: 0.5, dur: 1.4, vol: 0.025, attack: 0.3 }) }, // frost hiss
+    ],
+  },
+};
+
 // how loud the ship is in each phase (seated phases listen from the bridge)
 const PHASE_LEVEL = { home: 0, lobby: 1, roam: 1, meeting: 0.6, nominations: 0.5, lastwords: 0.5, dusk: 0.6, dawn: 0.6, ended: 0.45 };
 
@@ -332,7 +429,7 @@ export class Soundscape {
 
   // which set of room sounds this ship plays (the Cosmic Carnival has its own)
   defs() {
-    return this.script === 'carnival' ? CARNIVAL_SOUNDS : SOUNDS;
+    return this.script === 'carnival' ? CARNIVAL_SOUNDS : this.script === 'outbreak' ? OUTBREAK_SOUNDS : SOUNDS;
   }
 
   setScript(id) {

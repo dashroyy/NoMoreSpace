@@ -525,7 +525,7 @@ test('carnival stories, the dawn recap and summaries mention the script', () => 
   firstDawn(g);
   assert.ok(typeof g.dawn.story === 'string' && g.dawn.story.length > 10);
   assert.strictEqual(g.summary().script, 'carnival');
-  assert.deepStrictEqual(Object.keys(SCRIPTS).sort(), ['carnival', 'classic']);
+  assert.deepStrictEqual(Object.keys(SCRIPTS).sort(), ['carnival', 'classic', 'outbreak']);
   assert.ok(SCRIPTS.carnival.roles.every((r) => ROLES[r]), 'every carnival role exists');
   assert.ok(rolesOfTypeIn('carnival', 'saboteur').length >= 4 && rolesOfTypeIn('carnival', 'crew').length >= 12);
   // carnival executions have their own circus lines

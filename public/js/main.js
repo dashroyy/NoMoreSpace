@@ -486,6 +486,10 @@ function setupHome() {
     unlockAudio();
     send('create', { name: $('home-name').value || 'Rookie', practice: true, script: 'carnival', look: savedLook() }).then(() => sfx('whoosh')).catch((e) => problem(e.message));
   });
+  $('home-practice-outbreak').addEventListener('click', () => {
+    unlockAudio();
+    send('create', { name: $('home-name').value || 'Rookie', practice: true, script: 'outbreak', look: savedLook() }).then(() => sfx('whoosh')).catch((e) => problem(e.message));
+  });
   $('home-create').addEventListener('click', () => {
     unlockAudio();
     const mode = document.querySelector('input[name="mode"]:checked')?.value || 'autopilot';
