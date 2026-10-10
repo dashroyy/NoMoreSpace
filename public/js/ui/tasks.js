@@ -2,6 +2,7 @@
 // Observation Array (and give your hands something to do while you talk).
 import { el, clear } from '../util.js';
 import { sfx } from '../audio.js';
+import { themeInfo } from '../store.js';
 import { openModal, closeModal } from './rolecard.js';
 
 export function openTask(taskId, name, onDone) {
@@ -180,7 +181,7 @@ const GAMES = {
   // Hydroponics: water the wilting plants.
   plants(area, status, done) {
     let watered = 0;
-    status.textContent = 'Water the 6 wilting moon plants before the black hole dries them out.';
+    status.textContent = themeInfo().plants;
     const grid = el('div', { className: 'task-grid', style: { gridTemplateColumns: 'repeat(3, 80px)' } });
     const btns = Array.from({ length: 6 }, (_, i) => el('button', { className: 'task-btn', onclick: () => water(i) }, '🥀'));
     grid.append(...btns);

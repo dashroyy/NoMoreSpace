@@ -8,7 +8,7 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 const { Server } = require('socket.io');
-const { Game, DEATH_ANIMS, ROOM_NAMES, HAUNTS, REACTIONS, HAUNTS_PER_DAY } = require('./engine');
+const { Game, DEATH_ANIMS, HAUNTS, REACTIONS, HAUNTS_PER_DAY } = require('./engine');
 const { ROLES, TYPES, DISTRIBUTION, MIN_PLAYERS, MAX_PLAYERS, EVIL_INFO_MIN, teamOf } = require('./roles');
 const cosmetics = require('./cosmetics');
 const { TASKS } = require('./tasks');
@@ -269,7 +269,7 @@ function deliver(room, g, speakerId, message, { spoofedBy = null } = {}) {
   // the Comms Officer's intercept: words without names
   if (channel === 'near' && where && where !== 'corridor') {
     for (const id of g.listeners(where, now)) {
-      if (!ids.includes(id)) personSocket(room, id)?.emit('chat', { ...message, from: null, name: `🎧 ${ROOM_NAMES[where]}`, channel: 'intercept' });
+      if (!ids.includes(id)) personSocket(room, id)?.emit('chat', { ...message, from: null, name: `🎧 ${g.roomName(where)}`, channel: 'intercept' });
     }
   }
   // the Captain hears everything, and sees through tricks

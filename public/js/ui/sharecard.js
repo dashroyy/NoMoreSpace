@@ -1,7 +1,7 @@
 // The shareable result card: one image with the ship's name, who won, every
 // role, the best award and the funniest last words, ready for the group chat.
 import { el, problem, toast } from '../util.js';
-import { store } from '../store.js';
+import { store, themeInfo } from '../store.js';
 import { openModal } from './rolecard.js';
 import { sfx } from '../audio.js';
 
@@ -60,7 +60,7 @@ export function drawShareCard(state) {
   g.textAlign = 'center';
   g.fillStyle = '#dff9ff';
   g.font = `56px ${TITLE}`;
-  g.fillText('NO MORE SPACE', W / 2, 96);
+  g.fillText(themeInfo(state.script).shareTitle, W / 2, 96);
   g.fillStyle = '#8a92b8';
   g.font = `40px ${BODY}`;
   g.fillText(`${state.shipName || 'The ship'} · ${state.code}${state.season?.games > 1 ? ` · round ${state.season.games}` : ''}`, W / 2, 148);
@@ -69,7 +69,7 @@ export function drawShareCard(state) {
   g.font = `64px ${TITLE}`;
   g.shadowColor = accent;
   g.shadowBlur = 30;
-  g.fillText(crewWon ? 'THE CREW ESCAPES!' : 'NO MORE SPACE…', W / 2, 250);
+  g.fillText(crewWon ? themeInfo(state.script).shareCrew : themeInfo(state.script).shareEvil, W / 2, 250);
   g.shadowBlur = 0;
   g.fillStyle = '#c9d2f2';
   g.font = `38px ${BODY}`;

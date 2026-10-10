@@ -46,7 +46,17 @@ I read the BotC wiki and the official script pages, and looked at what the commu
 
 ## 🎪 Cosmic Carnival
 
-*Roll up, roll up! The Greatest Show in the Galaxy begins. Ahead, the black hole waits in the wings. Somewhere in the troupe, something hungry is wearing a costume.*
+*Roll up, roll up! The Greatest Show in the Galaxy begins. Above the Big Top, the Great Grin hangs in the sky, a clown moon with a bottomless mouth, waiting for the final act. Somewhere in the troupe, something hungry is wearing a costume.*
+
+### A disaster of its own: the Great Grin
+
+Every script has a **theme** in `server/scripts.js`: what the disaster is called, and the words each screen uses for it. Black Hole Blues is about a black hole. The Carnival is **not** about a black hole at all. The troupe's travelling Big Top has drifted into the orbit of the **Great Grin**, a colossal clown-faced moon with a rainbow wig, a pulsing red nose and a bottomless mouth. Like the black hole, it creeps closer every night and every death, and when only two players are left alive it swallows the Big Top ("the final curtain falls: no more show").
+
+What changes when a ship plays the Carnival:
+
+- **Sky and windows.** The windows, the Observation Deck and the sea of stars under the ship show the Great Grin (growing as the show nears its end) among drifting confetti instead of a black hole. The table hologram becomes a bobbing red clown nose.
+- **Words.** The HUD meter, the dawn warning ("The Big Top shudders…"), the win and lose titles, the end-of-game reveal, the share card, the replay card, the narrator's name tag, the night subtitle, the Captain's announcement buttons, the wiki's story page and every ending told by the engine all use the Carnival's theme.
+- **Rooms.** The ship's rooms get circus names: the Bridge is **The Center Ring**, the Observation Deck is **The Ferris Wheel**, Navigation is **The Carousel**, Comms is **The Calliope**, the Medbay is **The Clown Clinic**, the Galley is **The Snack Stand**, the Reactor is **The Spark Tent**, the Engine Room is **The Cannon Bay**, Hydroponics is **The Topiary Garden**, the Airlock is **The Human Cannon**, Crew Quarters is **The Caravans** and the Cargo Bay is **The Prop Room**. Room ids and rules are unchanged; only the names are.
 
 The big idea: **every role has a moment on stage**. The roles that matter are public gambles and surprises, not private bookkeeping, and half of them can swing the whole game with one dramatic reveal.
 
@@ -90,7 +100,7 @@ It also found two things that were fixed: robots tying a vote (a second nominati
 ### Making a new script
 
 1. Add roles to a `roles-<name>.js` file (the same fields as in `roles.js`) and merge them in `roles.js`.
-2. Add an entry to `server/scripts.js`: id, name, icon, minimum players, blurb, rules, role ids, which demons can appear.
+2. Add an entry to `server/scripts.js`: id, name, icon, minimum players, blurb, rules, role ids, which demons can appear, and a `theme` (what the disaster is called, the win and lose lines, optional room names). If the disaster looks different from a black hole, add a painter for it in `public/js/world/sky.js` (`paintDoom`, `buildBackdrop`).
 3. Put each new ability in `engine.js`: night prompts in `promptFor`/`computeDraft`, day triggers in `nominate`/`execute`/`beginDusk`/`kill`, and win rules in `checkWin`.
 4. Teach the robots (`server/bots.js`): night targets in `nightTargets`, any new public moves.
 5. Give each role a 3D model in `public/js/world/models.js` for the end-game reveal, and captions in `reveal.js` for new kinds of events.

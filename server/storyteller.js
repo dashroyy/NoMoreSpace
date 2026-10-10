@@ -6,7 +6,7 @@
 // The human Captain can override any of them from the Command Station.
 
 const { ROLES, DISTRIBUTION, rolesOfType, rolesOfTypeIn, teamOf } = require('./roles');
-const { scriptOf, inScript } = require('./scripts');
+const { scriptOf, themeOf, inScript } = require('./scripts');
 
 function pick(list, random) {
   return list[Math.floor(random() * list.length)];
@@ -250,7 +250,7 @@ function makeClue(game, random = Math.random, forced = null) {
   if (kind === 'living-constellation') {
     const roles = goodRoles.filter((r) => inPlay.has(r));
     const role = pick(roles.length ? roles : goodRoles, random);
-    return { kind, team, role, caption: 'A new constellation burns bright beside the black hole. Its light is still alive.' };
+    return { kind, team, role, caption: themeOf(game.script).constellation };
   }
   if (kind === 'comets') {
     const evil = living.filter((p) => teamOf(p.role) === 'infiltrators');

@@ -2,7 +2,7 @@
 // Storyteller. Move between phases, read the Ship Manifest (grimoire), edit
 // what players learn at night, tell the story of each death, puppet players.
 import { $, el, clear, problem, toast, formatTime } from '../util.js';
-import { store, send, role, player, serverNow } from '../store.js';
+import { store, send, role, player, serverNow, themeInfo } from '../store.js';
 import { sfx } from '../audio.js';
 
 let tab = 'control';
@@ -227,7 +227,7 @@ function story(s) {
       sayBox,
       el('button', { className: 'primary', onclick: () => sayBox.value.trim() && act('say', { text: sayBox.value }, 'Story sent!').then(() => (sayBox.value = '')) }, 'Show cloud bubble'),
       el('div', { className: 'hint' }, 'Quick announcements:'),
-      el('div', { className: 'grid-buttons' }, ...JOKES.map((j) => el('button', { title: j, onclick: () => act('say', { text: j }) }, j.slice(3, 32) + '…'))),
+      el('div', { className: 'grid-buttons' }, ...(themeInfo(s.script).jokes.length ? themeInfo(s.script).jokes : JOKES).map((j) => el('button', { title: j, onclick: () => act('say', { text: j }) }, j.slice(3, 32) + '…'))),
     ),
     el('section', {},
       el('h3', {}, '🎉 Ship events'),

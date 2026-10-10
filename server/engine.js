@@ -8,7 +8,7 @@
 
 const crypto = require('crypto');
 const { ROLES, TYPES, MIN_PLAYERS, MAX_PLAYERS, EVIL_INFO_MIN, rolesOfType, rolesOfTypeIn, teamOf } = require('./roles');
-const { SCRIPTS, scriptOf } = require('./scripts');
+const { SCRIPTS, scriptOf, themeOf, roomLabel } = require('./scripts');
 const st = require('./storyteller');
 const cosmetics = require('./cosmetics');
 const { TASKS } = require('./tasks');
@@ -1259,17 +1259,22 @@ class Game {
     this.shipEvent = { kind, until: now + seconds * 1000 };
   }
 
+  // "the Bridge", or this script's own name for the room (the Carnival has a Center Ring)
+  roomName(id) {
+    return roomLabel(this.script, id, ROOM_NAMES[id]);
+  }
+
   checkWin() {
     if (this.winner) return true;
     const alive = this.alive();
     const demonDead = !alive.some((p) => this.isDemon(p));
     if (demonDead && !this.twinsAlive()) {
-      return this.finish('crew', 'The Parasite is dead! The crew fires the engines and breaks free of the black hole.');
+      return this.finish('crew', themeOf(this.script).crewReason);
     }
     if (alive.length <= 2) {
       return this.finish('infiltrators', demonDead
         ? 'Only two remain. The Parasite is gone, but the Stage Double and their twin are still on stage, and the show goes on without the crew.'
-        : 'Only two remain. The Parasite steers the ship into the black hole. There is no more space.');
+        : themeOf(this.script).evilReason);
     }
     return false;
   }
@@ -1526,7 +1531,7 @@ class Game {
     this.logEvent({ k: 'noexec' });
     const fo = this.players.find((p) => p.alive && p.role === 'firstofficer');
     if (this.aliveCount() === 3 && fo && !this.isGlitched(fo)) {
-      this.finish('crew', `Three survivors and no airlocking: First Officer ${fo.name} takes the helm and pulls the ship free!`);
+      this.finish('crew', themeOf(this.script).officerReason.replace('{name}', fo.name));
     }
     this.dusk = { id: null, cause: null, story: 'The crew stares at each other in silence as the lights go down.' };
     if (!this.winner && this.reflectionAlive()) {
@@ -1726,7 +1731,7 @@ class Game {
     if ((sys.target === 'player' || sys.target === 'spoof') && (!target || target.id === pid)) throw new Error('Pick another player.');
     if (sys.id === 'disguise' && !target.alive) throw new Error('Pick a living player.');
     const occupants = (args.occupants || []).filter((id) => this.get(id));
-    const where = ROOM_NAMES[room];
+    const where = this.roomName(room);
     const result = {};
 
     switch (sys.id) {

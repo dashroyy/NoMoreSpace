@@ -2,7 +2,7 @@
 // players can learn before (or between) games. Open it from the title
 // screen, the lobby or the 📖 button in the top bar.
 import { $, el, clear } from '../util.js';
-import { store, scriptInfo } from '../store.js';
+import { store, scriptInfo, themeInfo } from '../store.js';
 import { openModal, closeModal, wakeText } from './rolecard.js';
 
 const SVG = 'http://www.w3.org/2000/svg';
@@ -60,7 +60,7 @@ function basics() {
     el('div', { className: 'wiki-goal' }, goal),
   );
   return el('div', {},
-    el('p', { className: 'wiki-lead' }, 'Your ship is falling into a black hole. Hidden among the crew is The Parasite, helped by its Saboteurs. Every night it kills. Every day the crew can vote to airlock one suspect.'),
+    el('p', { className: 'wiki-lead' }, `${themeInfo().howIntro} Hidden among the crew is The Parasite, helped by its Saboteurs. Every night it kills. Every day the crew can vote to airlock one suspect.`),
     el('div', { className: 'wiki-teams' },
       team(['crew', 'drifter'], 'good', '😇 Good team', '🏆 Wins when the Parasite is dead.'),
       el('div', { className: 'wiki-vs' }, 'VS'),
@@ -74,9 +74,10 @@ function basics() {
 // "Each death pulls the ship closer": a meter from a full crew to 2 survivors.
 function blackHoleMeter() {
   const steps = 7;
-  const g = svg('svg', { viewBox: '0 0 560 120', class: 'wiki-svg', role: 'img', 'aria-label': 'Each death pulls the ship closer to the black hole. At 2 survivors, evil wins.' });
+  const grin = themeInfo().doomIcon === '🤡';
+  const g = svg('svg', { viewBox: '0 0 560 120', class: 'wiki-svg', role: 'img', 'aria-label': `Each death pulls the ship closer to ${themeInfo().doom}. At 2 survivors, evil wins.` });
   g.append(svg('defs', {}, svg('radialGradient', { id: 'bh' }, svg('stop', { offset: '0.35', 'stop-color': '#000' }), svg('stop', { offset: '0.55', 'stop-color': '#ff8a3a' }), svg('stop', { offset: '1', 'stop-color': 'rgba(255,60,90,0)' }))));
-  g.append(svg('circle', { cx: 500, cy: 60, r: 52, fill: 'url(#bh)' }));
+  g.append(grin ? svg('text', { x: 500, y: 82, 'text-anchor': 'middle', 'font-size': 76 }, '🤡') : svg('circle', { cx: 500, cy: 60, r: 52, fill: 'url(#bh)' }));
   g.append(svg('line', { x1: 30, y1: 60, x2: 440, y2: 60, stroke: '#3a4670', 'stroke-width': 3, 'stroke-dasharray': '6 6' }));
   for (let i = 0; i < steps; i++) {
     const x = 40 + i * 62;
@@ -86,7 +87,7 @@ function blackHoleMeter() {
   }
   g.append(svg('text', { x: 40, y: 104, 'font-size': 14, fill: '#9aa6d0' }, 'players alive →'));
   g.append(svg('text', { x: 412, y: 30, 'text-anchor': 'middle', 'font-size': 14, fill: '#ff9fb3' }, '2 left: evil wins'));
-  return el('figure', { className: 'wiki-figure' }, g, el('figcaption', {}, 'Every death drags the ship closer to the black hole. If the crew can airlock the Parasite first, they escape.'));
+  return el('figure', { className: 'wiki-figure' }, g, el('figcaption', {}, `Every death drags the ship closer to ${themeInfo().doom}. If the crew can airlock the Parasite first, they escape.`));
 }
 
 function day() {

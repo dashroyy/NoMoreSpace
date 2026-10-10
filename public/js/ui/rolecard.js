@@ -1,7 +1,7 @@
 // The role card (R): your ability, tips, everything you've learned, plus the
 // full almanac of roles and a "how to play" guide.
 import { $, el, clear } from '../util.js';
-import { store, role, player, send, scriptRoleIds, scriptInfo } from '../store.js';
+import { store, role, player, send, scriptRoleIds, scriptInfo, themeInfo } from '../store.js';
 import { notebookTab } from './notebook.js';
 import { logTab } from './social.js';
 import { openBugReport } from './report.js';
@@ -157,12 +157,12 @@ export function howToPlay() {
   const d = store.data.distribution;
   const n = store.state?.playerCount;
   return el('div', {},
-    el('h2', {}, '🕳️ No More Space'),
-    el('p', {}, 'Your ship is falling into a black hole. Hidden among the crew is ', el('b', {}, 'The Parasite'), ', helped by its ', el('b', {}, 'Saboteurs'), '. Every night it kills. Every day the crew can vote to airlock one suspect.'),
+    el('h2', {}, themeInfo().howTitle),
+    el('p', {}, `${themeInfo().howIntro} Hidden among the crew is `, el('b', {}, 'The Parasite'), ', helped by its ', el('b', {}, 'Saboteurs'), '. Every night it kills. Every day the crew can vote to airlock one suspect.'),
     el('h3', {}, '🏆 How to win'),
     el('ul', { className: 'tips' },
       el('li', {}, el('b', {}, 'Crew (good): '), 'airlock or shoot the Parasite.'),
-      el('li', {}, el('b', {}, 'Infiltrators (evil): '), 'survive until only 2 players are alive. The ship falls in. No more space.'),
+      el('li', {}, el('b', {}, 'Infiltrators (evil): '), `survive until only 2 players are alive. ${themeInfo().evilGoal}`),
     ),
     el('h3', {}, '🌙 Night'),
     el('p', {}, 'Everyone sleeps. Players with night abilities choose targets on their screen; everyone else (and they too) can paint a picture that appears on the ship\'s walls the next day. Info roles get secret messages at dawn.'),

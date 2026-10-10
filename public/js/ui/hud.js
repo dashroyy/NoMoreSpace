@@ -1,7 +1,7 @@
 // The in-game HUD: top bar, the bridge-table ring (seats, nominations, the
 // vote clock), action buttons and the minimap.
 import { $, el, clear, formatTime, problem, toast } from '../util.js';
-import { store, send, serverNow, player, isCaptain, suitHex } from '../store.js';
+import { store, send, serverNow, player, isCaptain, suitHex, themeInfo } from '../store.js';
 import { sfx } from '../audio.js';
 import { ROOMS, CORRIDORS, roomOutline } from '../world/layout.js';
 import { blackHoleProgress } from '../world/world.js';
@@ -124,7 +124,8 @@ export function renderHud(state) {
   $('hud-phase').textContent = label;
   const alive = state.aliveCount;
   const hole = Math.round(blackHoleProgress(state) * 100);
-  $('hud-horizon').replaceChildren(el('span', { title: 'How close the black hole is. It creeps closer every night and every death.' }, `🕳️ ${hole}% · `), el('b', {}, `${alive} alive`), ` · ${state.threshold} votes to airlock`);
+  const theme = themeInfo(state.script);
+  $('hud-horizon').replaceChildren(el('span', { title: theme.doomTip }, `${theme.doomIcon} ${hole}% · `), el('b', {}, `${alive} alive`), ` · ${state.threshold} votes to airlock`);
   document.body.classList.toggle('horizon-close', state.phase !== 'lobby' && alive <= 4);
   const pct = Math.min(100, Math.round((state.charge / state.chargeNeeded) * 100));
   $('hud-charge').querySelector('span').style.width = `${pct}%`;

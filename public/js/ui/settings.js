@@ -80,7 +80,7 @@ export function openSettings(moods) {
     row('🔠 Text size', 'Makes every panel, button and message bigger.', choices(SIZES.map(([id, label]) => [id, label]), get('nms-text', 'm'), (v) => { set('nms-text', v); applyTextSize(v); again(); })),
     row('📺 Old-screen effect', 'Scanlines and flicker.', choices([['on', 'On'], ['off', 'Off']], get('nms-crt', 'on'), (v) => { set('nms-crt', v); applyCrt(v === 'on'); again(); })),
     row('🎥 Camera distance', 'Close is easier on small screens. The mouse wheel still zooms.', choices([['close', 'Close'], ['normal', 'Normal'], ['far', 'Far']], get('nms-zoom', 'normal'), (v) => { set('nms-zoom', v); window.__world?.setCamera({ zoom: v }); again(); })),
-    row('📳 Camera shake', 'When the black hole tugs at the ship.', choices([['on', 'On'], ['off', 'Off']], get('nms-shake', 'on'), (v) => { set('nms-shake', v); window.__world?.setCamera({ shake: v === 'on' }); again(); })),
+    row('📳 Camera shake', 'When doom tugs at the ship.', choices([['on', 'On'], ['off', 'Off']], get('nms-shake', 'on'), (v) => { set('nms-shake', v); window.__world?.setCamera({ shake: v === 'on' }); again(); })),
     row('✨ Graphics', 'Low is for slow computers and old phones.', choices([['0', 'High'], ['1', 'Low']], lowFx ? '1' : '0', (v) => {
       set('nms-lowfx', v);
       if ((v === '1') !== lowFx && confirm('Graphics change after a reload. Reload now? (You keep your seat.)')) location.reload();

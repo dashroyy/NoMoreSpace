@@ -41,16 +41,22 @@ function emojiShape(emoji) {
   return result;
 }
 
-export function paintSpace(ctx, w, h, { t = 0, progress = 0, clue = null, colorOf = () => '#fff', iconOf = () => '★', withHole = true, holeX = 0.5 } = {}) {
+const CONFETTI = ['rgba(255,120,190,', 'rgba(255,225,90,', 'rgba(110,230,255,', 'rgba(160,255,140,'];
+
+export function paintSpace(ctx, w, h, { t = 0, progress = 0, clue = null, colorOf = () => '#fff', iconOf = () => '★', withHole = true, holeX = 0.5, script = 'classic' } = {}) {
+  const carnival = script === 'carnival';
   const bg = ctx.createRadialGradient(w * holeX, h * 0.6, 10, w * 0.5, h * 0.5, Math.max(w, h));
-  bg.addColorStop(0, '#1a0b22');
-  bg.addColorStop(0.4, '#070816');
-  bg.addColorStop(1, '#020208');
+  bg.addColorStop(0, carnival ? '#2b0b34' : '#1a0b22');
+  bg.addColorStop(0.4, carnival ? '#12071f' : '#070816');
+  bg.addColorStop(1, carnival ? '#05020d' : '#020208');
   ctx.fillStyle = bg;
   ctx.fillRect(0, 0, w, h);
 
   // Nebula wisps.
-  for (const [x, y, r, col] of [[0.2, 0.3, 0.5, 'rgba(90,40,160,0.18)'], [0.8, 0.25, 0.4, 'rgba(20,120,160,0.14)'], [0.6, 0.85, 0.5, 'rgba(160,30,70,0.12)']]) {
+  const wisps = carnival
+    ? [[0.2, 0.3, 0.5, 'rgba(230,60,170,0.2)'], [0.8, 0.25, 0.4, 'rgba(255,200,60,0.12)'], [0.6, 0.85, 0.5, 'rgba(60,200,230,0.14)']]
+    : [[0.2, 0.3, 0.5, 'rgba(90,40,160,0.18)'], [0.8, 0.25, 0.4, 'rgba(20,120,160,0.14)'], [0.6, 0.85, 0.5, 'rgba(160,30,70,0.12)']];
+  for (const [x, y, r, col] of wisps) {
     const g = ctx.createRadialGradient(x * w, y * h, 0, x * w, y * h, r * w);
     g.addColorStop(0, col);
     g.addColorStop(1, 'rgba(0,0,0,0)');
@@ -58,16 +64,134 @@ export function paintSpace(ctx, w, h, { t = 0, progress = 0, clue = null, colorO
     ctx.fillRect(0, 0, w, h);
   }
 
-  for (const s of STARS) {
+  for (let i = 0; i < STARS.length; i++) {
+    const s = STARS[i];
     const a = 0.45 + 0.55 * Math.abs(Math.sin(t * 0.8 + s.tw));
-    ctx.fillStyle = `${s.hue}${a})`;
+    // in the Carnival, the stars are bits of confetti
+    ctx.fillStyle = `${carnival && i % 3 ? CONFETTI[i % CONFETTI.length] : s.hue}${a})`;
     ctx.beginPath();
     ctx.arc(s.x * w, s.y * h, s.r, 0, Math.PI * 2);
     ctx.fill();
   }
 
-  if (withHole) paintBlackHole(ctx, w * holeX, h * 0.6, (Math.min(w, h) * (0.12 + progress * 0.22)), t);
+  if (withHole) paintDoom(ctx, w * holeX, h * 0.6, (Math.min(w, h) * (0.12 + progress * 0.22)), t, script);
   if (clue) paintClue(ctx, w, h, clue, t, colorOf, iconOf);
+}
+
+// The Cosmic Carnival's doom: the Great Grin, a colossal clown-faced moon with a
+// bottomless mouth. r is the face radius (it grows as the show gets closer to
+// being swallowed); the whole face bobs, blinks and grins wider with time.
+const WIG = ['#ff4fa3', '#ffd23f', '#3ad6e8', '#8a5cff', '#7fe33b', '#ff8a2a'];
+
+export function paintGrin(ctx, cx, cy, r, t) {
+  // pink and gold glow around the moon
+  const glow = ctx.createRadialGradient(cx, cy, r * 0.7, cx, cy, r * 3.4);
+  glow.addColorStop(0, 'rgba(255,90,170,0.45)');
+  glow.addColorStop(0.4, 'rgba(255,200,80,0.14)');
+  glow.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = glow;
+  ctx.fillRect(cx - r * 4, cy - r * 4, r * 8, r * 8);
+
+  // rainbow wig, puffing up and down around the head
+  for (let i = 0; i < 11; i++) {
+    const a = Math.PI * (0.78 + (i / 10) * 1.44);
+    const bob = Math.sin(t * 1.6 + i) * r * 0.04;
+    const d = r * (1.02 + (i % 2) * 0.08) + bob;
+    ctx.fillStyle = WIG[i % WIG.length];
+    ctx.beginPath();
+    ctx.arc(cx + Math.cos(a) * d, cy + Math.sin(a) * d, r * (0.36 + (i % 3) * 0.03), 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // the face
+  const face = ctx.createRadialGradient(cx - r * 0.25, cy - r * 0.3, r * 0.1, cx, cy, r);
+  face.addColorStop(0, '#fffaf0');
+  face.addColorStop(1, '#f1d3c2');
+  ctx.fillStyle = face;
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, 0, Math.PI * 2);
+  ctx.fill();
+  // rosy cheeks
+  ctx.fillStyle = 'rgba(255,90,120,0.35)';
+  for (const sx of [-1, 1]) {
+    ctx.beginPath();
+    ctx.arc(cx + sx * r * 0.62, cy + r * 0.12, r * 0.17, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // eyes with blue diamonds, blinking now and then
+  const blink = (t % 5.2) > 5.05 ? 0.12 : 1;
+  for (const sx of [-1, 1]) {
+    const ex = cx + sx * r * 0.36;
+    const ey = cy - r * 0.22;
+    ctx.fillStyle = '#3b6df0';
+    ctx.beginPath();
+    ctx.moveTo(ex, ey - r * 0.42);
+    ctx.lineTo(ex + r * 0.12, ey - r * 0.27);
+    ctx.lineTo(ex, ey - r * 0.12);
+    ctx.lineTo(ex - r * 0.12, ey - r * 0.27);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = '#fff';
+    ctx.beginPath();
+    ctx.ellipse(ex, ey, r * 0.17, r * 0.2 * blink, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#12091f';
+    ctx.beginPath();
+    ctx.ellipse(ex + Math.sin(t * 0.7) * r * 0.05, ey + r * 0.04, r * 0.07, r * 0.09 * blink, 0, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // the bottomless mouth: wider and deeper as the show nears its end (r grows)
+  const open = 0.5 + Math.sin(t * 1.3) * 0.07;
+  const mx0 = cx - r * 0.7;
+  const mx1 = cx + r * 0.7;
+  const my = cy + r * 0.3;
+  const mouth = new Path2D();
+  mouth.moveTo(mx0, my);
+  mouth.quadraticCurveTo(cx, my + r * 0.18, mx1, my);
+  mouth.quadraticCurveTo(cx, my + r * (0.18 + open * 1.9), mx0, my);
+  mouth.closePath();
+  ctx.save();
+  ctx.fillStyle = '#05000c';
+  ctx.fill(mouth);
+  ctx.clip(mouth);
+  // a few stars deep inside the dark
+  for (let i = 0; i < 7; i++) {
+    ctx.fillStyle = `rgba(255,230,250,${0.3 + 0.4 * Math.abs(Math.sin(t * 0.9 + i * 1.7))})`;
+    ctx.fillRect(mx0 + ((i * 97) % 140) / 140 * (mx1 - mx0), my + r * (0.25 + ((i * 53) % 60) / 60 * open * 1.5), 2, 2);
+  }
+  // teeth along the top lip
+  ctx.fillStyle = '#fffdf6';
+  for (let i = 0; i < 9; i++) {
+    ctx.fillRect(mx0 + (i / 9) * (mx1 - mx0) + r * 0.02, my + r * 0.04, (mx1 - mx0) / 9 - r * 0.04, r * 0.15);
+  }
+  ctx.restore();
+  // lips
+  ctx.strokeStyle = '#d7263d';
+  ctx.lineWidth = Math.max(2, r * 0.09);
+  ctx.lineCap = 'round';
+  ctx.stroke(mouth);
+
+  // the big red nose pulses like a warning light
+  const pulse = 1 + Math.sin(t * 3) * 0.06;
+  ctx.fillStyle = '#e8203a';
+  ctx.shadowColor = '#ff2d55';
+  ctx.shadowBlur = r * 0.35;
+  ctx.beginPath();
+  ctx.arc(cx, cy + r * 0.04, r * 0.17 * pulse, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.shadowBlur = 0;
+  ctx.fillStyle = 'rgba(255,255,255,0.7)';
+  ctx.beginPath();
+  ctx.arc(cx - r * 0.05, cy - r * 0.01, r * 0.04, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+// Whichever doom this script is about (the black hole, or the Great Grin).
+export function paintDoom(ctx, cx, cy, r, t, script = 'classic') {
+  if (script === 'carnival') paintGrin(ctx, cx, cy, r * 0.8, t);
+  else paintBlackHole(ctx, cx, cy, r, t);
 }
 
 export function paintBlackHole(ctx, cx, cy, r, t) {
@@ -245,6 +369,7 @@ export class SpaceCanvases {
     for (const tex of [this.smallTex, this.bigTex]) tex.colorSpace = THREE.SRGBColorSpace;
     this.windowTextures = []; // clones of smallTex used by individual windows
     this.progress = 0;
+    this.script = 'classic';
     this.clue = null;
     this.colorOf = () => '#fff';
     this.iconOf = () => '★';
@@ -256,13 +381,13 @@ export class SpaceCanvases {
   update(time) {
     if (time - this.last < 0.2) return;
     this.last = time;
-    paintSpace(this.small.getContext('2d'), 512, 256, { t: time, progress: this.progress, holeX: 0.7 });
+    paintSpace(this.small.getContext('2d'), 512, 256, { t: time, progress: this.progress, holeX: 0.7, script: this.script });
     this.smallTex.needsUpdate = true;
     for (const tex of this.windowTextures) tex.needsUpdate = true;
     // the big window is expensive to paint and upload, so do it rarely while nobody is looking
     if (this.bigVisible || this.bigPaintedAt < 0 || time - this.bigPaintedAt > 2) {
       this.bigPaintedAt = time;
-      paintSpace(this.big.getContext('2d'), 1440, 180, { t: time, progress: this.progress, clue: this.clue, colorOf: this.colorOf, iconOf: this.iconOf, holeX: 0.62 });
+      paintSpace(this.big.getContext('2d'), 1440, 180, { t: time, progress: this.progress, clue: this.clue, colorOf: this.colorOf, iconOf: this.iconOf, holeX: 0.62, script: this.script });
       this.bigTex.needsUpdate = true;
     }
   }
@@ -314,6 +439,13 @@ export function buildBackdrop(scene) {
   }
   const tex = new THREE.CanvasTexture(c);
   tex.colorSpace = THREE.SRGBColorSpace;
+  // the Cosmic Carnival's version: the Great Grin, seen from above
+  const gc = document.createElement('canvas');
+  gc.width = gc.height = 1024;
+  paintGrin(gc.getContext('2d'), 512, 512, 150, 1.2);
+  const grinTex = new THREE.CanvasTexture(gc);
+  grinTex.colorSpace = THREE.SRGBColorSpace;
+  let carnival = false;
   const hole = new THREE.Mesh(
     new THREE.PlaneGeometry(1, 1),
     new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }),
@@ -333,8 +465,15 @@ export function buildBackdrop(scene) {
       const s = 220 + p * 900;
       hole.scale.set(s, s, 1);
     },
+    // the Cosmic Carnival swaps the black hole for the Great Grin
+    setScript(id) {
+      carnival = id === 'carnival';
+      hole.material.map = carnival ? grinTex : tex;
+      hole.material.needsUpdate = true;
+      core.visible = !carnival;
+    },
     update(time) {
-      hole.rotation.z = time * 0.03;
+      hole.rotation.z = carnival ? Math.sin(time * 0.15) * 0.12 : time * 0.03;
       stars.rotation.y = time * 0.002;
     },
   };

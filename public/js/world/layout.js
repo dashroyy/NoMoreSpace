@@ -16,6 +16,12 @@ export const ROOMS = [
   { id: 'cargo', name: 'Cargo Bay', rect: [-10, 38, 10, 48], floor: 0x34342a, light: 0xffe27a, task: 'hamsters' },
 ];
 
+// A script can give the rooms its own names ({ bridge: 'The Center Ring' }); {} puts them back.
+const ROOM_BASE_NAMES = Object.fromEntries(ROOMS.map((r) => [r.id, r.name]));
+export function setRoomNames(names = {}) {
+  for (const r of ROOMS) r.name = names[r.id] || ROOM_BASE_NAMES[r.id];
+}
+
 const H = 1.6; // half corridor width
 export const CORRIDORS = [
   [-H, -18, H, -10],

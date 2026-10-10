@@ -41,8 +41,23 @@ export function role(id) {
 
 // The script (cast of characters) this ship is playing; before a ship exists, the classic one.
 export function scriptInfo(id = store.state?.script) {
-  return store.data?.scripts?.[id] || store.data?.scripts?.classic || { id: 'classic', name: 'Black Hole Blues', icon: '🕳️', minPlayers: 3, roles: Object.keys(store.data?.roles || {}), demons: ['parasite'], rules: [], blurb: '', tagline: '' };
+  return store.data?.scripts?.[id] || store.data?.scripts?.classic || { id: 'classic', name: 'Black Hole Blues', icon: '🕳️', minPlayers: 3, roles: Object.keys(store.data?.roles || {}), demons: ['parasite'], rules: [], blurb: '', tagline: '', theme: FALLBACK_THEME };
 }
+
+// The disaster the story is about (black hole, Great Grin...) and the words for it.
+export function themeInfo(id = store.state?.script) {
+  return scriptInfo(id).theme || FALLBACK_THEME;
+}
+
+const FALLBACK_THEME = {
+  doom: 'the black hole', doomIcon: '🕳️', doomTip: 'How close the black hole is. It creeps closer every night and every death.',
+  lurch: 'The ship lurches. The black hole is {pct}% of the way to swallowing us…',
+  howTitle: '🕳️ No More Space', howIntro: 'Your ship is falling into a black hole.', evilGoal: 'The ship falls in. No more space.',
+  nightSub: 'The ship sleeps. Something in the vents does not.',
+  crewWinTitle: '🛡️ The crew escapes the black hole!', evilWinTitle: '🦑 The infiltrators win. No more space.',
+  shareTitle: 'NO MORE SPACE', shareCrew: 'THE CREW ESCAPES!', shareEvil: 'NO MORE SPACE…',
+  plants: 'Water the 6 wilting moon plants before the black hole dries them out.', jokes: [], rooms: {},
+};
 
 // The roles on that script, optionally just one type of them.
 export function scriptRoleIds(type = null, id = store.state?.script) {

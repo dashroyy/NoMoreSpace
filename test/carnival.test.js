@@ -590,3 +590,44 @@ test('Palm Reader visions are false (neither is real) when the Hacker glitches t
   // the Stagehand was not glitched: the Hacker woke (1) and the Lion Tamer did not on night 1
   assert.strictEqual(g.draft.messages.find((m) => m.role === 'stagehand').value, 1);
 });
+
+test('the Carnival has its own disaster: the Great Grin, not a black hole, in every ending and room name', () => {
+  const { themeOf, roomLabel } = require('../server/scripts');
+  const { ROOM_NAMES } = require('../server/engine');
+  const theme = themeOf('carnival');
+  assert.strictEqual(theme.doom, 'the Great Grin');
+  // every word the screens use for the disaster, and the story intro, avoids the black hole
+  for (const [key, value] of Object.entries(theme)) {
+    if (typeof value === 'string') assert.ok(!/black hole|singularity/i.test(value), `theme.${key} still mentions a black hole`);
+  }
+  assert.ok(!/black hole/i.test(SCRIPTS.carnival.intro) && !/black hole/i.test(SCRIPTS.carnival.tagline));
+  // every room has a circus name (and the classic script keeps the ship's names)
+  for (const id of Object.keys(ROOM_NAMES)) {
+    assert.ok(theme.rooms[id], `no carnival name for ${id}`);
+    assert.strictEqual(roomLabel('classic', id, ROOM_NAMES[id]), ROOM_NAMES[id]);
+  }
+
+  // the three ways the crew or evil can win in a normal game, told in circus words
+  const { g } = carnival(SEVEN);
+  g.kill(g.players[0], 'parasite'); // the Parasite dies
+  g.checkWin();
+  assert.strictEqual(g.winner, 'crew');
+  assert.match(g.winReason, /Great Grin/);
+  assert.ok(!/black hole|ship/i.test(g.winReason), g.winReason);
+  const evil = carnival(SEVEN, { seed: 2 }).g;
+  for (const p of evil.players.slice(2, 7)) evil.kill(p, 'parasite');
+  evil.checkWin();
+  assert.strictEqual(evil.winner, 'infiltrators');
+  assert.match(evil.winReason, /final curtain/);
+  assert.strictEqual(evil.roomName('bridge'), 'The Center Ring');
+
+  // while the classic ship keeps its black hole
+  const classic = new Game('CLAS', { random: seeded(3) });
+  const [a, b, c] = ['a', 'b', 'c'].map((n) => classic.addPlayer(n));
+  classic.start(a.id, 0, { deal: ['parasite', 'comms', 'medic'] });
+  classic.kill(a, 'airlock');
+  classic.checkWin();
+  assert.match(classic.winReason, /black hole/);
+  assert.strictEqual(classic.roomName('bridge'), 'the Bridge');
+  void b; void c;
+});

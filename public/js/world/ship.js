@@ -256,6 +256,10 @@ export function buildShip(scene, space) {
   add(holo, new THREE.ConeGeometry(0.9, 1.0, 24, 1, true), new THREE.MeshBasicMaterial({ color: 0x7f6bff, transparent: true, opacity: 0.08, side: THREE.DoubleSide, depthWrite: false }), 0, -0.55, 0, [Math.PI, 0, 0]);
   bridge.add(holo);
   holo.userData.dynamic = true;
+  // the Cosmic Carnival turns the table's little black hole into a bobbing red clown nose
+  const holoColors = holo.children.map((m) => m.material.color.getHex());
+  const carnivalColors = [0xe8203a, 0xffd23f, 0xff4fa3, 0xff4fa3];
+  const setHoloTheme = (carnival) => holo.children.forEach((m, i) => m.material.color.setHex((carnival ? carnivalColors : holoColors)[i]));
   const seats = new THREE.Group();
   seats.userData.dynamic = true;
   bridge.add(seats);
@@ -322,6 +326,7 @@ export function buildShip(scene, space) {
     flicker,
     stations,
     holo,
+    setHoloTheme,
     disk,
     setSeats,
     easels,

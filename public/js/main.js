@@ -1,6 +1,6 @@
 // Entry point: connects the server, the 3D world and all the UI pieces.
 import { $, el, clear, problem, toast, typeText, isTouch } from './util.js';
-import { socket, store, onState, send, role, player, isCaptain, serverNow } from './store.js';
+import { socket, store, onState, send, role, player, isCaptain, serverNow, themeInfo, scriptInfo } from './store.js';
 import { unlockAudio, sfx, setAmbient, setSound, soundEnabled, setMusic, musicEnabled } from './audio.js';
 import { World, blackHoleProgress } from './world/world.js';
 import { initChat, addChat, updateChatVisibility, clearChat, systemLine } from './ui/chat.js';
@@ -11,7 +11,7 @@ import { initDrawing, renderNight, flushDrawing } from './ui/night.js';
 import { openTask } from './ui/tasks.js';
 import { initCommand, renderCommand } from './ui/command.js';
 import { initRooms } from './ui/rooms.js';
-import { ROOMS } from './world/layout.js';
+import { ROOMS, setRoomNames } from './world/layout.js';
 import { initSystems } from './ui/systems.js';
 import { initVote } from './ui/vote.js';
 import { initSocial } from './ui/social.js';
@@ -144,7 +144,7 @@ async function boot() {
   // ?replay=<id>: rewatch a finished game's reveal instead of playing
   const replayId = new URLSearchParams(location.search).get('replay');
   if (replayId) {
-    startReplay(replayId, reveal);
+    startReplay(replayId, reveal, world);
     return;
   }
   const rejoin = () => {
@@ -202,6 +202,8 @@ async function boot() {
     route(state);
     world.syncPlayers(state);
     world.setScript(state.script);
+    setRoomNames(themeInfo(state.script).rooms);
+    $('night-sub').textContent = themeInfo(state.script).nightSub;
     if (!prev || prev.phase !== state.phase || prev.code !== state.code) onPhaseChange(state, prev, world, reveal);
     world.setProgressFromState(state);
 
@@ -238,7 +240,7 @@ async function boot() {
 }
 
 // Rewatch a finished game from a replay link.
-async function startReplay(id, reveal) {
+async function startReplay(id, reveal, world) {
   try {
     const res = await fetch(`/replay/${encodeURIComponent(id)}.json`);
     if (!res.ok) throw new Error('missing');
@@ -246,14 +248,18 @@ async function startReplay(id, reveal) {
     document.body.classList.remove('screen-home');
     document.body.classList.add('screen-replay');
     $('screen-home').hidden = true;
+    // the stage behind the "watch" card wears the right script (Great Grin, circus room names...)
+    world.setScript(state.script);
+    setRoomNames(themeInfo(state.script).rooms);
+    const gameName = themeInfo(state.script).shareTitle.toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
     const go = () => {
       unlockAudio();
       reveal.start(state);
     };
     // browsers only play sound after a click, so ask for one
     const start = el('div', { className: 'replay-start card' },
-      el('h2', {}, `🎬 ${state.shipName || 'A game'} of No More Space`),
-      el('p', { className: 'hint' }, `${state.players.length} players · ${state.winner === 'crew' ? 'the crew escaped' : 'no more space'}`),
+      el('h2', {}, `🎬 ${state.shipName || 'A game'} of ${gameName}`),
+      el('p', { className: 'hint' }, `${state.players.length} players · ${state.winner === 'crew' ? 'the crew escaped' : themeInfo(state.script).shareTitle.toLowerCase()}`),
       el('button', { className: 'primary big', onclick: () => { start.remove(); go(); } }, '▶ Watch the replay'),
     );
     document.body.append(start);
@@ -306,10 +312,11 @@ function onPhaseChange(state, prev, world, reveal) {
     case 'dawn': {
       flushDrawing(); // a picture still being drawn as the night ended
       sfx('dawn');
-      // every night the ship drifts closer to the black hole
+      // every night the ship drifts closer to the black hole (or the Great Grin)
       world.rumble(1.8);
       setTimeout(() => sfx('creak'), 300);
-      setTimeout(() => toast(`🕳️ The ship lurches. The black hole is ${Math.round(blackHoleProgress(state) * 100)}% of the way to swallowing us…`, 'death', 6000), 1800);
+      const theme = themeInfo(state.script);
+      setTimeout(() => toast(`${theme.doomIcon} ${theme.lurch.replace('{pct}', Math.round(blackHoleProgress(state) * 100))}`, 'death', 6000), 1800);
       const dawn = state.dawn;
       if (dawn) {
         const names = dawn.deaths.map((d) => player(d.id)?.name).filter(Boolean);
@@ -450,7 +457,7 @@ function showStory(text, chips = [], ms = 8000, author = null, read = true) {
   if (!text) return;
   if (read) speak(text, { kind: 'story' });
   const state = store.state;
-  $('story-author').textContent = author || (state?.mode === 'captain' && state.captain ? `☁️ Captain ${state.captain.name} says` : '☁️ ARIA, ship AI, reports');
+  $('story-author').textContent = author || (state?.mode === 'captain' && state.captain ? `☁️ Captain ${state.captain.name} says` : `☁️ ${scriptInfo(state?.script).narrator || 'ARIA, ship AI'}, reports`);
   typeText($('story-text'), text, 18);
   clear($('story-deaths'), ...chips.map((c) => el('span', {}, c)));
   $('story').hidden = false;

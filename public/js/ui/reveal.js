@@ -2,11 +2,11 @@
 // character, then ARIA replays every night and day from the ship's black box.
 import * as THREE from 'three';
 import { $, el, clear, toast } from '../util.js';
-import { store, send } from '../store.js';
+import { store, send, themeInfo } from '../store.js';
 import { sfx, setAmbient } from '../audio.js';
 import { Avatar, makeTextSprite } from '../world/avatar.js';
 import { buildRoleModel, animateRoleModel } from '../world/models.js';
-import { paintBlackHole } from '../world/sky.js';
+import { paintDoom } from '../world/sky.js';
 import { seasonTable } from './party.js';
 import { openShareCard } from './sharecard.js';
 
@@ -154,7 +154,7 @@ export class Reveal {
   paintHole() {
     const g = this.holeCanvas.getContext('2d');
     g.clearRect(0, 0, 1024, 1024);
-    paintBlackHole(g, 512, 512, 90 * this.holeSize + 40, this.time || 0);
+    paintDoom(g, 512, 512, 90 * this.holeSize + 40, this.time || 0, this.state?.script);
     this.holeTex.needsUpdate = true;
   }
 
@@ -307,7 +307,7 @@ export class Reveal {
         return { dur: 3.6, bubble: e.text, caption: '', overview: true };
       case 'system': {
         // ⚡ ship systems, shown in the replay so everyone learns what really happened
-        const ROOM = (id) => ({ bridge: 'the Bridge', observation: 'the Observation Deck', navigation: 'Navigation', comms: 'Comms', medbay: 'the Medbay', galley: 'the Galley', reactor: 'the Reactor', engine: 'the Engine Room', hydroponics: 'Hydroponics', airlock: 'the Airlock', quarters: 'Crew Quarters', cargo: 'the Cargo Bay' })[id] || 'a room';
+        const ROOM = (id) => themeInfo(this.state.script).rooms[id] || ({ bridge: 'the Bridge', observation: 'the Observation Deck', navigation: 'Navigation', comms: 'Comms', medbay: 'the Medbay', galley: 'the Galley', reactor: 'the Reactor', engine: 'the Engine Room', hydroponics: 'Hydroponics', airlock: 'the Airlock', quarters: 'Crew Quarters', cargo: 'the Cargo Bay' })[id] || 'a room';
         const dud = e.works === false ? ' …but it was a dud!' : '';
         const text = {
           intercept: `🎧 ${name(e.a)} secretly listened in on ${ROOM(e.room)}.${dud}`,
@@ -424,7 +424,7 @@ export class Reveal {
     $('reveal-caption').textContent = '';
     const crewWon = s.winner === 'crew';
     clear(box,
-      el('h2', {}, crewWon ? '🛡️ The crew escapes the black hole!' : '🦑 The infiltrators win. No more space.'),
+      el('h2', {}, crewWon ? themeInfo(s.script).crewWinTitle : themeInfo(s.script).evilWinTitle),
       el('p', { className: 'hint' }, s.winReason),
       el('div', { className: 'summary-grid' }, ...[...this.cast.values()].map((c) => {
         const r = R[c.finalRole];

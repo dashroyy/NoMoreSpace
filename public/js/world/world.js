@@ -670,6 +670,11 @@ export class World {
   // The script this ship is playing (the Cosmic Carnival gets a circus ring on the bridge).
   setScript(id) {
     this.carnival.setActive(id === 'carnival');
+    if (this.space.script === (id || 'classic')) return;
+    this.space.script = id || 'classic';
+    this.backdrop.setScript(id);
+    this.ship.setHoloTheme(id === 'carnival');
+    this.space.last = -1; // repaint the windows now
   }
 
   // where the ears are: your spacesuit, the bridge table when seated, or the camera for spectators
