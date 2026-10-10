@@ -2,7 +2,7 @@
 // the windows. Everything is painted on canvases (no image files).
 import * as THREE from 'three';
 import { Doom } from './doom.js';
-import { cloudCanvas, CLOUD_TINTS, CLOUD_DARK, eyeCanvas, glowCanvas, grinFaceCanvas, grinGlowCanvases, planetCanvas, FACE, CAP_RADIUS } from './doom-art.js';
+import { cloudCanvas, CLOUD_TINTS, CLOUD_DARK, eyeCanvas, glowCanvas, lensCanvas, grinFaceCanvas, grinGlowCanvases, planetCanvas, FACE, CAP_RADIUS } from './doom-art.js';
 
 function seededRandom(seed) {
   return () => {
@@ -254,47 +254,33 @@ export function paintBloom(ctx, cx, cy, r, t) {
   ctx.restore();
 }
 
-// 🕳️ The black hole: a hot, swirling accretion disk that streaks as it orbits (the matter
-// close in orbits fastest), a bright lensed ring, jets, and sparks spiralling in.
+// 🕳️ The black hole: a tilted accretion disk of glowing gas that streaks as it orbits (the
+// matter close in orbits fastest), a halo where the far side of the disk is bent over the
+// top and under the bottom, a black horizon, and sparks spiralling in.
 export function paintBlackHole(ctx, cx, cy, r, t) {
   ctx.save();
-  const halo = ctx.createRadialGradient(cx, cy, r * 0.8, cx, cy, r * 4.2);
-  halo.addColorStop(0, 'rgba(255,150,70,0.4)');
-  halo.addColorStop(0.35, 'rgba(210,50,70,0.16)');
-  halo.addColorStop(1, 'rgba(0,0,0,0)');
-  ctx.fillStyle = halo;
-  ctx.fillRect(cx - r * 4.4, cy - r * 4.4, r * 8.8, r * 8.8);
-  const tilt = 0.3;
-  const rot = -0.16 + Math.sin(t * 0.07) * 0.04;
-  // a soft sheet of hot gas under the streaks, so the disk reads as one glowing thing
-  ctx.save();
-  ctx.translate(cx, cy);
-  ctx.rotate(rot);
-  ctx.scale(1, tilt);
-  const sheet = ctx.createRadialGradient(0, 0, r * 1.3, 0, 0, r * 4.9);
-  sheet.addColorStop(0, 'rgba(255,215,160,0.6)');
-  sheet.addColorStop(0.25, 'rgba(255,130,50,0.4)');
-  sheet.addColorStop(0.6, 'rgba(170,40,50,0.18)');
-  sheet.addColorStop(1, 'rgba(60,10,90,0)');
-  ctx.fillStyle = sheet;
-  ctx.beginPath();
-  ctx.arc(0, 0, r * 4.9, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.restore();
-  // the disk, as streaks that orbit at their own speed
+  const glow = ctx.createRadialGradient(cx, cy, r * 0.9, cx, cy, r * 4.4);
+  glow.addColorStop(0, 'rgba(255,120,50,0.28)');
+  glow.addColorStop(0.4, 'rgba(150,30,50,0.1)');
+  glow.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = glow;
+  ctx.fillRect(cx - r * 4.6, cy - r * 4.6, r * 9.2, r * 9.2);
+  const tilt = 0.36;
+  const rot = -0.14 + Math.sin(t * 0.07) * 0.04;
+  // streaks of gas, each orbiting at its own speed; hotter and brighter nearer the hole
   const streaks = (front) => {
     ctx.globalCompositeOperation = 'lighter';
-    for (let i = 0; i < 40; i++) {
-      const u = i / 39;
-      const rr = r * (1.45 + u * 3.3);
+    for (let i = 0; i < 46; i++) {
+      const u = i / 45;
+      const rr = r * (1.45 + u * 2.9);
       const w = 1.5 / Math.pow(rr / r, 1.5);
       const dash = rr * (0.5 + hashT(i) * 1.4);
-      ctx.setLineDash([dash, rr * (0.25 + hashT(i + 40) * 0.8)]);
+      ctx.setLineDash([dash, rr * (0.2 + hashT(i + 40) * 0.8)]);
       ctx.lineDashOffset = -t * w * rr * 2.2;
-      const g = Math.round(235 - u * 175);
-      const b = Math.round(185 - u * 175);
-      ctx.strokeStyle = `rgba(255,${g},${Math.max(10, b)},${0.7 - u * 0.5})`;
-      ctx.lineWidth = Math.max(1, r * 0.075 * (1 - u * 0.45));
+      const g = Math.round(240 - u * 150);
+      const b = Math.round(190 - u * 170);
+      ctx.strokeStyle = `rgba(255,${g},${Math.max(10, b)},${Math.pow(1 - u, 1.5) * 0.85 + 0.06})`;
+      ctx.lineWidth = Math.max(1, r * 0.07 * (1 - u * 0.5));
       ctx.beginPath();
       ctx.ellipse(cx, cy, rr, rr * tilt, rot, front ? 0 : Math.PI, front ? Math.PI : Math.PI * 2);
       ctx.stroke();
@@ -303,40 +289,10 @@ export function paintBlackHole(ctx, cx, cy, r, t) {
     ctx.globalCompositeOperation = 'source-over';
   };
   streaks(false);
-  // the far side of the disk, bent over the top and under the bottom by the hole's gravity
-  for (let i = 0; i < 7; i++) {
-    const rr = r * (1.25 + i * 0.16);
-    ctx.strokeStyle = `rgba(255,${190 - i * 14},${110 - i * 10},${0.55 - i * 0.06})`;
-    ctx.lineWidth = r * 0.07;
-    ctx.beginPath();
-    ctx.ellipse(cx, cy, rr, rr * 0.95, 0, Math.PI * 1.05, Math.PI * 1.95);
-    ctx.stroke();
-  }
-  // jets
-  const flick = 0.7 + 0.3 * Math.sin(t * 7);
-  for (const dir of [-1, 1]) {
-    const jet = ctx.createLinearGradient(cx, cy, cx, cy + dir * r * 5);
-    jet.addColorStop(0, `rgba(150,160,255,${0.16 * flick})`);
-    jet.addColorStop(0.5, `rgba(150,160,255,${0.05 * flick})`);
-    jet.addColorStop(1, 'rgba(150,160,255,0)');
-    ctx.fillStyle = jet;
-    ctx.beginPath();
-    ctx.moveTo(cx - r * 0.35, cy);
-    ctx.lineTo(cx + r * 0.35, cy);
-    ctx.lineTo(cx + r * 0.1, cy + dir * r * 5);
-    ctx.lineTo(cx - r * 0.1, cy + dir * r * 5);
-    ctx.closePath();
-    ctx.fill();
-  }
-  // the photon ring
-  ctx.strokeStyle = 'rgba(255,215,160,0.85)';
-  ctx.lineWidth = r * 0.12;
-  ctx.beginPath();
-  ctx.arc(cx, cy, r * 1.1, 0, Math.PI * 2);
-  ctx.stroke();
-  ctx.strokeStyle = 'rgba(255,250,240,0.95)';
-  ctx.lineWidth = r * 0.04;
-  ctx.stroke();
+  // the halo: the far side of the disk bent over the top and under the bottom, and the photon ring
+  ctx.globalCompositeOperation = 'lighter';
+  ctx.drawImage(lensCanvas(512), cx - r * 2.1, cy - r * 2.1, r * 4.2, r * 4.2);
+  ctx.globalCompositeOperation = 'source-over';
   // the hole itself
   ctx.fillStyle = '#000';
   ctx.beginPath();
@@ -346,7 +302,7 @@ export function paintBlackHole(ctx, cx, cy, r, t) {
   // sparks of matter spiralling in
   for (let i = 0; i < 34; i++) {
     const ph = (t * (0.07 + hashT(i) * 0.08) + i / 34) % 1;
-    const rr = r * (4.4 - ph * 3.3);
+    const rr = r * (3.8 - ph * 2.7);
     const a = i * 2.39 + (t * 1.5) / Math.pow(rr / r, 1.5);
     const x = cx + Math.cos(a) * rr;
     const y = cy + Math.sin(a) * rr * tilt;

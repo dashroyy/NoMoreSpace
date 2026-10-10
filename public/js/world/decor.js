@@ -158,19 +158,47 @@ function hazardTexture() {
   return tex;
 }
 
-// A pumpkin: a squashed sphere with ribs.
+// A pumpkin: a squashed sphere with soft ribs and a dimple where the stem goes.
+// shapePumpkin() is applied to the body and to the patch that carries the carved face,
+// so the face sits exactly on the skin.
+function shapePumpkin(v, scale = 1) {
+  const a = Math.atan2(v.z, v.x);
+  const rib = 1 - 0.05 * (0.5 + 0.5 * Math.cos(a * 10)) * (1 - v.y * v.y * 0.6); // ribs, strongest round the middle
+  const dip = v.y > 0.7 ? (v.y - 0.7) * 0.55 : 0; // the top sinks in round the stem
+  v.set(v.x * rib * scale, (v.y * 0.72 - dip * 0.72) * scale, v.z * rib * scale);
+}
+
 function pumpkinGeometry() {
-  const g = new THREE.SphereGeometry(1, 22, 14);
+  const g = new THREE.SphereGeometry(1, 36, 24);
   const pos = g.attributes.position;
   const v = new THREE.Vector3();
   for (let i = 0; i < pos.count; i++) {
     v.fromBufferAttribute(pos, i);
-    const a = Math.atan2(v.z, v.x);
-    const rib = 1 - 0.09 * (0.5 + 0.5 * Math.cos(a * 10));
-    pos.setXYZ(i, v.x * rib, v.y * 0.72, v.z * rib);
+    shapePumpkin(v);
+    pos.setXYZ(i, v.x, v.y, v.z);
   }
   g.computeVertexNormals();
   return g;
+}
+
+// the curved patch of skin on the front where the face is carved (the texture is mapped across it)
+function pumpkinFacePatch() {
+  const g = new THREE.SphereGeometry(1, 24, 14, Math.PI / 2 - 0.72, 1.44, Math.PI / 2 - 0.62, 1.04);
+  const pos = g.attributes.position;
+  const v = new THREE.Vector3();
+  for (let i = 0; i < pos.count; i++) {
+    v.fromBufferAttribute(pos, i);
+    shapePumpkin(v, 1.012);
+    pos.setXYZ(i, v.x, v.y, v.z);
+  }
+  g.computeVertexNormals();
+  return g;
+}
+
+// a curled stem
+function stemGeometry() {
+  const curve = new THREE.CatmullRomCurve3([new THREE.Vector3(0, 0, 0), new THREE.Vector3(0.02, 0.16, 0), new THREE.Vector3(0.09, 0.28, 0), new THREE.Vector3(0.2, 0.31, 0)]);
+  return new THREE.TubeGeometry(curve, 8, 0.085, 6, false);
 }
 
 // ---------------------------------------------------------------------------
@@ -193,13 +221,17 @@ export function buildDecor(ship) {
   const hazardMat = new THREE.MeshStandardMaterial({ map: hazardTexture(), roughness: 0.8 });
   const screenTex = dataScreenTexture();
   const screenMat = new THREE.MeshBasicMaterial({ map: screenTex, transparent: true, opacity: 0.92, side: THREE.DoubleSide });
-  const pumpkinMat = m(0xff7a1a, { roughness: 0.6, emissive: 0x401400, emissiveIntensity: 0.4 });
+  const pumpkinMat = m(0xff8a1f, { roughness: 0.5, emissive: 0x3a1600, emissiveIntensity: 0.35 });
+  const pumpkinMat2 = m(0xe8590c, { roughness: 0.55, emissive: 0x3a1000, emissiveIntensity: 0.4 }); // a deeper orange, for variety
   const stemMat = m(0x4a6b2a);
-  const faceMat = new THREE.MeshBasicMaterial({ map: pumpkinFaceTexture(), transparent: true, depthWrite: false });
+  const faceMat = new THREE.MeshBasicMaterial({ map: pumpkinFaceTexture(), transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
   const candleGlowMat = new THREE.MeshBasicMaterial({ map: glowTexture('rgba(255,160,40,0.55)', 'rgba(255,120,0,0)'), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending });
   const webMat = new THREE.MeshBasicMaterial({ map: cobwebTexture(), transparent: true, depthWrite: false, side: THREE.DoubleSide });
   const flagMats = [0xff7a1a, 0x7b3fe4, 0x15151c, 0x7fe33b].map((c) => new THREE.MeshStandardMaterial({ color: c, side: THREE.DoubleSide, roughness: 0.8 }));
   const pumpkinGeo = pumpkinGeometry();
+  const faceGeo = pumpkinFacePatch();
+  const stemGeo = stemGeometry();
+  const vary = seeded(4242); // (its own random stream, so the rest of the decor stays where it was)
 
   const bulbs = []; // fairy lights
   const leds = []; // blinking panel lights
@@ -244,10 +276,11 @@ export function buildDecor(ship) {
     const g = new THREE.Group();
     g.position.set(x, y, z);
     g.rotation.y = (rnd() - 0.5) * 0.6;
-    add(g, pumpkinGeo, pumpkinMat, 0, size * 0.7, 0, null, [size, size, size]);
-    add(g, new THREE.CylinderGeometry(size * 0.08, size * 0.12, size * 0.35, 6), stemMat, 0, size * 1.38, 0, [0.2, 0, 0.15]);
+    add(g, pumpkinGeo, vary() < 0.5 ? pumpkinMat : pumpkinMat2, 0, size * 0.72, 0, null, [size, size, size]);
+    add(g, stemGeo, stemMat, 0, size * 0.72 + size * 0.66, 0, [0, vary() * Math.PI * 2, 0], [size, size, size]);
     if (face) {
-      add(g, new THREE.PlaneGeometry(size * 1.5, size * 0.95), faceMat, 0, size * 0.8, size * 1.02, [-0.6, 0, 0]);
+      // the carved face is a curved patch of the skin, lit from the inside by a candle
+      add(g, faceGeo, faceMat, 0, size * 0.72, 0, null, [size, size, size]);
       add(g, new THREE.PlaneGeometry(size * 5, size * 5), candleGlowMat, 0, 0.02, size * 0.9, [-Math.PI / 2, 0, 0]);
     }
     ship.add(g);

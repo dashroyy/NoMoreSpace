@@ -94,6 +94,52 @@ export function ringCanvas(size = 512, color = '255,205,140') {
   });
 }
 
+// The black hole's halo: the far side of the disk, bent by gravity over the top and under
+// the bottom of the hole, brightest there and on the side moving towards us, with a thin
+// white photon ring right against the horizon. The hole's radius is 0.5 / 2.1 of the canvas.
+export function lensCanvas(size = 512) {
+  return cached(`lens|${size}`, () => {
+    const c = makeCanvas(size);
+    const g = c.getContext('2d');
+    const img = g.createImageData(size, size);
+    const m = size / 2;
+    // colour and opacity along the radius (1 = the edge of the canvas)
+    const stops = [
+      [0.46, 255, 245, 220, 0],
+      [0.484, 255, 248, 230, 1],
+      [0.535, 255, 215, 140, 0.95],
+      [0.64, 255, 150, 60, 0.55],
+      [0.8, 190, 60, 40, 0.18],
+      [0.95, 80, 10, 60, 0],
+    ];
+    for (let y = 0; y < size; y++) {
+      for (let x = 0; x < size; x++) {
+        const dx = (x - m) / m;
+        const dy = (y - m) / m;
+        const rn = Math.hypot(dx, dy) / 1;
+        if (rn < stops[0][0] || rn > stops[stops.length - 1][0]) continue;
+        let k = 1;
+        while (k < stops.length - 1 && rn > stops[k][0]) k++;
+        const lo = stops[k - 1];
+        const hi = stops[k];
+        const u = (rn - lo[0]) / (hi[0] - lo[0]);
+        const ang = Math.atan2(dy, dx);
+        // brighter above and below than at the sides, and brighter on the left (towards us)
+        const vertical = Math.abs(Math.sin(ang));
+        const left = 0.5 - 0.5 * Math.cos(ang);
+        const bright = Math.min(1, 0.22 + 0.55 * vertical + 0.23 * left * (0.4 + vertical));
+        const i = (y * size + x) * 4;
+        img.data[i] = lo[1] + (hi[1] - lo[1]) * u;
+        img.data[i + 1] = lo[2] + (hi[2] - lo[2]) * u;
+        img.data[i + 2] = lo[3] + (hi[3] - lo[3]) * u;
+        img.data[i + 3] = (lo[4] + (hi[4] - lo[4]) * u) * bright * 255;
+      }
+    }
+    g.putImageData(img, 0, 0);
+    return c;
+  });
+}
+
 // ---------- gas clouds (the Bloom) ----------
 // A cloud with a transparent edge. tint is [r, g, b] (0-255). Styles:
 //   'haze'  a soft, wispy glow

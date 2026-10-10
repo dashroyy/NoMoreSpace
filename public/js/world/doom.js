@@ -10,7 +10,7 @@
 // the one for the current script is shown. Everything is unlit (it glows), so the ship's
 // lights do not change how it looks. Pieces animate in update(); flash() kicks them.
 import * as THREE from 'three';
-import { cloudCanvas, CLOUD_TINTS, CLOUD_DARK, eyeCanvas, glowCanvas, ringCanvas, grinFaceCanvas, grinGlowCanvases, planetCanvas, FACE, CAP_RADIUS } from './doom-art.js';
+import { cloudCanvas, CLOUD_TINTS, CLOUD_DARK, eyeCanvas, glowCanvas, lensCanvas, grinFaceCanvas, grinGlowCanvases, planetCanvas, FACE, CAP_RADIUS } from './doom-art.js';
 
 const tex = (canvas) => {
   const t = new THREE.CanvasTexture(canvas);
@@ -55,7 +55,7 @@ float layer(float ang, float r, float spin) {
   float a2 = ang - spin;
   vec2 q = vec2(cos(a2), sin(a2)) * r;
   float n = fbm(q * 1.5 + 3.0);
-  float streak = fbm(vec2(a2 * 2.0 + 1.7, r * 3.2));
+  float streak = fbm(vec2(cos(a2) * 1.5 + r * 3.2, sin(a2) * 1.5 + 1.7)); // (periodic in the angle, so there is no seam)
   float hot = pow(streak, 2.0) * 2.2;
   // two bright spiral arms through the turbulence
   float arms = pow(0.5 + 0.5 * sin(2.0 * a2 - r * 2.6), 3.0);
@@ -76,7 +76,8 @@ void main() {
   float w1 = 1.0 - abs(2.0 * p1 - 1.0);
   float k = T * 1.5 / pow(r, 1.5);
   float dens = w0 * layer(ang, r, p0 * k) + w1 * layer(ang, r, p1 * k);
-  vec3 hot = vec3(1.0, 0.82, 0.55);
+  dens = pow(clamp(dens, 0.0, 1.6), 1.45); // more contrast: bright gas and dark gaps
+  vec3 hot = vec3(1.0, 0.9, 0.62);
   vec3 orange = vec3(1.0, 0.45, 0.1);
   vec3 red = vec3(0.55, 0.05, 0.04);
   vec3 violet = vec3(0.2, 0.03, 0.3);
@@ -85,9 +86,9 @@ void main() {
   col = mix(col, violet, smoothstep(0.5, 1.0, t));
   // the side of the disk moving towards us is brighter
   float doppler = 0.35 + 1.2 * max(0.0, cos(ang - 0.7));
-  float inner = pow(1.0 - t, 2.0);
-  float alpha = dens * (0.18 + inner * 1.5) * doppler;
-  alpha *= smoothstep(0.0, 0.05, t) * (1.0 - smoothstep(0.6, 1.0, t));
+  float inner = pow(1.0 - t, 2.6);
+  float alpha = dens * (0.1 + inner * 2.1) * doppler;
+  alpha *= smoothstep(0.0, 0.03, t) * (1.0 - smoothstep(0.4, 0.95, t));
   alpha *= 0.7 + uHeat * 0.6 + uFlare * 1.2;
   gl_FragColor = vec4(col, clamp(alpha, 0.0, 1.0));
 }`;
@@ -97,7 +98,7 @@ class BlackHole3D {
     this.group = new THREE.Group();
     this.group.visible = false;
     this.tilt = new THREE.Group();
-    this.tilt.rotation.x = 0.22; // nearly face-on: the disk must stay below the ship however big it gets
+    this.tilt.rotation.x = 0.5; // tilted, so the near side of the disk crosses in front of the hole (the Doom sits low enough that it never reaches the ship)
     this.group.add(this.tilt);
     this.flare = 0;
     this.heat = 0;
@@ -107,7 +108,7 @@ class BlackHole3D {
       vertexShader: DISK_VERT, fragmentShader: DISK_FRAG, side: THREE.DoubleSide, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
       uniforms: { uTime: { value: 0 }, uHeat: { value: 0 }, uFlare: { value: 0 } },
     });
-    const disk = new THREE.Mesh(new THREE.RingGeometry(1.45, 4.8, 180, 14), this.diskMat);
+    const disk = new THREE.Mesh(new THREE.RingGeometry(1.45, 4.4, 180, 14), this.diskMat);
     disk.rotation.x = -Math.PI / 2;
     this.tilt.add(disk);
 
@@ -130,10 +131,10 @@ class BlackHole3D {
     this.tilt.add(this.points);
 
     // the photon ring, a glow and a wide dark halo, always facing the camera
-    this.ring = new THREE.Sprite(additive(tex(ringCanvas(512)), 0xffffff, 1));
-    this.ring.scale.setScalar(3.6);
+    this.ring = new THREE.Sprite(additive(tex(lensCanvas(512)), 0xffffff, 1));
+    this.ring.scale.setScalar(4.2);
     this.group.add(this.ring);
-    this.glow = new THREE.Sprite(additive(tex(glowCanvas('rgba(255,150,70,0.8)', 'rgba(210,50,70,0.25)', 256)), 0xffffff, 0.85));
+    this.glow = new THREE.Sprite(additive(tex(glowCanvas('rgba(255,120,50,0.5)', 'rgba(150,30,50,0.2)', 256)), 0xffffff, 0.5));
     this.glow.scale.setScalar(6);
     this.group.add(this.glow);
   }
@@ -159,9 +160,9 @@ class BlackHole3D {
     this.diskMat.uniforms.uFlare.value = this.flare;
     this.tilt.rotation.z = Math.sin(t * 0.07) * 0.12; // the axis precesses, slowly
     const pulse = 1 + Math.sin(t * 1.3) * 0.03 + this.flare * 0.15;
-    this.ring.scale.setScalar(3.6 * pulse);
+    this.ring.scale.setScalar(4.2 * pulse);
     this.ring.material.opacity = 0.85 + this.flare * 0.15;
-    this.glow.material.opacity = 0.3 + this.heat * 0.3 + this.flare * 0.3;
+    this.glow.material.opacity = 0.18 + this.heat * 0.22 + this.flare * 0.3;
     // infalling matter
     this.points.material.size = 0.09 * k;
     const speed = 0.6 + this.heat * 0.9;
@@ -537,7 +538,9 @@ export class Doom {
     const flat = this.script === 'outbreak'; // the Bloom is a flat cloud; the others are round
     this.k = flat ? 37 + p * 153 : 30 + p * 170;
     this.group.scale.setScalar(this.k);
-    this.group.position.y = -105 - this.k * (flat ? 0.45 : 1.0);
+    // the Bloom is flat, the Grin is a ball, and the black hole's tilted disk reaches up the highest
+    const lift = flat ? 0.45 : this.script === 'classic' ? 1.9 : 1.0;
+    this.group.position.y = -105 - this.k * lift;
     this.parts[this.script].setProgress(p);
   }
 
