@@ -12,7 +12,7 @@ const CAPTIONS = {
   shot: '🔫 Plasma shot', zap: '⚡ Electric zap', creak: '🛠️ The hull creaks', whisper: '👂 Whispers in the vents', cackle: '🎃 A pumpkin cackles',
   thud: '📦 Something crashes down', dawn: '🌅 Dawn chime', night: '🌙 Night falls', task: '✅ Task complete', warn: '⏳ Warning bell: 10 seconds',
   count: '⏱️ Tick', drumroll: '🥁 Drumroll', trombone: '🎺 Sad trombone', airhorn: '📯 Air horn', crickets: '🦗 Crickets', kazoo: '🎶 Kazoo',
-  gasp: '😮 A gasp', doom: '🕳️ A deep rumble', fanfare: '🎺 Fanfare', groove: '🎵 Funky bassline', bubbles: '🫧 Bubbles', join: '🔔 Someone boarded',
+  gasp: '😮 A gasp', knock: '🚪 Knock knock', doom: '🕳️ A deep rumble', fanfare: '🎺 Fanfare', groove: '🎵 Funky bassline', bubbles: '🫧 Bubbles', join: '🔔 Someone boarded',
   leave: '🔔 Someone left', claim: '📯 Someone claimed a role', dread: '😨 You have been nominated', ghost: '👻 A ghostly wail', ping: '🔔 You were mentioned',
   pause: '⏸️ Game paused', resume: '▶️ Game resumed', whoosh: '💨 Whoosh', blip: '📟 Blip',
 };

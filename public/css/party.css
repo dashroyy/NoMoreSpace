@@ -275,3 +275,12 @@ input[type='range'] { flex: 1; padding: 0; height: 22px; accent-color: var(--amb
 .night-footer button.on { border-color: var(--good); }
 .night-footer .hint { text-align: center; }
 @media (max-width: 560px) { .night-footer button { min-width: 0; width: 100%; } }
+
+/* ---------- Doors: lock the room you are talking in, knock, let people in ---------- */
+.action.door { --edge: var(--amber); border-color: rgba(255, 181, 71, 0.55); }
+.action.door.dim { opacity: 0.7; }
+.door-card { position: absolute; right: 10px; bottom: 150px; z-index: 8; padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; max-width: 340px; border-color: rgba(255, 181, 71, 0.6); box-shadow: 0 0 22px rgba(255, 181, 71, 0.3); }
+.door-card[hidden] { display: none; }
+.knock-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; }
+.knock-row > span { flex: 1 1 100%; }
+@media (max-width: 820px) { .door-card { bottom: 130px; right: 6px; } }

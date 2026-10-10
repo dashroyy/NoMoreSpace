@@ -35,7 +35,7 @@ export function liveSystems(state = store.state) {
   return {
     disguise: Object.fromEntries((s.disguises || []).filter((d) => d.until > now).map((d) => [d.id, d.as])),
     blackout: (s.blackoutUntil || 0) > now,
-    lockdowns: (s.lockdowns || []).filter((l) => l.until > now).map(({ room, allowed }) => ({ room, allowed })),
+    lockdowns: (s.lockdowns || []).filter((l) => l.until > now).map(({ room, allowed, until, private: isPrivate }) => ({ room, allowed, until, private: !!isPrivate })),
   };
 }
 

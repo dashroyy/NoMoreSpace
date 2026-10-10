@@ -88,6 +88,6 @@ export function openSettings(moods) {
     })),
     el('h3', {}, 'Help'),
     row('💡 Tips for new players', 'Show the first-game tips again.', el('button', { className: 'small', onclick: () => { resetCoach(); toast('💡 Tips will show again.'); } }, 'Show tips again')),
-    el('p', { className: 'hint' }, 'Keys: 1–9 for quick emotes, Q for the emote menu, Tab for the map, R role card, M rooms, Enter chat.'),
+    el('p', { className: 'hint' }, 'Keys: 1–9 for quick emotes, Q for the emote menu, Tab for the map, K to lock or knock on a door, R role card, M rooms, Enter chat.'),
   ));
 }

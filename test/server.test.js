@@ -228,6 +228,70 @@ test('ship systems over the network: intercepts, spoofs, disguises and lockdowns
   assert.ok(!again.ok);
 });
 
+test('locking a room for a private chat: intruders are kept out, knocks reach the people inside, and the door opens from inside', async () => {
+  const { host, players, room } = await makeShip(4);
+  assert.ok((await call(host, 'start')).ok);
+  room.game.resolveNight(Date.now());
+  room.game.applyDraft(Date.now());
+  room.game.beginRoam(Date.now());
+  const [a, b, c, d] = players;
+  const id = (x) => latest(x).you.id;
+  a.emit('pos', { x: 24, z: 0, r: 0, m: 0, room: 'galley' });
+  b.emit('pos', { x: 27, z: 1, r: 0, m: 0, room: 'galley' });
+  c.emit('pos', { x: 26, z: -12, r: 0, m: 0, room: 'corridor' });
+  d.emit('pos', { x: -26, z: 0, r: 0, m: 0, room: 'medbay' });
+  await waitFor(() => Object.keys(room.positions).length === 4);
+
+  // you can't lock a door from the corridor, or alone
+  assert.ok(!(await call(c, 'lock')).ok);
+  assert.ok(!(await call(d, 'lock')).ok);
+  // two people in the galley can
+  const noticeB = new Promise((r) => b.once('door', r));
+  assert.ok((await call(a, 'lock')).ok);
+  assert.strictEqual((await noticeB).kind, 'locked');
+  await waitFor(() => latest(c).systems.lockdowns.some((l) => l.room === 'galley' && l.private));
+
+  // the intruder walks to the door and tries to step in: the server still files them in the corridor
+  c.emit('pos', { x: 26, z: -7, r: 0, m: 1, room: 'galley' });
+  await waitFor(() => room.positions[id(c)]?.z === -7);
+  assert.strictEqual(room.positions[id(c)].room, 'corridor');
+  // and neither side hears the other
+  await call(a, 'chat', { text: 'what I tell you stays here' });
+  await waitFor(() => b.chats.some((m) => m.text === 'what I tell you stays here'));
+  await wait(150);
+  assert.ok(!c.chats.some((m) => m.text === 'what I tell you stays here'));
+  await call(c, 'chat', { text: 'can anybody hear me?' });
+  await wait(200);
+  assert.ok(!b.chats.some((m) => m.text === 'can anybody hear me?'));
+
+  // knocking: only near the door, and the people inside are told
+  assert.ok(!(await call(d, 'knock', { room: 'galley' })).ok, 'too far away');
+  const knockHeard = new Promise((r) => a.once('door', r));
+  assert.ok((await call(c, 'knock', { room: 'galley' })).ok);
+  const knock = await knockHeard;
+  assert.strictEqual(knock.kind, 'knock');
+  assert.strictEqual(knock.from, id(c));
+  assert.ok(!(await call(c, 'knock', { room: 'galley' })).ok, 'no knocking twice in a row');
+
+  // let in: now they can enter, hear and be heard
+  assert.ok(!(await call(c, 'let-in', { id: id(c) })).ok, 'you cannot let yourself in');
+  const opened = new Promise((r) => c.once('door', r));
+  assert.ok((await call(b, 'let-in', { id: id(c) })).ok);
+  assert.strictEqual((await opened).kind, 'opened');
+  c.emit('pos', { x: 25, z: -5, r: 0, m: 1, room: 'galley' });
+  await waitFor(() => room.positions[id(c)]?.room === 'galley');
+  await wait(650); // (chat has a short cooldown)
+  assert.ok((await call(a, 'chat', { text: 'welcome, come in' })).ok);
+  await waitFor(() => c.chats.some((m) => m.text === 'welcome, come in'));
+
+  // anyone inside can unlock, and then strangers get in
+  assert.ok(!(await call(d, 'unlock')).ok, 'only people inside');
+  assert.ok((await call(b, 'unlock')).ok);
+  await waitFor(() => !latest(d).systems.lockdowns.some((l) => l.room === 'galley'));
+  d.emit('pos', { x: 28, z: 3, r: 0, m: 1, room: 'galley' });
+  await waitFor(() => room.positions[id(d)]?.room === 'galley');
+});
+
 test('whisper requests beam both players into an empty room; claims, bug reports and stats work', async () => {
   const { host, players, room } = await makeShip(5);
   assert.ok((await call(host, 'start')).ok);

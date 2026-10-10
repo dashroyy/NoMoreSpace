@@ -23,7 +23,7 @@ export function initSocial(w) {
     sfx('whoosh');
     const where = ROOMS.find((r) => r.id === room)?.name || 'a quiet room';
     systemLine(`💬 Beamed to ${where} for a private chat with ${name}.`);
-    toast(`💬 Private chat with ${name} in ${where}`, 'info', 5000);
+    toast(`💬 Private chat with ${name} in ${where}. Press K to lock the door.`, 'info', 6000);
   });
   $('btn-claim').addEventListener('click', () => toggleClaim());
 }

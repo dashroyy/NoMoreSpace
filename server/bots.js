@@ -195,8 +195,12 @@ function walk(room, g, p, b, now, dt) {
   const pos = room.positions[p.id] || { x: 0, z: 7, r: 0, m: 0, room: 'bridge' };
   if (g.phase === 'roam' && (!b.room || now > b.roomUntil)) {
     // beam to another room, like players do with the teleporter
-    const ids = Object.keys(ROOM_RECTS);
-    b.room = pick(ids);
+    // (not into a room that is locked against them)
+    const ids = Object.keys(ROOM_RECTS).filter((r) => {
+      const lock = g.activeLockdown(r, now);
+      return !lock || lock.allowed.includes(p.id);
+    });
+    b.room = ids.length ? pick(ids) : 'bridge';
     b.roomUntil = now + 15_000 + Math.random() * 25_000;
     const spot = inside(ROOM_RECTS[b.room]);
     Object.assign(pos, spot, { room: b.room });

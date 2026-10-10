@@ -27,6 +27,7 @@ import { openWiki } from './ui/wiki.js';
 import { initSettings } from './ui/settings.js';
 import { initSession, renderSession } from './ui/session.js';
 import { initCaptions } from './ui/captions.js';
+import { initDoors } from './ui/doors.js';
 import { openProfile } from './ui/profile.js';
 import { openPublicShips } from './ui/publicships.js';
 import { recordKick } from './progress.js';
@@ -62,6 +63,7 @@ async function boot() {
     onSendPos: (p) => socket.emit('pos', p),
     onNearTask: (taskId) => setUsePrompt(taskId ? store.data.tasks[taskId].name : null),
     onStep: () => sfx('step'),
+    onBlocked: (roomId, lock) => toast(lock?.private ? '🔒 That room is locked: people are talking in private. Press K to knock.' : '🔐 That room is sealed.', 'info', 4500),
     onDuckBump: () => {
       sfx('pop');
       const unlocked = recordKick();
@@ -105,6 +107,7 @@ async function boot() {
   initSettings({ moods: MOODS });
   initSession();
   initCaptions();
+  initDoors(world);
   for (const id of ['home-profile', 'lobby-profile']) $(id).addEventListener('click', () => openProfile());
   $('home-public').addEventListener('click', () => openPublicShips({ look: savedLook }));
   for (const id of ['home-wiki', 'lobby-wiki', 'btn-wiki']) $(id).addEventListener('click', () => openWiki());
@@ -391,6 +394,7 @@ function announceChanges(state, prev, world) {
     phaseBanner('🌑 BLACKOUT', 'The lights are out. Who is who?', 4000);
   }
   for (const l of sys.lockdowns || []) {
+    if (l.private) continue; // private locks tell the people inside (doors.js), not the whole ship
     if (!(was.lockdowns || []).some((b) => b.room === l.room && b.until === l.until)) {
       sfx('lock');
       toast(`🔐 ${ROOMS.find((r) => r.id === l.room)?.name || 'A room'} has gone into lockdown!`, 'info', 6000);

@@ -646,6 +646,10 @@ const SOUNDS = {
   },
   vote: () => tick(now(), { vol: 0.07, bus: sfxBus }),
   lock: () => bell(69, now(), { vol: 0.08, decay: 0.5, index: 1 }),
+  knock: () => [0, 0.13, 0.5, 0.63].forEach((d) => {
+    tone({ freq: 120, slide: 70, dur: 0.09, vol: 0.2, type: 'triangle', delay: d });
+    noise({ dur: 0.05, vol: 0.1, freq: 700, q: 2, delay: d });
+  }),
   hand: () => {
     bell(74, now(), { vol: 0.06, decay: 0.5 });
     bell(81, now() + 0.07, { vol: 0.06, decay: 0.7 });

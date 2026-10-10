@@ -253,12 +253,19 @@ function ghosts() {
 
 function controls() {
   const keys = [
-    ['W A S D', 'move (or the joystick on phones)'], ['M', 'rooms: teleport'], ['Tab', 'full station map'], ['E', 'use a task console'], ['R', 'role card & notebook'],
+    ['W A S D', 'move (or the joystick on phones)'], ['M', 'rooms: teleport'], ['K', 'lock the room you are in / knock on a locked door'], ['Tab', 'full station map'], ['E', 'use a task console'], ['R', 'role card & notebook'],
     ['C', 'claim a role'], ['X', 'your ship system'], ['Q', 'emotes (try the 🐶 Scooby and 🤿 Scuba dances!)'], ['Y / N', 'vote yes / no'],
     ['Enter', 'chat'], ['@name + Tab', 'mention a player'], ['Mouse wheel', 'zoom'],
   ];
   return el('div', {},
     el('div', { className: 'wiki-keys' }, ...keys.map(([k, what]) => el('div', { className: 'wiki-key' }, ...k.split(' / ').map((x, i) => [i ? ' / ' : '', el('kbd', {}, x)]).flat(), el('span', {}, what)))),
+    el('h3', {}, '🔒 Private chats'),
+    el('ul', { className: 'tips' },
+      el('li', {}, 'Talking with someone in a room? Press ', el('kbd', {}, 'K'), ' (or the 🔒 button) to lock the door. Nobody else can walk in, and nobody outside can hear you. You need someone in the room with you.'),
+      el('li', {}, 'A lock lasts up to 90 seconds. Anyone inside can unlock it (K again). It also opens by itself if people leave, and the bridge cannot be locked.'),
+      el('li', {}, 'Locked out? Walk up to the door and press ', el('kbd', {}, 'K'), ' to knock. Whoever is inside gets a button to let you in.'),
+      el('li', {}, 'A locked room glows amber and says 🔒 LOCKED. (A Comms Officer\'s intercept can still listen in on one.)'),
+    ),
     el('h3', {}, 'Top bar'),
     el('ul', { className: 'tips' },
       el('li', {}, '🗣️ Read aloud: ARIA reads the stories (and, if you like, the chat) out loud.'),

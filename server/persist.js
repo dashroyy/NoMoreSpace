@@ -49,7 +49,7 @@ function deserialize(text, now = Date.now()) {
     if (g.chapter) g.chapter = [...g.history].reverse().find((h) => h.k === 'night' || h.k === 'day') || null;
     // short-lived effects simply end
     g.shipEvent = null;
-    g.systems = { intercepts: [], lockdowns: [], disguises: {}, blackoutUntil: 0 };
+    g.resetSystems();
     g.activeFloor = now;
     g.afk = new Set();
     for (const p of g.players) {

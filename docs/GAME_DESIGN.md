@@ -159,7 +159,7 @@ Players with an ability choose targets on their screen. If they don't choose in 
 | Part | What happens | Default length |
 |---|---|---|
 | **Dawn** | The Captain's (or ARIA's) story of the night appears in a **cloud bubble** (it stays up for most of the dawn), with the "Previously on…" recap; deaths play their **death animations** at the bridge table. A **Ready for the day** button lets everyone skip ahead once they have read it | ~24 s + 6 s per death |
-| **Explore** | Walk the ship. **Proximity chat** (text and voice): only players in the same room (or within a few steps; in corridors only distance counts) hear you, which recreates BotC's private conversations. Press **M** / tap **🚀 Rooms** (or click a room on the map) to **teleport** into any room; the list shows who is in each room, and a line above the chat says exactly who can hear you. Do **tasks**, look for **clues**, find the **drawings** | 25 s per living player (+90 s on day 1) |
+| **Explore** | Walk the ship. **Proximity chat** (text and voice): only players in the same room (or within a few steps; in corridors only distance counts) hear you, which recreates BotC's private conversations. Press **M** / tap **🚀 Rooms** (or click a room on the map) to **teleport** into any room (rooms locked for a private chat show 🔒 and can be knocked on); the list shows who is in each room, and a line above the chat says exactly who can hear you. Do **tasks**, look for **clues**, find the **drawings** | 25 s per living player (+90 s on day 1) |
 | **Emergency meeting** | Everyone's pulled back to their seats on the bridge. Open discussion | 12 s per living player |
 | **Nominations** | Press **☝️ Nominate** (or click a seat) and pick a player. The **nominator accuses (20 s)**, the **nominee defends (20 s)**, then **everyone votes at once (15 s)**, and the **vote clock** sweeps round the table revealing each vote | 30 s per living player |
 | **Dusk** | The player "on the block" is **airlocked** | ~9 s |
@@ -362,6 +362,17 @@ The host can tick **📢 Open to the public** in the docking bay. The ship then 
 
 ### 🔮 Who dies tonight?
 At night everyone (alive or dead) can guess who the Parasite will strike, or that nobody will die. A right guess is a point on the season scoreboard, and the best guesser wins **🔮 Clairvoyant**. Everyone sees the same card, so it gives nothing away; the Parasite can guess too, but its guesses never count.
+
+### 🔒 Locking a room for a private chat
+Anyone alive can press **K** (or the 🔒 button) while standing in a room with at least one other person to **lock the door**. Nobody else can walk in or teleport in, a glowing amber field and a **🔒 LOCKED** sign mark the room, and the room keeps sound in and out: text chat and voice chat from outside the door can't be heard, and people inside can't be heard outside. It ends when:
+- anyone inside presses K again (or after **90 seconds**), or
+- fewer than two of the people it was locked around are still inside (after a 6-second grace).
+
+After a lock ends, the person who made it must wait **45 seconds** before locking again, a player can hold only one lock, and at most **3 doors** can be locked on the ship at once. The **bridge can't be locked** (everyone needs it for meetings). Locks end when exploring ends.
+
+**Knocking:** standing near a locked door (within about 9 m) shows a **🚪 Knock** button. The people inside get a card saying who is knocking, with **Let in** and **Ignore**. Letting someone in adds them to the lock: they can walk in, hear and be heard. Robots stay out of rooms locked against them.
+
+How it relates to the Security Chief's 🔐 **Lockdown** (a once-per-game role ability): both keep people out and sound in, but a Security Chief's lockdown also blocks the **Comms Officer's intercept**, works with only one person inside, can't be opened from within, and shows a red force field. An ordinary private lock does **not** stop an intercept.
 
 ### 🗺️ The full map
 Press **Tab** (or ⛶ on the minimap; on phones it's a button in the corner) for a big station map with room names, everyone's position and name, and your tasks. Click a room to teleport there, exactly like the minimap. Tab or Esc closes it.

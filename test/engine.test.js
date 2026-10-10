@@ -574,6 +574,89 @@ test('when every connected player is ready, the day moves on early', () => {
   assert.throws(() => g.setReady(p[0].id, true), /Nothing to hurry/);
 });
 
+test('private door locks: who can lock, how long it lasts, letting people in, and when it opens itself', () => {
+  const { g, p } = setup(['parasite', 'hacker', 'engineer', 'comms', 'scanner', 'medic', 'marine']);
+  playNight(g, {});
+  g.applyDraft(2000);
+  g.beginRoam(2000);
+  const [a, b, c, d, e] = p;
+  const T = 10_000;
+  // rules for locking
+  assert.throws(() => g.lockRoom(a.id, { here: 'galley', occupants: [a.id] }, T), /private chats/, 'alone in a room: nothing to lock');
+  assert.throws(() => g.lockRoom(a.id, { here: 'bridge', occupants: [a.id, b.id] }, T), /bridge/);
+  assert.throws(() => g.lockRoom(a.id, { here: 'corridor', occupants: [a.id, b.id] }, T), /inside a room/);
+  assert.throws(() => g.lockRoom('nobody', { here: 'galley', occupants: [] }, T), /Only players/);
+  const lock = g.lockRoom(a.id, { here: 'galley', occupants: [a.id, b.id] }, T);
+  assert.deepStrictEqual(lock.allowed.sort(), [a.id, b.id].sort());
+  assert.strictEqual(lock.until, T + 90_000, 'a lock lasts 90 seconds');
+  assert.ok(g.activeLockdown('galley', T + 1), 'it seals the room (movement and sound)');
+  assert.throws(() => g.lockRoom(b.id, { here: 'galley', occupants: [a.id, b.id] }, T + 1), /already locked/);
+  assert.throws(() => g.lockRoom(a.id, { here: 'medbay', occupants: [a.id, c.id] }, T + 1), /already locked a door/, 'one door each');
+  // what everyone sees
+  const view = g.systemsView(T + 1).lockdowns.find((l) => l.room === 'galley');
+  assert.ok(view.private && view.allowed.includes(a.id));
+  // a Comms Officer's intercept still hears a privately locked room, but not a Security Chief lockdown
+  g.systems.intercepts.push({ by: d.id, room: 'galley', until: T + 60_000, works: true });
+  assert.deepStrictEqual(g.listeners('galley', T + 1), [d.id]);
+
+  // knocking and letting in
+  assert.throws(() => g.knock(a.id, 'galley', T + 2), /allowed in already/);
+  assert.throws(() => g.knock(c.id, 'medbay', T + 2), /not locked/);
+  assert.strictEqual(g.knock(c.id, 'galley', T + 2).room, 'galley');
+  assert.throws(() => g.knock(c.id, 'galley', T + 3), /just knocked/);
+  assert.strictEqual(g.knock(c.id, 'galley', T + 9000).room, 'galley', 'knock again after a few seconds');
+  assert.throws(() => g.admit(e.id, c.id, { here: 'galley' }, T + 10), /Only the people inside/);
+  assert.ok(g.admit(b.id, c.id, { here: 'galley' }, T + 10).allowed.includes(c.id));
+
+  // only people inside can unlock; then the locker waits before locking again
+  assert.throws(() => g.unlockRoom(e.id, { here: 'galley' }, T + 20), /Only the people inside/);
+  g.unlockRoom(b.id, { here: 'galley' }, T + 20);
+  assert.strictEqual(g.activeLockdown('galley', T + 21), null);
+  assert.throws(() => g.lockRoom(a.id, { here: 'galley', occupants: [a.id, b.id] }, T + 30), /recharging/);
+  assert.ok(g.lockRoom(a.id, { here: 'galley', occupants: [a.id, b.id] }, T + 20 + 45_000), 'after the cooldown');
+
+  // at most three doors at a time
+  const x = setup(['parasite', 'hacker', 'engineer', 'comms', 'scanner', 'medic', 'marine', 'droid']);
+  playNight(x.g, {});
+  x.g.applyDraft(2000);
+  x.g.beginRoam(2000);
+  const q = x.p;
+  x.g.lockRoom(q[0].id, { here: 'galley', occupants: [q[0].id, q[1].id] }, T);
+  x.g.lockRoom(q[2].id, { here: 'medbay', occupants: [q[2].id, q[3].id] }, T);
+  x.g.lockRoom(q[4].id, { here: 'comms', occupants: [q[4].id, q[5].id] }, T);
+  assert.throws(() => x.g.lockRoom(q[6].id, { here: 'hydroponics', occupants: [q[6].id, q[7].id] }, T), /Too many doors/);
+
+  // time runs out, or the room empties
+  const inRoom = { galley: [a.id, b.id], medbay: [c.id] };
+  const here = (r) => inRoom[r] || [];
+  const y = setup(['parasite', 'hacker', 'engineer', 'comms', 'scanner', 'medic', 'marine']);
+  playNight(y.g, {});
+  y.g.applyDraft(2000);
+  y.g.beginRoam(2000);
+  const yl = y.g.lockRoom(y.p[0].id, { here: 'galley', occupants: [y.p[0].id, y.p[1].id] }, T);
+  const yh = (r) => (r === 'galley' ? [y.p[0].id, y.p[1].id] : []);
+  assert.deepStrictEqual(y.g.sweepLocks(yh, T + 1000), [], 'both still inside');
+  assert.deepStrictEqual(y.g.sweepLocks(() => [y.p[0].id], T + 2000), [], 'one left: a grace period');
+  assert.deepStrictEqual(y.g.sweepLocks(() => [y.p[0].id], T + 4000), []);
+  const ended = y.g.sweepLocks(() => [y.p[0].id], T + 9000);
+  assert.strictEqual(ended.length, 1);
+  assert.strictEqual(ended[0].ended, 'empty');
+  assert.strictEqual(y.g.activeLockdown('galley', T + 9001), null, 'the room opens up');
+  const z = setup(['parasite', 'hacker', 'engineer', 'comms', 'scanner', 'medic', 'marine']);
+  playNight(z.g, {});
+  z.g.applyDraft(2000);
+  z.g.beginRoam(2000);
+  z.g.lockRoom(z.p[0].id, { here: 'galley', occupants: [z.p[0].id, z.p[1].id] }, T);
+  const zh = () => [z.p[0].id, z.p[1].id];
+  assert.deepStrictEqual(z.g.sweepLocks(zh, T + 89_000), []);
+  assert.strictEqual(z.g.sweepLocks(zh, T + 90_001)[0].ended, 'time');
+  assert.ok(here('galley').length === 2 && yl.private, 'sanity');
+
+  // locks never outlive the exploring phase
+  g.beginMeeting(T + 1);
+  assert.deepStrictEqual(g.systems.lockdowns, []);
+});
+
 test('the night only ends early when everyone has chosen AND is ready; the timer is the backstop', () => {
   const { g, p, role } = setup(['parasite', 'hacker', 'engineer', 'comms', 'scanner', 'medic', 'marine']);
   g.beginNight(1000);

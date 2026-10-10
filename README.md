@@ -14,6 +14,7 @@ A spooky, slightly silly space spin-off of **Blood on the Clocktower**, played o
 - ⚙️ Comfort settings: text size, separate music / effects / voice volume, 💬 sound captions, camera distance and shake; a 🗺️ full map on Tab; a 👤 profile with unlockable cosmetics
 - 📊 An owner dashboard at `/dashboard` with live players, win rates, roles and bug reports
 - 👻 Ghosts stay in the game (bets on the Parasite, haunting, a ghost channel), emoji reactions, speaking rings, lobby bios, ship names, rematches with a season scoreboard, and a shareable result card
+- 🔒 Lock the room you are in for a private chat, and knock on locked doors: nobody barges in or listens at the door
 - 🗒️ A private **notebook** for tracking claims and suspicions, shown as badges around the bridge table
 - 🎬 An **epic end-game reveal** that unmasks every character model and replays each night
 

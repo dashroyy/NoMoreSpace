@@ -191,6 +191,7 @@ function updateVolumes() {
     else if (phase === 'roam' && mine && pos[id] && !captainId) {
       const d = Math.hypot(pos[id].x - mine.x, pos[id].z - mine.z);
       volume = Math.max(0, Math.min(1, 1 - (d - 2.5) / (HEAR_RADIUS - 2.5)));
+      if (world.sealedBetween(store.me, id)) volume = 0; // a locked room keeps voices in (and out)
     } else if (phase === 'roam' && !pos[id]) volume = 1; // the Captain speaks over the intercom
     peer.audio.volume = volume * peerVolume(id) * voiceLevel;
   }

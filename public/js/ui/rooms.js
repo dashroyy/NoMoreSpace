@@ -93,7 +93,7 @@ function renderRooms(force = false) {
         el('b', {}, r.name),
         el('span', { className: 'room-who' }, ...(world.blackout ? [el('em', {}, '📡 sensors offline')] : list.length ? list.map(chip) : [el('em', {}, 'empty')])),
       ),
-      el('span', { className: 'room-go' }, here ? 'You are here' : sealed ? '🔐 Sealed' : '🚀 Go'),
+      el('span', { className: 'room-go' }, here ? 'You are here' : sealed ? (world.lockOf(r.id)?.private ? '🔒 Locked' : '🔐 Sealed') : '🚀 Go'),
     );
   });
   const walking = world.blackout ? [] : (who.corridor || []).filter((id) => id !== me);

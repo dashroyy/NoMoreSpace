@@ -1,6 +1,6 @@
 // The 3D world: scene, camera, players moving around the ship.
 import * as THREE from 'three';
-import { Avatar } from './avatar.js';
+import { Avatar, makeTextSprite, disposeTree } from './avatar.js';
 import { buildShip } from './ship.js';
 import { SpaceCanvases, buildBackdrop } from './sky.js';
 import { Flyby } from './flyby.js';
@@ -27,9 +27,10 @@ export const NEAR_RADIUS = 7; // same as the server: proximity chat distance
 const TELEPORT_COOLDOWN = 2.5; // seconds
 
 export class World {
-  constructor(container, data, { onSendPos, onNearTask, onStep, onDuckBump } = {}) {
+  constructor(container, data, { onSendPos, onNearTask, onStep, onDuckBump, onBlocked } = {}) {
     this.data = data;
     this.onDuckBump = onDuckBump;
+    this.onBlocked = onBlocked; // you walked into a locked door: (roomId, lock)
     this.onSendPos = onSendPos;
     this.onNearTask = onNearTask;
     this.onStep = onStep;
@@ -476,7 +477,8 @@ export class World {
       const [nx, nz] = moveWithCollision(this.local.x, this.local.z, dx * sp * dt, dz * sp * dt);
       // sealed rooms: you can walk out, but not in
       const into = roomAt(nx, nz);
-      if (!(into !== this.room && this.lockedOut(into))) [this.local.x, this.local.z] = [nx, nz];
+      if (into !== this.room && this.lockedOut(into)) this.bumpLockedDoor(into);
+      else [this.local.x, this.local.z] = [nx, nz];
       const want = Math.atan2(dx, dz);
       let diff = want - this.local.r;
       while (diff > Math.PI) diff -= Math.PI * 2;
@@ -765,21 +767,22 @@ export class World {
     this.blackout = blackout;
     this.lockdowns = lockdowns;
     if (this.lastState) this.syncPlayers(this.lastState);
-    // a red force field over each sealed room
-    for (const m of this.lockMeshes || []) {
-      this.scene.remove(m);
-      m.geometry.dispose();
-      m.material.dispose();
-    }
-    this.lockMeshes = lockdowns.map(({ room }) => {
+    // a force field over each sealed room: red for a Security Chief's lockdown, amber for a private lock
+    for (const m of this.lockMeshes || []) disposeTree(m);
+    this.lockMeshes = lockdowns.map(({ room, private: priv }) => {
       const [x0, z0, x1, z1] = roomById(room).rect;
-      const mesh = new THREE.Mesh(
+      const group = new THREE.Group();
+      group.position.set((x0 + x1) / 2, 0, (z0 + z1) / 2);
+      const field = new THREE.Mesh(
         new THREE.BoxGeometry(x1 - x0, 4.2, z1 - z0),
-        new THREE.MeshBasicMaterial({ color: 0xff2a4a, transparent: true, opacity: 0.12, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide }),
+        new THREE.MeshBasicMaterial({ color: priv ? 0xffb547 : 0xff2a4a, transparent: true, opacity: priv ? 0.1 : 0.12, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide }),
       );
-      mesh.position.set((x0 + x1) / 2, 2.1, (z0 + z1) / 2);
-      this.scene.add(mesh);
-      return mesh;
+      field.position.y = 2.1;
+      const label = makeTextSprite(priv ? '🔒 LOCKED' : '🔐 SEALED', { color: priv ? '#ffd27a' : '#ff8fa3', size: 44, scale: 0.016 });
+      label.position.y = 3.4;
+      group.add(field, label);
+      this.scene.add(group);
+      return group;
     });
   }
 
@@ -788,13 +791,37 @@ export class World {
     return (this.lockdowns || []).some((l) => l.room === roomId && !l.allowed.includes(this.myId));
   }
 
+  lockOf(roomId) {
+    return (this.lockdowns || []).find((l) => l.room === roomId) || null;
+  }
+
+  // You walked into a sealed door: say so (once in a while, not every step).
+  bumpLockedDoor(roomId) {
+    const now = performance.now();
+    if (now - (this.lastBlockedAt || 0) < 4000) return;
+    this.lastBlockedAt = now;
+    this.onBlocked?.(roomId, this.lockOf(roomId));
+  }
+
+  // A sealed room keeps sound in and out, except for the people it was sealed around.
+  sealedBetween(idA, idB, all = this.whereabouts()) {
+    const a = all[idA];
+    const b = all[idB];
+    if (!a || !b) return false;
+    return (this.lockdowns || []).some((l) => {
+      const aIn = a.room === l.room;
+      const bIn = b.room === l.room;
+      return aIn !== bIn && !l.allowed.includes(aIn ? idB : idA);
+    });
+  }
+
   // Beam yourself into a room. Returns a reason string if you can't right now.
   teleport(roomId, { force = false } = {}) {
     if (!this.canMove()) return 'You can only teleport while exploring the ship.';
     const room = roomById(roomId);
     if (!room) return 'Unknown room.';
     if (this.room === roomId) return null;
-    if (this.lockedOut(roomId)) return `🔐 ${room.name} is in lockdown. Try again in a minute.`;
+    if (this.lockedOut(roomId)) return this.lockOf(roomId)?.private ? `🔒 ${room.name} is locked: people in there are talking in private. Walk up to the door and knock (K).` : `🔐 ${room.name} is in lockdown. Try again in a minute.`;
     const now = performance.now() / 1000;
     if (now < this.teleportReadyAt && !force) return 'The teleporter is recharging…';
     this.teleportReadyAt = now + TELEPORT_COOLDOWN;
@@ -872,7 +899,7 @@ export class World {
     const mine = all[this.myId];
     if (!mine) return [];
     return Object.entries(all)
-      .filter(([id, p]) => id !== this.myId && ((p.room === mine.room && p.room !== 'corridor') || Math.hypot(p.x - mine.x, p.z - mine.z) < NEAR_RADIUS))
+      .filter(([id, p]) => id !== this.myId && ((p.room === mine.room && p.room !== 'corridor') || Math.hypot(p.x - mine.x, p.z - mine.z) < NEAR_RADIUS) && !this.sealedBetween(this.myId, id, all))
       .map(([id]) => id);
   }
 

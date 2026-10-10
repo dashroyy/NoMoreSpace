@@ -17,6 +17,12 @@ const DAY_PHASES = ['roam', 'meeting', 'nominations'];
 const READY_PHASES = ['night', 'dawn', ...DAY_PHASES];
 // A drawing that is still being sent as the night ends is still pinned up if it arrives within this long.
 const DRAWING_GRACE_MS = 8000;
+// Private door locks (see lockRoom): anyone can lock the room they are talking in.
+const LOCK_SECONDS = 90; // a lock lasts this long at most
+const LOCK_COOLDOWN_SECONDS = 45; // then the person who locked it must wait this long before locking again
+const MAX_PRIVATE_LOCKS = 3; // doors locked across the whole ship at once
+const LOCK_GRACE_MS = 6000; // a lock with fewer than two of its people inside opens itself after this long
+const KNOCK_GAP_MS = 8000; // between knocks from the same person on the same door
 const TARGET_RULE = { hacker: 'alive', jester: 'alive', medic: 'alive', parasite: 'alive', scanner: 'any', droid: 'any', blackbox: 'any' };
 const DEATH_ANIMS = ['airlock', ...st.NIGHT_ANIMS, 'fainted', 'shot'];
 const HAUNTS = ['flicker', 'crate', 'cackle']; // a ghost's harmless pranks
@@ -141,7 +147,7 @@ class Game {
     this.regCache = {};
     this.lastParasiteVotes = 0;
     this.mimicManifest = null;
-    this.systems = { intercepts: [], lockdowns: [], disguises: {}, blackoutUntil: 0 };
+    this.resetSystems();
     this.visits = {}; // room -> Set of players seen inside today (door logs)
     this.votesToday = []; // results of today's nominations
     this.version = (this.version || 0) + 1;
@@ -220,7 +226,12 @@ class Game {
     this.pausedRemaining = null;
     this.ready.clear();
     // timed ship systems only last while exploring
-    if (phase !== 'roam' && this.systems) this.systems = { intercepts: [], lockdowns: [], disguises: {}, blackoutUntil: 0 };
+    if (phase !== 'roam' && this.systems) this.resetSystems();
+  }
+
+  // Ship systems and door locks only last while exploring: everything starts afresh.
+  resetSystems() {
+    this.systems = { intercepts: [], lockdowns: [], disguises: {}, blackoutUntil: 0, lockReady: {}, knocked: {} };
   }
 
   // How long each part of the day lasts. Tuned so a 10-player game runs about
@@ -1274,9 +1285,106 @@ class Game {
     return this.systems.lockdowns.find((l) => l.room === room && l.works && now < l.until) || null;
   }
 
-  // Who is secretly listening to this room right now.
+  // ---------------------------------------------------------------------------
+  // 🔒 Private door locks: anyone exploring can lock the room they are in so
+  // nobody else walks in or listens at the door. It only exists for private
+  // chats (two or more people inside), lasts 90 seconds at most, and the
+  // people inside can open it from within, or let a knocker in.
+  // ---------------------------------------------------------------------------
+
+  privateLock(room, now = Date.now()) {
+    return this.systems.lockdowns.find((l) => l.private && !l.ended && l.room === room && now < l.until) || null;
+  }
+
+  // here: the room the player stands in; occupants: who is in it right now (the server knows, from live positions).
+  lockRoom(pid, { here, occupants = [] } = {}, now = Date.now()) {
+    const p = this.get(pid);
+    if (!p) throw new Error('Only players can lock doors.');
+    if (this.phase !== 'roam') throw new Error('Doors only lock while you are exploring the ship.');
+    if (this.pausedRemaining != null) throw new Error('The game is paused.');
+    if (!p.alive) throw new Error('Ghosts cannot work the doors.');
+    if (here === 'bridge') throw new Error('The bridge cannot be locked: everyone needs it for meetings.');
+    if (!ROOM_NAMES[here]) throw new Error('Stand inside a room first (not a corridor).');
+    if (this.activeLockdown(here, now)) throw new Error('This room is already locked.');
+    const inside = [...new Set([pid, ...occupants])].filter((id) => this.get(id));
+    if (inside.length < 2) throw new Error('Locking is for private chats: wait until someone is in here with you.');
+    if (this.systems.lockdowns.some((l) => l.private && !l.ended && l.by === pid && now < l.until)) throw new Error('You already locked a door. Unlock it first.');
+    const ready = this.systems.lockReady[pid] || 0;
+    if (now < ready) throw new Error(`The lock is recharging: ${Math.ceil((ready - now) / 1000)} more seconds.`);
+    if (this.systems.lockdowns.filter((l) => l.private && !l.ended && now < l.until).length >= MAX_PRIVATE_LOCKS) throw new Error('Too many doors are locked already. Try again in a minute.');
+    const lock = { room: here, until: now + LOCK_SECONDS * 1000, allowed: inside, by: pid, works: true, private: true, since: now, ended: null, thinSince: null };
+    this.systems.lockdowns.push(lock);
+    return lock;
+  }
+
+  releaseLock(lock, now, why) {
+    lock.until = Math.min(lock.until, now);
+    lock.ended = why;
+    this.systems.lockReady[lock.by] = now + LOCK_COOLDOWN_SECONDS * 1000;
+  }
+
+  // Anyone the door was locked around can open it from inside.
+  unlockRoom(pid, { here } = {}, now = Date.now()) {
+    const lock = this.privateLock(here, now);
+    if (!lock) throw new Error('This room is not locked.');
+    if (!lock.allowed.includes(pid)) throw new Error('Only the people inside can unlock it.');
+    this.releaseLock(lock, now, 'unlocked');
+    return lock;
+  }
+
+  // Let someone who knocked in (or anyone else): they can now walk in and hear.
+  admit(pid, targetId, { here } = {}, now = Date.now()) {
+    const lock = this.privateLock(here, now);
+    if (!lock) throw new Error('This room is not locked.');
+    if (!lock.allowed.includes(pid)) throw new Error('Only the people inside can open the door.');
+    if (!this.get(targetId)) throw new Error('Unknown player.');
+    if (!lock.allowed.includes(targetId)) lock.allowed.push(targetId);
+    return lock;
+  }
+
+  // A knock on a locked door. Returns the lock; the server tells the people inside.
+  knock(pid, roomId, now = Date.now()) {
+    if (!this.get(pid)) throw new Error('Only players can knock.');
+    if (this.phase !== 'roam') throw new Error('Nobody is behind a door right now.');
+    const lock = this.privateLock(roomId, now);
+    if (!lock) throw new Error('That door is not locked.');
+    if (lock.allowed.includes(pid)) throw new Error('You are allowed in already.');
+    const key = `${pid}>${roomId}`;
+    if (now - (this.systems.knocked[key] || 0) < KNOCK_GAP_MS) throw new Error('You just knocked. Give them a moment.');
+    this.systems.knocked[key] = now;
+    return lock;
+  }
+
+  // Called a few times a second with a function giving who is inside each room now. Locks end when their
+  // time is up, or when fewer than two of the people they were locked around are still inside (after a short
+  // grace, so stepping out for a second doesn't matter). Returns the locks that just ended.
+  sweepLocks(presentIn, now = Date.now()) {
+    const ended = [];
+    for (const l of this.systems.lockdowns) {
+      if (!l.private || l.ended) continue;
+      if (now >= l.until) {
+        this.releaseLock(l, now, 'time');
+        ended.push(l);
+        continue;
+      }
+      const inside = presentIn(l.room).filter((id) => l.allowed.includes(id));
+      if (inside.length >= 2) l.thinSince = null;
+      else {
+        l.thinSince ??= now;
+        if (now - l.thinSince >= LOCK_GRACE_MS) {
+          this.releaseLock(l, now, 'empty');
+          ended.push(l);
+        }
+      }
+    }
+    return ended;
+  }
+
+  // Who is secretly listening to this room right now. (A Security Chief's lockdown keeps listeners out;
+  // an ordinary private lock does not: it keeps people out, not the Comms Officer's intercept.)
   listeners(room, now = Date.now()) {
-    if (this.activeLockdown(room, now)) return [];
+    const lock = this.activeLockdown(room, now);
+    if (lock && !lock.private) return [];
     return this.systems.intercepts.filter((i) => i.room === room && i.works && now < i.until && this.get(i.by)?.alive).map((i) => i.by);
   }
 
@@ -1363,7 +1471,7 @@ class Game {
   systemsView(now = Date.now()) {
     const s = this.systems;
     return {
-      lockdowns: s.lockdowns.filter((l) => l.works && now < l.until).map((l) => ({ room: l.room, until: l.until, allowed: l.allowed })),
+      lockdowns: s.lockdowns.filter((l) => l.works && now < l.until).map((l) => ({ room: l.room, until: l.until, allowed: l.allowed, private: !!l.private })),
       disguises: Object.entries(s.disguises).filter(([id]) => this.disguiseOf(id, now)).map(([id, d]) => ({ id, as: d.as, until: d.until })),
       blackoutUntil: this.blackout(now) ? s.blackoutUntil : 0,
     };
@@ -2018,6 +2126,7 @@ class Game {
       hand: this.nomination ? !!this.nomination.hands[pid] : false,
       cast: this.nomination ? !!this.nomination.cast[pid] : false,
       system: this.systemFor(p) && p.alive ? { id: this.systemFor(p).id, used: p.systemUsed } : null,
+      lockReady: this.systems.lockReady?.[pid] || 0,
       intercepting: this.systems.intercepts.filter((i) => i.by === pid && Date.now() < i.until).map((i) => ({ room: i.room, until: i.until }))[0] || null,
     };
     // Players who did a task today get a heads-up before a clue arrives.

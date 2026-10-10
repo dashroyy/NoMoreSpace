@@ -177,3 +177,41 @@ test('public ships: the host lists a ship; practice ships stay private', () => {
   g.practice = true;
   assert.throws(() => g.setPublic(host.id, true), /private/);
 });
+
+test('robots stay out of a room that is locked against them', () => {
+  const { g, host, room } = shipWithBots(11);
+  const api = quietApi();
+  g.start(host.id, 1000);
+  g.players[0].isBot = true;
+  // get to the exploring phase
+  let now = 1000;
+  for (let i = 0; i < 40_000 && g.phase !== 'roam'; i++) {
+    now += 250;
+    runBots(room, now, api, 0.25);
+    g.tick(now);
+  }
+  assert.strictEqual(g.phase, 'roam');
+  // the host and one robot are in the galley when it is locked (the server passes who is inside)
+  const a = g.players.find((p) => p.isBot && p.id !== host.id);
+  room.positions[host.id] = { x: 26, z: 0, r: 0, m: 0, room: 'galley' };
+  room.positions[a.id] = { x: 25, z: 1, r: 0, m: 0, room: 'galley' };
+  g.systems.lockdowns.length = 0;
+  const lock = g.lockRoom(host.id, { here: 'galley', occupants: [host.id, a.id] }, now);
+  // (stretched to ten minutes here, so the robots change rooms hundreds of times) nobody who was not let in ever ends up inside
+  lock.until = now + 600_000;
+  let leaked = 0;
+  let changes = 0;
+  const wasIn = {};
+  while (now < lock.until - 500 && g.phase === 'roam') {
+    now += 250;
+    runBots(room, now, api, 0.25);
+    for (const p of g.players) {
+      const where = room.positions[p.id]?.room;
+      if (where !== wasIn[p.id]) changes++;
+      wasIn[p.id] = where;
+      if (where === 'galley' && !lock.allowed.includes(p.id)) leaked++;
+    }
+  }
+  assert.ok(changes > 100, `the robots kept moving between rooms (${changes} changes)`);
+  assert.strictEqual(leaked, 0, 'locked-out robots never walked in');
+});

@@ -15,7 +15,7 @@ const { TASKS } = require('./tasks');
 const qrcode = require('qrcode-generator');
 const records = require('./records');
 const persist = require('./persist');
-const { runBots } = require('./bots');
+const { runBots, ROOM_RECTS } = require('./bots');
 const crypto = require('crypto');
 
 const PORT = process.env.PORT != null ? Number(process.env.PORT) : 3000;
@@ -192,6 +192,20 @@ function newRoomCode() {
 function personSocket(room, personId) {
   for (const [socketId, id] of room.sockets) if (id === personId) return io.sockets.sockets.get(socketId);
   return null;
+}
+
+// Door locks: who is standing inside a room right now, and telling people about the door.
+function insideRoom(room, roomId) {
+  return Object.entries(room.positions).filter(([id, p]) => p.room === roomId && room.game.get(id)?.connected).map(([id]) => id);
+}
+
+function doorNotice(room, ids, payload) {
+  for (const id of ids) personSocket(room, id)?.emit('door', payload);
+}
+
+// How far a point is from a room's walls (0 when inside).
+function distanceToRoom({ x, z }, [x0, z0, x1, z1]) {
+  return Math.hypot(Math.max(x0 - x, 0, x - x1), Math.max(z0 - z, 0, z - z1));
 }
 
 // Each person gets their own view (secrets stay secret).
@@ -611,6 +625,38 @@ io.on('connection', (socket) => {
     return {};
   });
 
+  // 🔒 Door locks (see engine.js lockRoom). Where you stand and who is inside come from live positions, never from the client.
+  on('lock', () => {
+    const g = game();
+    const here = room.positions[me]?.room;
+    const inside = insideRoom(room, here);
+    const lock = g.lockRoom(me, { here, occupants: inside }, Date.now());
+    doorNotice(room, inside, { kind: 'locked', room: here, by: g.get(me).name, until: lock.until });
+  });
+  on('unlock', () => {
+    const g = game();
+    const here = room.positions[me]?.room;
+    g.unlockRoom(me, { here }, Date.now());
+    doorNotice(room, insideRoom(room, here), { kind: 'unlocked', room: here, why: 'unlocked', by: g.get(me).name });
+  });
+  on('knock', ({ room: target }) => {
+    const g = game();
+    const rect = ROOM_RECTS[target];
+    const mine = room.positions[me];
+    if (!rect || !mine) throw new Error('Walk up to a locked door first.');
+    if (distanceToRoom(mine, rect) > 9) throw new Error('You are too far from that door. Walk up to it first.');
+    const lock = g.knock(me, target, Date.now());
+    const inside = insideRoom(room, target).filter((id) => lock.allowed.includes(id));
+    doorNotice(room, inside, { kind: 'knock', from: me, name: g.get(me).name, room: target });
+    return { heard: inside.length };
+  });
+  on('let-in', ({ id }) => {
+    const g = game();
+    const here = room.positions[me]?.room;
+    g.admit(me, String(id), { here }, Date.now());
+    doorNotice(room, [String(id)], { kind: 'opened', room: here, by: g.get(me).name });
+  });
+
   // Movement: stored and relayed ~10 times a second by the loop below.
   socket.on('pos', (data) => {
     if (!room || !room.game.get(me) || !data) return;
@@ -693,7 +739,10 @@ setInterval(() => {
       broadcast(room);
     }
     const botsActed = runBots(room, now, botApi(room));
-    if (g.tick(now) || botsActed) broadcast(room);
+    // locks end when their time is up or their room has emptied
+    const unlocked = g.sweepLocks((r) => insideRoom(room, r), now);
+    for (const l of unlocked) doorNotice(room, l.allowed, { kind: 'unlocked', room: l.room, why: l.ended });
+    if (g.tick(now) || botsActed || unlocked.length) broadcast(room);
     if (room.emptySince && now - room.emptySince > 10 * 60_000) rooms.delete(code);
   }
 }, 250).unref();
