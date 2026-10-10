@@ -60,7 +60,7 @@ function teammates(g, p) {
   return new Set(team ? team.map((t) => t.id) : [p.id]);
 }
 
-const EVIL_ROLE = /(Hacker|Mimic|Incubator|Smuggler|Holo-Jester|The Parasite|The Reflection|Knife Thrower|Stage Double|Hexer|The Carrier|Bioterrorist|Quack Doctor|Spore Host)/;
+const EVIL_ROLE = /(Hacker|Mimic|Incubator|Smuggler|Holo-Jester|The Parasite|The Reflection|Knife Thrower|Stage Double|Hexer|The Carrier|Bioterrorist|Quack Doctor|Spore Host|Recruiter|Mole|Blackmailer|The Head Traitor|Recruit)/;
 
 // What a clue (a role's private info, or one shared at the meeting) says about
 // one player: positive = suspicious, negative = probably good.
@@ -71,6 +71,7 @@ function readClue(text, name) {
   if ((m = text.match(/^(\d) of your living neighbours/))) return { 0: -0.35, 1: 0.2, 2: 0.6 }[m[1]] ?? 0;
   if (text.startsWith('Black Box data:')) return EVIL_ROLE.test(text) ? 1.2 : -0.6;
   if ((m = text.match(/^One of .+ is the (.+)\.$/))) return EVIL_ROLE.test(m[1]) ? 0.35 : -0.12;
+  if ((m = text.match(/ is (a TRAITOR|FAITHFUL)\.$/))) return m[1] === 'FAITHFUL' ? -0.9 : 1.3; // the Seer's look
   return 0;
 }
 
@@ -90,6 +91,17 @@ function suspicion(g, p, t, brain) {
   else {
     if (claim === p.believed) s += 0.5; // claims MY role: one of us is lying
     if (Object.values(g.claims).filter((c) => c.role === claim).length > 1) s += 0.25;
+  }
+  // the Citadel unmasks the banished: whoever voted to banish a Faithful looks worse, and whoever voted for a Traitor looks better
+  if (g.dayLog && g.mech().revealBanished) {
+    for (const e of g.dayLog) {
+      if (e.k !== 'vote' || e.result !== 'block') continue;
+      const gone = g.dayLog.find((x) => x.k === 'airlock' && x.id === e.t && x.day === e.day);
+      if (!gone?.unmask) continue;
+      const bad = gone.unmask === 'faithful';
+      if (e.voters.includes(t.id)) s += bad ? 0.28 : -0.22;
+      if (e.a === t.id) s += bad ? 0.2 : -0.15;
+    }
   }
   // what this robot's own role told it (trusted), and what others shared at meetings (half trusted)
   for (const n of p.notes) if (n.kind !== 'evil') s += readClue(n.text, t.name);
@@ -130,8 +142,22 @@ function nightTargets(g, p, prompt, brain) {
   let list;
   switch (prompt.role) {
     case 'parasite':
+    case 'headtraitor':
     case 'reflection':
       list = ranked(others.filter((t) => !team.has(t.id)), infoClaim); // hunt whoever claims to know things
+      break;
+    case 'recruiter':
+      // offer the cloak to someone who has been accused a lot: they may not say no
+      list = ranked(others.filter((t) => !team.has(t.id)), (t) => (g.stats.yesReceived[t.id] || 0) * 0.3);
+      break;
+    case 'blackmailer':
+      list = ranked(others.filter((t) => !team.has(t.id)), infoClaim);
+      break;
+    case 'seer':
+      list = ranked(others, (t) => suspicion(g, p, t, brain));
+      break;
+    case 'guardian':
+      list = ranked(others.filter((t) => t.id !== p.lastPick), (t) => infoClaim(t) - suspicion(g, p, t, brain));
       break;
     case 'carrier':
     case 'bioterrorist':
@@ -385,7 +411,7 @@ function runBots(room, now, api, dt = 0.25) {
       const prompt = g.prompts[p.id];
       if (prompt && !g.choices[p.id] && !g.draft && now > b.actAt) {
         // a once-per-game ability (Knife Thrower, Magician) is saved some of the time, and never used from night 2 when robots are unsure
-        const save = prompt.once && Math.random() < (prompt.role === 'donor' ? 0.1 : 0.55);
+        const save = prompt.once && Math.random() < ({ donor: 0.1, seer: 0.2, recruiter: 0.3 }[prompt.role] ?? 0.55);
         act(() => g.submitChoice(p.id, save ? [] : nightTargets(g, p, prompt, b), now));
       }
       if (!g.deathGuesses[p.id] && !g.draft && now > b.actAt) {
@@ -404,6 +430,15 @@ function runBots(room, now, api, dt = 0.25) {
     }
     // robots read the dawn story at a human's pace, then are ready for the day
     if (g.phase === 'dawn' && !g.ready.has(p.id) && now > b.readyAt + 8000 * tempo) act(() => g.setReady(p.id, true));
+
+    // the Citadel: a robot that gets a black envelope thinks it over, then answers
+    if (g.offer?.id === p.id) {
+      b.offerAt ??= now + (5000 + Math.random() * 25_000) * tempo;
+      if (now > b.offerAt) {
+        b.offerAt = undefined;
+        act(() => g.chooseOffer(p.id, Math.random() < 0.45, now));
+      }
+    }
 
     // the Outbreak: an infected (or fevered) robot tells the table, and asks for a Vaccinator
     if (g.phase === 'meeting' && p.alive && p.infected != null && !b.said.fever && now > b.actAt) {

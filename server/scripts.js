@@ -8,6 +8,8 @@
 //                                 with twins, tricks, pies and a mirror demon
 //   outbreak  "Outbreak"          a research station in a spreading spore cloud (the Bloom), where
 //                                 the Demon infects people instead of killing them
+//   traitors  "Citadel of Traitors" a gothic castle under a Blood Moon, based on the TV show The
+//                                 Traitors: shields, a prize pot, recruiting and banishing
 //
 // Each script has a `theme`: what the disaster is called and how every screen talks about it,
 // plus (optionally) its own names for the rooms.
@@ -47,6 +49,18 @@ const OUTBREAK_ROLE_IDS = [
   'hacker', 'incubator', 'bioterrorist', 'quack', 'sporehost',
   // the Demon
   'carrier',
+];
+
+const TRAITORS_ROLE_IDS = [
+  // the Faithful
+  'comms', 'archivist', 'security', 'navigator', 'engineer', 'coroner', 'blackbox',
+  'seer', 'daggerbearer', 'guardian', 'loyalist',
+  // drifters
+  'drunk', 'stowaway',
+  // the Traitors
+  'recruiter', 'mole', 'blackmailer', 'hacker',
+  // the Head Traitor
+  'headtraitor',
 ];
 
 const SCRIPTS = {
@@ -218,6 +232,72 @@ const SCRIPTS = {
       },
     },
     intro: 'Station Petri is sealed. Outside, the Bloom presses against the glass, a cloud of spores as big as a moon. Inside, one of the staff is a Carrier, and the first fever is already on its way.',
+  },
+  traitors: {
+    id: 'traitors',
+    name: 'Citadel of Traitors',
+    icon: '🗡️',
+    minPlayers: 7,
+    tagline: 'A gothic castle on a drifting asteroid, a Prize Pot of star-gold, and cloaked Traitors among the Faithful.',
+    blurb: 'Based on the TV game show The Traitors. The Traitors know each other from the start. Do missions (tasks) to build the Prize Pot and win a Shield that stops a murder. By night the Head Traitor murders a Faithful, and a Recruiter can offer another a cloak of their own: accept or refuse? By day everyone sits at the Round Table and banishes somebody, who is unmasked as Faithful or Traitor. The Faithful win when every Traitor is banished. The Traitors win when they are as many as the Faithful.',
+    rules: [
+      'The Faithful win when EVERY Traitor is banished. The Traitors win when they are as many as the Faithful.',
+      'The Traitors know each other, and can talk in secret. By night the Head Traitor murders someone. If the Head Traitor is banished, another Traitor takes the cloak.',
+      'Complete missions (tasks) to grow the Prize Pot. Each day, whoever completed the most missions wins a Shield: the Traitors cannot murder them that night.',
+      'A banished guest is unmasked: everyone learns whether they were Faithful or a Traitor.',
+      'A Recruiter can offer a Faithful a place among the Traitors. They have one minute to accept or refuse.',
+    ],
+    roles: TRAITORS_ROLE_IDS,
+    demons: ['headtraitor'],
+    narrator: 'ARIA, Lady of the Citadel',
+    // the show's own rules, for the engine (see Game.mech)
+    mechanics: { evilInfoMin: 5, revealBanished: true, dailyShield: true, prizePot: 500, winRule: 'traitors', succession: true },
+    // the disaster the story is about, and the words every screen uses for it
+    theme: {
+      doom: 'the Blood Moon',
+      doomIcon: '🌕',
+      doomTip: 'How close the Blood Moon is. It rises higher every night and every death, and when it is full the Traitors win the Prize Pot.',
+      lurch: 'The Blood Moon rises. It is {pct}% of the way to totality…',
+      howTitle: '🗡️ Trust No One',
+      howIntro: 'You are a guest in the Citadel, a gothic castle on a drifting asteroid, playing for a Prize Pot of star-gold. The Blood Moon is rising.',
+      evilGoal: 'The Traitors are as many as the Faithful, the Blood Moon rises in full, and the Traitors take the Prize Pot.',
+      nightSub: 'The Citadel sleeps. Somewhere in the dark, a cloaked figure is choosing.',
+      crewWinTitle: '🏆 The Faithful win! Every Traitor is banished!',
+      evilWinTitle: '🗡️ The Traitors win the Prize Pot!',
+      shareTitle: 'CITADEL OF TRAITORS',
+      shareCrew: 'THE FAITHFUL WIN!',
+      shareEvil: 'THE TRAITORS WIN…',
+      crewReason: 'The last Traitor is banished, the cloaks fall away, and the Faithful split the Prize Pot.',
+      evilReason: 'The Traitors are as many as the Faithful. The Round Table goes quiet, the Blood Moon rises, and the Traitors take the Prize Pot.',
+      officerReason: 'Three survivors and no banishment: the Faithful take the Prize Pot!',
+      constellation: 'A new constellation of candle-flames burns above the Blood Moon. Its light is still alive.',
+      plants: 'Water the 6 wilting garden roses before the Blood Moon blackens them.',
+      demonName: 'The Head Traitor',
+      demonDoes: 'Every night it murders a Faithful.',
+      jokes: [
+        '📢 Attention guests: the Prize Pot is safe in the vault. The vault is safe in the dungeon. The dungeon is not safe at all.',
+        '📢 Reminder: the Round Table is for banishing, not for dining. Please remove your soup.',
+        '📢 Would the person who keeps leaving black envelopes under doors please also leave a return address.',
+        '📢 The Blood Moon has asked us to stop calling it "the Blood Moon". It prefers "Mooncake".',
+        '📢 Whoever is whispering in the Turret: we can hear you. It is a very echoey turret.',
+        '📢 Lost: one (1) Faithful badge. If found, please do not return it to the Traitors.',
+        '📢 Tonight\'s menu: Mystery Stew. The mystery is whether you will see breakfast.',
+      ],
+      rooms: {
+        bridge: 'The Round Table', observation: 'The Battlements', navigation: 'The Library', comms: 'The Bell Tower', medbay: 'The Apothecary', galley: 'The Banquet Hall',
+        reactor: 'The Great Hearth', engine: 'The Dungeon', hydroponics: 'The Walled Garden', airlock: 'The Banishment Gate', quarters: 'The Bedchambers', cargo: 'The Wine Cellar',
+      },
+    },
+    // little stories that show what a game of this script is like (the wiki lists them)
+    moments: [
+      ['🗡️', 'The Round Table', 'Dana is banished by one vote. A hush. Then the unmasking: "Dana was FAITHFUL." Half the table goes pale. The other half starts counting votes, and noticing who voted yes.'],
+      ['🛡️', 'The Shield', 'Kit did the most missions today, so Kit has a Shield tonight and tells nobody. The Traitors strike at Kit anyway. Dawn: nobody died. The table gasps. "Somebody is holding a Shield. Who?"'],
+      ['✉️', 'The black envelope', 'A black envelope arrives at dawn. Sam has one minute to say yes or no. The other Faithful are watching. Does he take the cloak? (He has not told anyone he got an envelope at all.)'],
+      ['🔮', 'The Seer looks', 'The Seer checks Priya: "Traitor!" She tells the table. Priya is banished and unmasked as... Faithful. The real Traitors now know exactly who the Seer is. (Priya was the Mole\'s best friend.)'],
+      ['🕵️', 'The Mole', 'Mo has been cleared by the Seer, defended by the Dagger Bearer and fed breakfast by the Guardian. Mo is the most trusted person in the Citadel. Mo is a Traitor.'],
+      ['🗡️', 'One vote short', 'The count is seven, and eight were needed. The Dagger Bearer\'s hand was already up. Seven hands, eight votes. Somebody is banished, and nobody can explain the arithmetic.'],
+    ],
+    intro: 'Welcome to the Citadel. The doors have boomed shut, the candles are lit, and a Blood Moon hangs over the battlements. Somewhere among you, beneath a smile, are the Traitors. Trust no one.',
   },
 };
 

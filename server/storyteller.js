@@ -210,11 +210,36 @@ const OUTBREAK_EXECUTION_LINES = [
   '{name} is quarantined... permanently. The door is welded shut by committee.',
 ];
 
+// The Citadel of Traitors' stories: murders, quiet nights and banishments.
+const TRAITORS_MURDER_LINES = [
+  '{name} was found at the foot of the tower stairs, smiling. Nobody smiles at the foot of the stairs.',
+  'A single black feather lay on {name}\'s pillow. {name} was not breathing.',
+  'In the night, the Traitors came for {name}. {name}\'s chair at the Round Table is empty.',
+  'A black envelope lay unopened on {name}\'s bed. So was {name}\'s breakfast.',
+  '{name} went to fetch a candle and never came back. The candle did.',
+  'The Round Table is one chair short this morning. The chair belonged to {name}.',
+];
+
+const TRAITORS_QUIET_NIGHT_LINES = [
+  'A Shield, a Guardian or a change of heart: nobody was murdered last night. The Faithful do not know whether to cheer.',
+  'The night passed with a thud and a creak, and no body. The Traitors will have some explaining to do to each other.',
+  'No murder. The Traitors are either very clever, very cruel or very confused.',
+  'Every chair at the Round Table is full this morning. Somebody is smiling a little too widely.',
+];
+
+const TRAITORS_BANISH_LINES = [
+  '{name} walks the long gallery to the Banishment Gate, and the great doors boom shut behind them.',
+  'The Round Table has spoken. {name} puts down their goblet, bows once, and is escorted out into the night.',
+  '"I have nothing to hide," says {name}, which is exactly what everyone says. The gate swings open.',
+  '{name} is banished from the Citadel by a very small majority and a very large silence.',
+];
+
 function dawnStory(dead, random = Math.random, scriptId = 'classic') {
   const carnival = scriptId === 'carnival';
   const outbreak = scriptId === 'outbreak';
-  if (!dead.length) return pick(outbreak ? OUTBREAK_QUIET_NIGHT_LINES : carnival ? CARNIVAL_QUIET_NIGHT_LINES : QUIET_NIGHT_LINES, random);
-  const lines = outbreak ? OUTBREAK_BURST_LINES : carnival ? CARNIVAL_NIGHT_DEATH_LINES : NIGHT_DEATH_LINES;
+  const traitors = scriptId === 'traitors';
+  if (!dead.length) return pick(traitors ? TRAITORS_QUIET_NIGHT_LINES : outbreak ? OUTBREAK_QUIET_NIGHT_LINES : carnival ? CARNIVAL_QUIET_NIGHT_LINES : QUIET_NIGHT_LINES, random);
+  const lines = traitors ? TRAITORS_MURDER_LINES : outbreak ? OUTBREAK_BURST_LINES : carnival ? CARNIVAL_NIGHT_DEATH_LINES : NIGHT_DEATH_LINES;
   return dead
     .map((d) => (typeof d === 'string' ? { name: d } : d))
     .map(({ name, bio }) => (bio && random() < 0.7 ? fillBio(pick(BIO_DEATH_LINES, random), name, bio) : fill(pick(lines, random), name)))
@@ -223,7 +248,7 @@ function dawnStory(dead, random = Math.random, scriptId = 'classic') {
 
 function executionStory(name, random = Math.random, bio = '', scriptId = 'classic') {
   if (bio && random() < 0.5) return fillBio(pick(BIO_EXECUTION_LINES, random), name, bio);
-  return fill(pick(scriptId === 'outbreak' ? OUTBREAK_EXECUTION_LINES : scriptId === 'carnival' ? CARNIVAL_EXECUTION_LINES : EXECUTION_LINES, random), name);
+  return fill(pick(scriptId === 'traitors' ? TRAITORS_BANISH_LINES : scriptId === 'outbreak' ? OUTBREAK_EXECUTION_LINES : scriptId === 'carnival' ? CARNIVAL_EXECUTION_LINES : EXECUTION_LINES, random), name);
 }
 
 const SHIP_NAMES = [

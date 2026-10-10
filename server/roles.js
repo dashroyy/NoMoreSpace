@@ -298,6 +298,8 @@ const ROLES = {
 Object.assign(ROLES, require('./roles-carnival').CARNIVAL_ROLES);
 // The Outbreak script's extra roles.
 Object.assign(ROLES, require('./roles-outbreak').OUTBREAK_ROLES);
+// The Citadel of Traitors script's extra roles.
+Object.assign(ROLES, require('./roles-traitors').TRAITORS_ROLES);
 
 // Blood on the Clocktower's setup table, extended down to 3 players ("Short Haul").
 //               crew drifters saboteurs parasite

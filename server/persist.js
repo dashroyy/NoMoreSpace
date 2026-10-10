@@ -54,6 +54,9 @@ function deserialize(text, now = Date.now()) {
     g.twin ??= null;
     g.hexed ??= null;
     g.wish ??= null;
+    g.pot ??= 0;
+    g.offer ??= null;
+    g.gagged ??= null;
     g.activeFloor = now;
     g.afk = new Set();
     for (const p of g.players) {

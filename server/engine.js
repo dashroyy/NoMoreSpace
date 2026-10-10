@@ -69,6 +69,7 @@ function freshPlayerState() {
     master: null, // Service Droid's chosen master for today
     netUsed: false, // the Acrobat's safety net has been used
     lastPick: null, // the player a "not twice in a row" ability chose last night
+    shield: null, // Citadel of Traitors: the night this player's Shield protects them from a murder
     infected: null, // Outbreak: the night this player was infected (they burst when the next night ends)
     hazmatWarned: false, // Outbreak: the Hazmat Tech has already been warned once
     notes: [], // private information this player has learned
@@ -138,6 +139,9 @@ class Game {
     this.twin = null; // the Stage Double's twin: { evil, good }
     this.hexed = null; // the Hexer's victim for today: { id }
     this.wish = null; // a dead Clown's pie: { id, until }
+    this.pot = 0; // the Prize Pot (Citadel of Traitors): grows with every mission
+    this.offer = null; // a Recruiter's offer waiting for an answer: { id, from, until }
+    this.gagged = null; // the Blackmailer's victim for today: { id }
     this.shipEvent = null; // the Captain's fun: { kind, until }
     this.awards = null;
     this.startedAt = null;
@@ -292,6 +296,7 @@ class Game {
       voteStep: 0.45, // then the clock hand sweeps round revealing each vote
       lastwords: 15,
       wish: 40, // a dead Clown has this long to pick a target for their pie
+      offer: 60, // a recruited guest has this long to accept or refuse
       dusk: 9,
     }[kind];
     return Math.round(seconds * 1000 * this.pace);
@@ -477,8 +482,13 @@ class Game {
     this.beginNight(now);
   }
 
+  // the script's own rules (scripts.js `mechanics`): shields, a prize pot, unmasking, the win rule...
+  mech() {
+    return scriptOf(this.script).mechanics || {};
+  }
+
   evilInfoShared() {
-    return this.players.length >= EVIL_INFO_MIN;
+    return this.players.length >= (this.mech().evilInfoMin ?? EVIL_INFO_MIN);
   }
 
   // ---------------------------------------------------------------------------
@@ -508,8 +518,22 @@ class Game {
     return this.night === 1 ? !!def.first : !!def.other;
   }
 
+  // The show's daily Shield: whoever did the most missions (tasks) today cannot be murdered tonight.
+  awardShield() {
+    for (const p of this.players) p.shield = null;
+    if (!this.mech().dailyShield) return;
+    const counts = this.alive().map((p) => [p, (this.tasksDone[p.id] || []).length]).filter(([, n]) => n > 0);
+    if (!counts.length) return;
+    const top = Math.max(...counts.map(([, n]) => n));
+    const winner = st.pick(counts.filter(([, n]) => n === top).map(([p]) => p), this.random);
+    winner.shield = this.night;
+    this.tell(winner, '🛡️ You won today\'s Shield for your missions! The Traitors cannot murder you tonight. (Tell nobody, or tell everybody.)', { kind: 'shield' });
+    this.ev({ k: 'shield', id: winner.id });
+  }
+
   beginNight(now) {
     this.night += 1;
+    this.awardShield();
     this.deathGuesses = {};
     this.executedYesterday = this.executedToday;
     this.executedToday = null;
@@ -668,6 +692,15 @@ class Game {
       r.type = r.demon ? 'parasite' : 'saboteur';
       r.role = r.demon ? this.demonRole() : st.pick(this.rolesOf('saboteur'), this.random);
     }
+    if (p.role === 'mole') {
+      // the Mole is a Traitor who always looks Faithful
+      const inPlay = new Set(this.players.map((o) => o.role));
+      const options = [...this.rolesOf('crew'), ...this.rolesOf('drifter')].filter((x) => !inPlay.has(x) && x !== 'drunk');
+      r.evil = false;
+      r.demon = false;
+      r.role = st.pick(options.length ? options : this.rolesOf('crew'), this.random);
+      r.type = ROLES[r.role].type;
+    }
     if (p.role === 'mimic' && flip(this.regPolicy.mimic, 'good')) {
       const inPlay = new Set(this.players.map((o) => o.role));
       const options = [...this.rolesOf('crew'), ...this.rolesOf('drifter')].filter((x) => !inPlay.has(x) && x !== 'drunk');
@@ -803,8 +836,8 @@ class Game {
       say(p, 'stagehand', `Backstage count for ${picked[0].name} & ${picked[1].name}: ${value} of them ${value === 1 ? 'was' : 'were'} woken tonight.`, !lies(p), { value, players: picked.map((o) => o.id) });
     }
 
-    // Medic protects.
-    for (const p of believers('medic')) {
+    // Medic (or Guardian) protects.
+    for (const p of [...believers('medic'), ...believers('guardian')]) {
       const [t] = choice(p) || [];
       if (!t) continue;
       const works = !broken(p);
@@ -914,6 +947,11 @@ class Game {
         const heir = minions.find((p) => p.role === 'incubator') || st.pick(minions, this.random);
         d.starpass = heir ? { from: parasite.id, to: heir.id, role: parasite.role } : null;
         kill(parasite, 'starpass', { to: heir?.id });
+      } else if (target.shield === N && !d.shieldUsed?.includes(target.id)) {
+        // the guest holding today's Shield: the murder fails (and they are told)
+        (d.shieldUsed ||= []).push(target.id);
+        d.messages.push({ to: target.id, role: 'shield', text: '🛡️ Something struck at you in the night... and your Shield held! You are safe.', truthful: true });
+        kill(null, 'shield');
       } else if (target.id === d.protectedId) {
         kill(null, 'protected');
       } else if (target.role === 'marine' && !broken(target)) {
@@ -938,6 +976,31 @@ class Game {
         kill(target, 'died');
       }
     }
+    // The Recruiter's once-a-game offer: a Faithful is invited to become a Traitor (they answer at dawn).
+    for (const p of this.players.filter((x) => x.alive && x.role === 'recruiter')) {
+      const [t] = choice(p) || [];
+      if (!t) continue;
+      const target = this.get(t);
+      let result = 'offered';
+      if (broken(p)) result = 'glitched';
+      else if (!target || !target.alive || teamOf(target.role) !== 'crew') result = 'invalid';
+      else if (target.role === 'loyalist' && !broken(target)) {
+        result = 'loyal';
+        say(target, 'loyalist', 'A cloaked figure slid an offer to join the Traitors under your door. You tore it up at once: nobody can recruit a Loyalist. Somebody aboard is a Recruiter!', true);
+        say(p, 'recruiter', `${target.name} is a Loyalist, and tore up your offer. Nobody can recruit a Loyalist.`, true);
+      } else d.offer = { by: p.id, to: t };
+      d.events.push({ k: 'recruit', a: p.id, t, result });
+    }
+
+    // The Blackmailer silences a player: they cannot nominate tomorrow, and their vote is ignored.
+    for (const p of this.players.filter((x) => x.alive && x.role === 'blackmailer')) {
+      const [t] = choice(p) || [];
+      if (!t) continue;
+      const works = !broken(p);
+      if (works) d.gag = t;
+      d.events.push({ k: 'gag', a: p.id, t, works });
+    }
+
     // The Method Actor's "kills" do nothing at all, but the real Parasite sees them.
     for (const p of this.players.filter((x) => x.alive && x.role === 'actor')) {
       const [t] = choice(p) || [];
@@ -1006,6 +1069,20 @@ class Game {
       say(p, 'engineer', `${value} of your living neighbours (${names}) ${value === 1 ? 'is' : 'are'} evil.`, !lies(p), { value });
     }
 
+    // The Seer's once-a-game look: is this guest a Traitor? A Traitor who is looked at learns who the Seer is.
+    for (const p of believers('seer')) {
+      if (dying.includes(p.id)) continue;
+      const [t] = choice(p) || [];
+      if (!t) continue;
+      const target = this.get(t);
+      const truth = this.reg(target).evil;
+      const value = lies(p) ? !truth : truth;
+      say(p, 'seer', `${target.name} is ${value ? 'a TRAITOR' : 'FAITHFUL'}.`, !lies(p), { value, players: [t] });
+      if (!lies(p) && teamOf(target.role) === 'infiltrators' && target.alive) {
+        d.messages.push({ to: target.id, role: 'seer', text: `🔮 ${p.name} is the Seer, and they just looked at you.`, truthful: true });
+      }
+    }
+
     // The Contact Tracer counts the infected among two players.
     for (const p of believers('tracer')) {
       if (dying.includes(p.id)) continue;
@@ -1043,7 +1120,7 @@ class Game {
       }
     }
 
-    d.messages.sort((a, b) => (ROLES[a.role].night?.order ?? 99) - (ROLES[b.role].night?.order ?? 99));
+    d.messages.sort((a, b) => (ROLES[a.role]?.night?.order ?? 99) - (ROLES[b.role]?.night?.order ?? 99));
     return d;
   }
 
@@ -1085,6 +1162,16 @@ class Game {
       this.kill(p, cause);
       deaths.push({ id, cause, anim: d.anims[id] || (cause === 'burst' ? 'melted' : st.nightDeathAnim(this.random)) });
     }
+    // the Citadel: a Shield is spent whether or not anyone struck, and tonight's black envelope and gag
+    for (const p of this.players) if (p.shield === d.night) p.shield = null;
+    this.gagged = d.gag ? { id: d.gag } : null; // the Blackmailer's gag lasts through today
+    if (d.gag && this.get(d.gag)?.alive) this.tell(this.get(d.gag), '🤐 Somebody has something on you. Today you cannot nominate, and your vote will be ignored.', { kind: 'gag' });
+    if (d.offer && this.get(d.offer.to)?.alive) {
+      this.offer = { id: d.offer.to, from: d.offer.by, until: null };
+      this.tell(this.get(d.offer.to), '✉️ A black envelope was slipped under your door: the Traitors invite you to join them. You have one minute to ACCEPT or REFUSE.', { kind: 'offer' });
+      this.ev({ k: 'offered', a: d.offer.by, t: d.offer.to });
+    }
+
     // the Outbreak: cures, new infections and (fake) fevers
     for (const id of d.cures || []) {
       const p = this.get(id);
@@ -1184,6 +1271,18 @@ class Game {
     // The Hacker's glitch ends when the Hacker dies.
     if (p.role === 'hacker') this.glitch = null;
 
+    // The Traitors' succession: if the Head Traitor goes, another Traitor takes the cloak and the murders go on.
+    if (this.isDemon(p) && this.mech().succession && !this.winner) {
+      const heirs = this.players.filter((o) => o.alive && o.id !== p.id && teamOf(o.role) === 'infiltrators');
+      if (heirs.length) {
+        const heir = st.pick(heirs, this.random);
+        heir.role = p.role;
+        heir.believed = p.role;
+        this.tell(heir, `${p.name}, the ${ROLES[p.role].name}, is gone. The cloak is yours now: you are ${ROLES[p.role].name}, and you murder each night.`, { kind: 'evil' });
+        this.ev({ k: 'become-parasite', a: heir.id, cause: 'succession' });
+      }
+    }
+
     // Incubator (Scarlet Woman) takes over if the Parasite dies with 5+ alive.
     if (this.isDemon(p) && cause !== 'starpass' && aliveBefore >= 5) {
       const inc = this.players.find((o) => o.alive && o.role === 'incubator' && !this.isGlitched(o));
@@ -1223,6 +1322,47 @@ class Game {
     }
   }
 
+  // ---- the Recruiter's offer (Citadel of Traitors) ----
+
+  // The recruited guest answers: accept and become a Traitor, or refuse.
+  chooseOffer(pid, accept, now = Date.now()) {
+    const o = this.offer;
+    if (!o || o.id !== pid) throw new Error('Nobody has made you an offer.');
+    this.resolveOffer(!!accept, now);
+  }
+
+  resolveOffer(accept, now) {
+    const o = this.offer;
+    this.offer = null;
+    const p = this.get(o.id);
+    if (!p || !p.alive) return;
+    const traitors = this.players.filter((x) => x.alive && teamOf(x.role) === 'infiltrators' && x.id !== p.id);
+    if (accept) {
+      p.role = 'recruit';
+      p.believed = 'recruit';
+      this.tell(p, `🐍 You accepted. You are a Traitor now! Your fellow Traitors: ${traitors.map((x) => x.name).join(', ') || 'nobody left'}. Say nothing.`, { kind: 'evil' });
+      for (const t of traitors) this.tell(t, `🐍 ${p.name} accepted the offer: they are a Traitor now.`, { kind: 'evil' });
+    } else {
+      this.tell(p, 'You refused. The Traitors will not forget it.', { kind: 'offer' });
+      for (const t of traitors.filter((x) => x.role === 'recruiter' || x.id === o.from)) this.tell(t, `${p.name} refused your offer.`, { kind: 'evil' });
+    }
+    this.ev({ k: 'recruited', t: p.id, a: o.from, accepted: accept });
+    this.checkWin();
+  }
+
+  // An offer nobody answers is a refusal. (The timer starts the first time the server looks at it.)
+  tickOffer(now) {
+    const o = this.offer;
+    if (!o || this.winner || this.phase === 'ended' || this.pausedRemaining != null) return false;
+    if (o.until == null) {
+      o.until = now + this.dur('offer');
+      return true; // tell the guest's screen how long they have
+    }
+    if (now < o.until) return false;
+    this.resolveOffer(false, now);
+    return true;
+  }
+
   // A Clown who never picks gets a random pie after a while.
   tickWish(now) {
     const w = this.wish;
@@ -1244,6 +1384,11 @@ class Game {
   finish(winner, reason) {
     if (this.winner) return true;
     this.wish = null;
+    this.offer = null;
+    if (this.mech().prizePot && this.pot) {
+      const winners = this.alive().filter((p) => (teamOf(p.role) === 'infiltrators') === (winner === 'infiltrators')).length;
+      if (winners) reason += ` The Prize Pot of ${this.pot.toLocaleString('en-US')} star-gold is split between the surviving ${winner === 'crew' ? 'Faithful' : 'Traitors'}: ${Math.floor(this.pot / winners).toLocaleString('en-US')} each.`;
+    }
     this.winner = winner;
     this.winReason = reason;
     this.history.push({ k: 'end', winner, reason });
@@ -1394,6 +1539,14 @@ class Game {
 
   checkWin() {
     if (this.winner) return true;
+    // The Traitors' rules: the Faithful win when every Traitor is gone; the Traitors win when they are as many as the Faithful.
+    if (this.mech().winRule === 'traitors') {
+      const alive = this.alive();
+      const evil = alive.filter((p) => teamOf(p.role) === 'infiltrators').length;
+      if (!evil) return this.finish('crew', themeOf(this.script).crewReason);
+      if (evil >= alive.length - evil) return this.finish('infiltrators', themeOf(this.script).evilReason);
+      return false;
+    }
     const alive = this.alive();
     const demonDead = !alive.some((p) => this.isDemon(p));
     if (demonDead && !this.twinsAlive()) {
@@ -1459,6 +1612,7 @@ class Game {
     const a = this.get(aId);
     const b = this.get(bId);
     if (!a || !a.alive) throw new Error('Dead players cannot nominate.');
+    if (this.gagged && this.gagged.id === aId) throw new Error('You have been blackmailed: you cannot nominate today.');
     if (!b || !b.alive) throw new Error('Nominate a living player.');
     if (this.nominators.has(aId)) throw new Error('You already nominated today.');
     if (this.nominees.has(bId)) throw new Error(`${b.name} was already nominated today.`);
@@ -1582,13 +1736,23 @@ class Game {
         ignored.push(id);
         continue;
       }
+      // the Blackmailer's victim votes, but nobody counts it
+      if (this.gagged && this.gagged.id === id) {
+        ignored.push(id);
+        continue;
+      }
       voters.push(id);
     }
     for (const id of voters) {
       const p = this.get(id);
       if (!p.alive) p.ghostVote = false;
     }
-    const votes = voters.length;
+    // the Dagger Bearer's vote counts twice (a living one, with a dagger that works)
+    const weight = (id) => {
+      const p = this.get(id);
+      return p && p.alive && p.role === 'daggerbearer' && !this.broken(p) ? 2 : 1;
+    };
+    const votes = voters.reduce((n, id) => n + weight(id), 0);
     const threshold = Math.ceil(this.aliveCount() / 2);
     let result = 'safe';
     if (votes >= threshold) {
@@ -1689,12 +1853,15 @@ class Game {
       this.setPhase('dusk', this.dur('dusk'), now);
       return;
     }
-    const story = cause === 'sentinel' ? `${p.name} is fried by the Sentinel's defences and swept out of the airlock.` : st.executionStory(p.name, this.random, p.bio, this.script);
-    this.ev({ k: 'execute', id: p.id, cause, votes: this.block?.votes || 0, story });
+    let story = cause === 'sentinel' ? `${p.name} is fried by the Sentinel's defences and swept out of the airlock.` : st.executionStory(p.name, this.random, p.bio, this.script);
+    // in the Citadel the banished are unmasked: everyone learns which side they were on
+    const unmask = this.mech().revealBanished ? (teamOf(p.role) === 'infiltrators' ? 'traitor' : 'faithful') : null;
+    if (unmask) story += unmask === 'traitor' ? ` The cloak falls away: ${p.name} was a TRAITOR!` : ` The cloak is lifted, and there is only a kind face: ${p.name} was FAITHFUL.`;
+    this.ev({ k: 'execute', id: p.id, cause, votes: this.block?.votes || 0, story, unmask });
     this.kill(p, cause === 'sentinel' ? 'sentinel' : 'airlock');
     this.executedToday = p.id;
-    this.announce(`${p.name} is airlocked.`, 'death');
-    this.logEvent({ k: cause === 'sentinel' ? 'sentinel' : 'airlock', id: p.id, votes: this.block?.votes || 0 });
+    this.announce(unmask ? `${p.name} is banished... and was ${unmask === 'traitor' ? 'a TRAITOR' : 'FAITHFUL'}.` : `${p.name} is airlocked.`, 'death');
+    this.logEvent({ k: cause === 'sentinel' ? 'sentinel' : 'airlock', id: p.id, votes: this.block?.votes || 0, unmask });
     // the Spore Host's last gift: whoever nominated them breathes in the spores
     if (p.role === 'sporehost' && !this.isGlitched(p)) {
       const last = [...this.votesToday].reverse().find((v) => v.nominee === p.id);
@@ -2194,6 +2361,7 @@ class Game {
     const done = (this.tasksDone[pid] ||= []);
     if (done.includes(taskId)) throw new Error('You already did that task today.');
     done.push(taskId);
+    this.pot += this.mech().prizePot || 0;
     this.charge += 1;
     this.bump('tasks', pid);
     return { charge: this.charge, needed: this.chargeNeeded() };
@@ -2373,7 +2541,8 @@ class Game {
     const awayChanged = away !== !!this.lastHostAway;
     this.lastHostAway = away;
     const wished = this.tickWish(now);
-    return this.tickPhase(now) || cluesChanged || afk || awayChanged || wished;
+    const offered = this.tickOffer(now);
+    return this.tickPhase(now) || cluesChanged || afk || awayChanged || wished || offered;
   }
 
   tickPhase(now) {
@@ -2546,6 +2715,7 @@ class Game {
       winReason: this.phase === 'ended' ? this.winReason : null,
       history: this.phase === 'ended' ? this.history : null,
       evilChatOpen: this.evilInfoShared(),
+      pot: this.mech().prizePot ? this.pot : null,
     };
   }
 
@@ -2580,6 +2750,8 @@ class Game {
       evilTeam: this.evilTeamFor(p),
       bluffs: ROLES[p.believed]?.type === 'parasite' && this.evilInfoShared() ? this.bluffs : null,
       wish: this.wish && this.wish.id === pid ? { role: this.wish.role, until: this.wish.until } : null,
+      offer: this.offer && this.offer.id === pid ? { until: this.offer.until } : null,
+      gagged: !!(this.gagged && this.gagged.id === pid && p.alive),
       infected: p.alive && p.infected != null ? { since: p.infected, bursts: p.infected + 1 } : null,
       manifest: p.role === 'mimic' && p.alive ? this.mimicManifest : null,
       master: p.role === 'droid' && p.alive ? p.master : null,
