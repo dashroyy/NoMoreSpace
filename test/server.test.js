@@ -74,7 +74,7 @@ test('serves the page, game data and Three.js, and blocks path tricks', async ()
   }));
   assert.strictEqual((await get('/')).status, 200);
   const data = JSON.parse((await get('/game-data.json')).body);
-  assert.strictEqual(Object.keys(data.roles).length, 23);
+  assert.strictEqual(Object.keys(data.roles).length, 35);
   assert.strictEqual((await get('/vendor/three/three.module.min.js')).status, 200);
   assert.notStrictEqual((await get('/..%2fpackage.json')).status, 200);
   assert.notStrictEqual((await get('/vendor/three/..%2f..%2f..%2fpackage.json')).status, 200);

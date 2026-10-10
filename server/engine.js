@@ -7,7 +7,8 @@
 // tested on its own (see test/engine.test.js).
 
 const crypto = require('crypto');
-const { ROLES, TYPES, MIN_PLAYERS, MAX_PLAYERS, EVIL_INFO_MIN, rolesOfType, teamOf } = require('./roles');
+const { ROLES, TYPES, MIN_PLAYERS, MAX_PLAYERS, EVIL_INFO_MIN, rolesOfType, rolesOfTypeIn, teamOf } = require('./roles');
+const { SCRIPTS, scriptOf } = require('./scripts');
 const st = require('./storyteller');
 const cosmetics = require('./cosmetics');
 const { TASKS } = require('./tasks');
@@ -23,7 +24,7 @@ const LOCK_COOLDOWN_SECONDS = 45; // then the person who locked it must wait thi
 const MAX_PRIVATE_LOCKS = 3; // doors locked across the whole ship at once
 const LOCK_GRACE_MS = 6000; // a lock with fewer than two of its people inside opens itself after this long
 const KNOCK_GAP_MS = 8000; // between knocks from the same person on the same door
-const TARGET_RULE = { hacker: 'alive', jester: 'alive', medic: 'alive', parasite: 'alive', scanner: 'any', droid: 'any', blackbox: 'any' };
+const TARGET_RULE = { hacker: 'alive', jester: 'alive', medic: 'alive', parasite: 'alive', reflection: 'alive', scanner: 'any', droid: 'any', blackbox: 'any' };
 const DEATH_ANIMS = ['airlock', ...st.NIGHT_ANIMS, 'fainted', 'shot'];
 const HAUNTS = ['flicker', 'crate', 'cackle']; // a ghost's harmless pranks
 const HAUNTS_PER_DAY = 3;
@@ -81,6 +82,7 @@ class Game {
     this.pace = 1; // timer multiplier: 1.3 relaxed, 1 standard, 0.7 quick
     this.autoAdvance = mode === 'autopilot';
     this.customRoles = null;
+    this.script = 'classic'; // which cast of characters and story (scripts.js)
     this.regPolicy = { stowaway: 'auto', mimic: 'auto' };
     this.shipName = st.shipName(random);
     // the evening's running scores, kept across rematches (by player name)
@@ -127,6 +129,9 @@ class Game {
     this.claims = {}; // public role claims: pid -> { role, text, at }
     this.dayLog = []; // public record of the game: votes, deaths, clues, claims
     this.lastWords = null; // { id } while the airlocked player gets their last words
+    this.twin = null; // the Stage Double's twin: { evil, good }
+    this.hexed = null; // the Hexer's victim for today: { id }
+    this.wish = null; // a dead Clown's pie: { id, until }
     this.shipEvent = null; // the Captain's fun: { kind, until }
     this.awards = null;
     this.startedAt = null;
@@ -191,6 +196,29 @@ class Game {
     return p.role === 'drunk' || (!!glitch && glitch.id === p.id);
   }
 
+  // The Demon is "the Parasite" in every script, but some scripts have more than one kind (the Reflection).
+  isDemon(p) {
+    return ROLES[p.role].type === 'parasite';
+  }
+
+  demonRole() {
+    return this.players.find((p) => this.isDemon(p))?.role || 'parasite';
+  }
+
+  rolesOf(type) {
+    return rolesOfTypeIn(this.script, type);
+  }
+
+  reflectionAlive() {
+    return this.players.some((p) => p.alive && p.role === 'reflection');
+  }
+
+  // Information from this player's ability is false: broken abilities, and every Crew ability
+  // while the Reflection lives. (Protections and attacks are not information, so they still work.)
+  lies(p, glitch = this.glitch) {
+    return this.broken(p, glitch) || (this.reflectionAlive() && ROLES[p.believed].type === 'crew');
+  }
+
   // The public record (the "day log"): things everyone at the table saw happen.
   logEvent(e) {
     this.dayLog.push({ day: this.day, night: this.night, phase: this.phase, at: Date.now(), ...e });
@@ -251,6 +279,7 @@ class Game {
       ballot: 15, // everyone votes at once
       voteStep: 0.45, // then the clock hand sweeps round revealing each vote
       lastwords: 15,
+      wish: 40, // a dead Clown has this long to pick a target for their pie
       dusk: 9,
     }[kind];
     return Math.round(seconds * 1000 * this.pace);
@@ -327,6 +356,14 @@ class Game {
     this.pace = value;
   }
 
+  setScript(byId, id) {
+    this.requireController(byId);
+    if (this.phase !== 'lobby') throw new Error('The ship has already launched.');
+    if (!SCRIPTS[id]) throw new Error('Unknown script.');
+    if (this.script !== id) this.customRoles = null; // hand-picked roles belong to the old script
+    this.script = id;
+  }
+
   setCustomRoles(byId, roleIds) {
     this.requireController(byId);
     if (this.phase !== 'lobby') throw new Error('Roles are dealt already.');
@@ -335,7 +372,7 @@ class Game {
       return;
     }
     if (!Array.isArray(roleIds)) throw new Error('Bad role list.');
-    const error = st.validateRoles(roleIds, this.players.length);
+    const error = st.validateRoles(roleIds, this.players.length, this.script);
     if (error) throw new Error(error);
     this.customRoles = [...roleIds];
   }
@@ -352,16 +389,18 @@ class Game {
     if (this.phase !== 'lobby') throw new Error('Already launched.');
     const n = this.players.length;
     if (n < MIN_PLAYERS) throw new Error(`Need at least ${MIN_PLAYERS} players.`);
+    const script = scriptOf(this.script);
+    if (n < script.minPlayers) throw new Error(`${script.name} needs at least ${script.minPlayers} players.`);
 
     let roles;
     if (deal) {
-      const error = st.validateRoles(deal, n);
+      const error = st.validateRoles(deal, n, this.script);
       if (error) throw new Error(error);
       roles = [...deal];
     } else {
       roles = this.customRoles;
-      if (roles && st.validateRoles(roles, n)) roles = null; // player count changed since they were picked
-      roles = st.shuffle(roles || st.pickRoles(n, this.random), this.random);
+      if (roles && st.validateRoles(roles, n, this.script)) roles = null; // player count changed since they were picked
+      roles = st.shuffle(roles || st.pickRoles(n, this.random, this.script), this.random);
     }
 
     this.resetState();
@@ -372,7 +411,7 @@ class Game {
     });
 
     const inPlay = new Set(roles);
-    const goodNotInPlay = (type) => rolesOfType(type).filter((r) => !inPlay.has(r) && ROLES[r].minPlayers <= n);
+    const goodNotInPlay = (type) => this.rolesOf(type).filter((r) => !inPlay.has(r) && ROLES[r].minPlayers <= n);
 
     // The Space Drunk believes they are a Crew role that is not in play.
     const drunk = this.players.find((p) => p.role === 'drunk');
@@ -395,8 +434,18 @@ class Game {
     const bluffPool = [...goodNotInPlay('crew'), ...goodNotInPlay('drifter').filter((r) => r !== 'drunk')].filter((r) => !inPlay.has(r));
     this.bluffs = st.sample(bluffPool, 3, this.random);
 
+    // The Method Actor believes they are the Demon that is in play.
+    const demonRole = roles.find((r) => ROLES[r].type === 'parasite');
+    for (const p of this.players) if (p.role === 'actor') p.believed = demonRole;
+    // The Stage Double has a good twin (a Crew player), and they know each other.
+    this.twin = null;
+    const double = this.players.find((p) => p.role === 'stagedouble');
+    const twinPool = this.players.filter((p) => ROLES[p.role].type === 'crew');
+    if (double && twinPool.length) this.twin = { evil: double.id, good: st.pick(twinPool, this.random).id };
+
     this.history.push({
       k: 'setup',
+      twin: this.twin,
       seats: this.players.map((p) => p.id),
       roles: Object.fromEntries(this.players.map((p) => [p.id, p.role])),
       believed: Object.fromEntries(this.players.map((p) => [p.id, p.believed])),
@@ -405,7 +454,7 @@ class Game {
     });
     this.mimicManifest = this.manifest();
     for (const p of this.players) p.lastActive = now;
-    this.announce('The ship has launched. Ahead, the black hole waits. Somewhere aboard, something is hungry.', 'system');
+    this.announce(script.intro, 'system');
     this.beginNight(now);
   }
 
@@ -422,8 +471,22 @@ class Game {
     const def = ROLES[p.believed].night;
     if (!def || !def.choose || def.onDeath) return null;
     if (this.night === 1 ? !def.first : !def.other) return null;
-    if (p.believed === 'parasite' && this.night < this.firstKillNight) return null;
-    return { role: p.believed, choose: def.choose, notSelf: !!def.notSelf, target: TARGET_RULE[p.believed] || 'alive' };
+    if (ROLES[p.believed].type === 'parasite' && this.night < this.firstKillNight) return null;
+    if (def.once && p.used) return null; // a once-per-game ability that has been used
+    if (def.target === 'dead' && !this.players.some((o) => !o.alive)) return null; // nobody to choose yet
+    return {
+      role: p.believed, choose: def.choose, notSelf: !!def.notSelf, target: def.target || TARGET_RULE[p.believed] || 'alive',
+      once: !!def.once, notRepeat: !!def.notRepeat,
+    };
+  }
+
+  // Did this player wake tonight because of their own ability? (The Stagehand counts these.)
+  wakesTonight(o) {
+    if (!o.alive) return false;
+    if (this.prompts[o.id]) return true;
+    const def = ROLES[o.believed].night;
+    if (!def || def.choose || def.onDeath) return false;
+    return this.night === 1 ? !!def.first : !!def.other;
   }
 
   beginNight(now) {
@@ -449,16 +512,37 @@ class Game {
     this.newChapter('night', this.night);
     this.setPhase('night', this.dur('nightMax'), now);
 
-    if (this.night === 1) this.shareEvilInfo();
+    if (this.night === 1) {
+      this.shareEvilInfo();
+      this.shareTwins();
+    }
     this.announce(`Night ${this.night}. The lights dim. Everyone returns to their sleep pods...`, 'night');
     this.maybeResolve(now);
+  }
+
+  // The Stage Double and the good twin are told about each other.
+  shareTwins() {
+    if (!this.twin) return;
+    const good = this.get(this.twin.good);
+    const evil = this.get(this.twin.evil);
+    this.tell(evil, `Your twin is ${good.name}, the ${ROLES[good.role].name}. If the crew airlocks ${good.name}, evil wins. And the crew cannot win while you both live.`, { kind: 'evil' });
+    this.tell(good, `You have an EVIL TWIN: ${evil.name} is the Stage Double. If the crew airlocks YOU, evil wins. The crew cannot win while you both live, so they must airlock ${evil.name} first.`, { kind: 'twin' });
   }
 
   // Minion & Demon info, only in games of 7 or more (like Blood on the Clocktower).
   shareEvilInfo() {
     if (!this.evilInfoShared()) return;
-    const parasite = this.players.find((p) => p.role === 'parasite');
+    const parasite = this.players.find((p) => this.isDemon(p));
     const saboteurs = this.players.filter((p) => ROLES[p.role].type === 'saboteur');
+    // The Method Actor thinks they are the Parasite and is shown made-up Saboteurs and the Parasite's bluffs.
+    const actor = this.players.find((p) => p.role === 'actor');
+    if (actor && parasite) {
+      this.tell(parasite, `Your Method Actor is ${actor.name}. They believe they are the Parasite, and each night you will see who they aim at.`, { kind: 'evil' });
+      const fake = st.sample(this.players.filter((o) => o !== actor), saboteurs.length, this.random);
+      actor.fakeTeam = fake.map((o) => o.id);
+      this.tell(actor, `Your Saboteurs: ${fake.map((s) => s.name).join(', ')}.`, { kind: 'evil' });
+      this.tell(actor, `Safe bluffs (good roles NOT aboard): ${this.bluffs.map((r) => ROLES[r].name).join(', ')}.`, { kind: 'evil' });
+    }
     for (const s of saboteurs) {
       const others = saboteurs.filter((o) => o !== s).map((o) => o.name);
       this.tell(s, `The Parasite is ${parasite.name}.${others.length ? ` Your fellow Saboteurs: ${others.join(', ')}.` : ''}`, { kind: 'evil' });
@@ -474,7 +558,16 @@ class Game {
     if (!prompt) throw new Error('You have nothing to choose tonight. Draw something!');
     if (this.choices[pid]) throw new Error('You already chose tonight.');
     if (this.draft) throw new Error('Too late, dawn is coming.');
+    // a once-per-game ability can be saved for another night: choose nobody
+    if (prompt.once && Array.isArray(targets) && targets.length === 0) {
+      this.choices[pid] = [];
+      this.maybeResolve(now);
+      return;
+    }
     this.choices[pid] = this.checkTargets(pid, targets, prompt);
+    const p = this.get(pid);
+    if (prompt.once) p.used = true;
+    if (prompt.notRepeat) p.lastPick = this.choices[pid][0];
     this.maybeResolve(now);
   }
 
@@ -485,7 +578,9 @@ class Game {
       const t = this.get(id);
       if (!t) throw new Error('Unknown player.');
       if (prompt.target === 'alive' && !t.alive) throw new Error('Choose a living player.');
+      if (prompt.target === 'dead' && t.alive) throw new Error('Choose a player who has died.');
       if (prompt.notSelf && id === pid) throw new Error('You cannot choose yourself.');
+      if (prompt.notRepeat && this.get(pid)?.lastPick === id) throw new Error(`${t.name} was your choice last night. Pick someone else.`);
     }
     return [...targets];
   }
@@ -504,9 +599,15 @@ class Game {
   fillMissingChoices() {
     for (const [pid, prompt] of Object.entries(this.prompts)) {
       if (this.choices[pid]) continue;
-      const pool = this.players.filter((t) => (prompt.target === 'any' || t.alive) && !(prompt.notSelf && t.id === pid));
-      const ids = pool.map((t) => t.id).filter((id) => !(prompt.role === 'parasite' && id === pid));
+      if (prompt.once) {
+        this.choices[pid] = []; // a once-per-game ability is never used by accident: it is saved for later
+        continue;
+      }
+      const side = (t) => (prompt.target === 'any' ? true : prompt.target === 'dead' ? !t.alive : t.alive);
+      const pool = this.players.filter((t) => side(t) && !(prompt.notSelf && t.id === pid) && !(prompt.notRepeat && this.get(pid).lastPick === t.id));
+      const ids = pool.map((t) => t.id).filter((id) => !(ROLES[prompt.role].type === 'parasite' && id === pid));
       this.choices[pid] = st.sample(ids.length >= prompt.choose ? ids : pool.map((t) => t.id), prompt.choose, this.random);
+      if (prompt.notRepeat) this.get(pid).lastPick = this.choices[pid][0];
       this.get(pid).notes.push({ text: 'You did not choose in time, so ARIA chose for you.', night: this.night, auto: true });
     }
   }
@@ -527,7 +628,7 @@ class Game {
     this.blackbox.target = targetId;
     const p = this.get(pid);
     const t = this.get(targetId);
-    const truthful = !this.broken(p, this.draft.glitch);
+    const truthful = !this.lies(p, this.draft.glitch);
     const role = truthful ? this.reg(t).role : st.pick(Object.keys(ROLES).filter((r) => r !== t.role), this.random);
     const text = `Black Box data: ${t.name} is the ${ROLES[role].name}.`;
     this.draft.messages.push({ to: pid, role: 'blackbox', text, truthful });
@@ -540,19 +641,19 @@ class Game {
   reg(p) {
     const key = `${this.night}:${p.id}`;
     if (this.regCache[key]) return this.regCache[key];
-    const r = { evil: teamOf(p.role) === 'infiltrators', type: ROLES[p.role].type, role: p.role, demon: p.role === 'parasite' };
+    const r = { evil: teamOf(p.role) === 'infiltrators', type: ROLES[p.role].type, role: p.role, demon: this.isDemon(p) };
     const flip = (policy, yes) => (policy === 'auto' ? this.random() < 0.5 : policy === yes);
     if (p.role === 'stowaway' && flip(this.regPolicy.stowaway, 'evil')) {
       r.evil = true;
       r.demon = this.random() < 0.4;
       r.type = r.demon ? 'parasite' : 'saboteur';
-      r.role = r.demon ? 'parasite' : st.pick(rolesOfType('saboteur'), this.random);
+      r.role = r.demon ? this.demonRole() : st.pick(this.rolesOf('saboteur'), this.random);
     }
     if (p.role === 'mimic' && flip(this.regPolicy.mimic, 'good')) {
       const inPlay = new Set(this.players.map((o) => o.role));
-      const options = [...rolesOfType('crew'), ...rolesOfType('drifter')].filter((x) => !inPlay.has(x) && x !== 'drunk');
+      const options = [...this.rolesOf('crew'), ...this.rolesOf('drifter')].filter((x) => !inPlay.has(x) && x !== 'drunk');
       r.evil = false;
-      r.role = st.pick(options.length ? options : rolesOfType('crew'), this.random);
+      r.role = st.pick(options.length ? options : this.rolesOf('crew'), this.random);
       r.type = ROLES[r.role].type;
     }
     this.regCache[key] = r;
@@ -583,7 +684,7 @@ class Game {
     let candidates = others.filter((o) => this.reg(o).type === type);
     if (type === 'saboteur' && !candidates.length) candidates = others.filter((o) => ROLES[o.role].type === 'saboteur');
     if (!truthful) {
-      const options = rolesOfType(type).filter((r) => ROLES[r].minPlayers <= this.players.length);
+      const options = this.rolesOf(type).filter((r) => ROLES[r].minPlayers <= this.players.length);
       if (type === 'drifter' && this.random() < 0.3) return { text: 'There are zero Drifters aboard.', zero: true };
       const pair = st.sample(others, 2, this.random);
       const role = st.pick(options, this.random);
@@ -604,6 +705,7 @@ class Game {
     const believers = (role) => this.players.filter((p) => p.alive && p.believed === role);
     const choice = (p) => this.choices[p.id];
     const broken = (p) => this.broken(p, d.glitch);
+    const lies = (p) => this.lies(p, d.glitch);
     const say = (p, role, text, truthful, extra = {}) => {
       d.messages.push({ to: p.id, ...extra, role, text, truthful });
       d.events.push({ k: 'info', a: p.id, role, text, truthful });
@@ -625,28 +727,61 @@ class Game {
       d.events.push({ k: 'hallucinate', a: jester.id, t, works });
     }
 
+    // The Hexer curses a player: if they nominate tomorrow, they die. (The Hexer loses the power at 3 alive.)
+    const hexer = aliveRole('hexer');
+    if (hexer && choice(hexer)) {
+      const t = choice(hexer)[0];
+      const works = !broken(hexer) && this.aliveCount() > 3;
+      if (works && t) d.hexed = t;
+      d.events.push({ k: 'hex', a: hexer.id, t, works });
+    }
+
     // First night information roles.
     if (N === 1) {
       for (const p of believers('comms')) {
-        const info = this.oneOfTwo(p, 'crew', !broken(p));
-        say(p, 'comms', info.text, !broken(p), info);
+        const info = this.oneOfTwo(p, 'crew', !lies(p));
+        say(p, 'comms', info.text, !lies(p), info);
       }
       for (const p of believers('archivist')) {
-        const info = this.oneOfTwo(p, 'drifter', !broken(p));
-        say(p, 'archivist', info.text, !broken(p), info);
+        const info = this.oneOfTwo(p, 'drifter', !lies(p));
+        say(p, 'archivist', info.text, !lies(p), info);
       }
       for (const p of believers('security')) {
-        const info = this.oneOfTwo(p, 'saboteur', !broken(p));
-        say(p, 'security', info.text, !broken(p), info);
+        const info = this.oneOfTwo(p, 'saboteur', !lies(p));
+        say(p, 'security', info.text, !lies(p), info);
       }
       for (const p of believers('navigator')) {
         const n = this.players.length;
         let pairs = 0;
         for (let i = 0; i < n; i++) if (this.reg(this.players[i]).evil && this.reg(this.players[(i + 1) % n]).evil) pairs++;
         const evilCount = this.players.filter((o) => teamOf(o.role) === 'infiltrators').length;
-        const value = broken(p) ? st.otherNumber(pairs, Math.max(1, evilCount - 1), this.random) : pairs;
-        say(p, 'navigator', `There ${value === 1 ? 'is 1 pair' : `are ${value} pairs`} of evil players sitting next to each other.`, !broken(p), { value });
+        const value = lies(p) ? st.otherNumber(pairs, Math.max(1, evilCount - 1), this.random) : pairs;
+        say(p, 'navigator', `There ${value === 1 ? 'is 1 pair' : `are ${value} pairs`} of evil players sitting next to each other.`, !lies(p), { value });
       }
+    }
+
+    // The Palm Reader sees two roles for a player: one is real, one is a decoy from the other side.
+    const goodSide = (r) => ['crew', 'drifter'].includes(ROLES[r].type);
+    for (const p of believers('palmreader')) {
+      const [t] = choice(p) || [];
+      if (!t) continue;
+      const target = this.get(t);
+      const truth = this.reg(target).role;
+      const pool = scriptOf(this.script).roles.filter((r) => r !== 'drunk' && r !== truth);
+      let shown;
+      if (lies(p)) shown = [st.pick(pool.filter(goodSide), this.random), st.pick(pool.filter((r) => !goodSide(r)), this.random)];
+      else shown = [truth, st.pick(pool.filter((r) => goodSide(r) !== goodSide(truth)), this.random)];
+      shown = st.shuffle(shown, this.random);
+      say(p, 'palmreader', `Your palm reading of ${target.name}: the ${ROLES[shown[0]].name} or the ${ROLES[shown[1]].name}.`, !lies(p), { players: [t], shown });
+    }
+
+    // The Stagehand counts how many of two players were woken by their abilities tonight.
+    for (const p of believers('stagehand')) {
+      const picked = (choice(p) || []).map((id) => this.get(id));
+      if (picked.length < 2) continue;
+      const truth = picked.filter((o) => this.wakesTonight(o)).length;
+      const value = lies(p) ? st.otherNumber(truth, 2, this.random) : truth;
+      say(p, 'stagehand', `Backstage count for ${picked[0].name} & ${picked[1].name}: ${value} of them ${value === 1 ? 'was' : 'were'} woken tonight.`, !lies(p), { value, players: picked.map((o) => o.id) });
     }
 
     // Medic protects.
@@ -658,26 +793,45 @@ class Game {
       d.events.push({ k: 'protect', a: p.id, t, works });
     }
 
+    // The Lion Tamer guesses who the Parasite is: a right guess stops it tonight.
+    for (const p of believers('liontamer')) {
+      const [t] = choice(p) || [];
+      if (!t) continue;
+      const works = !broken(p);
+      const hit = works && this.isDemon(this.get(t));
+      if (hit && !d.tamed) d.tamed = p.id;
+      d.events.push({ k: 'tame', a: p.id, t, works, hit });
+    }
+
     // The Parasite strikes.
-    const parasite = aliveRole('parasite');
+    const parasite = this.players.find((p) => p.alive && this.isDemon(p));
     d.parasiteId = parasite?.id || null;
     if (parasite && choice(parasite)) {
       const target = this.get(choice(parasite)[0]);
       const kill = (victim, result, extra = {}) => d.events.push({ k: 'kill', a: parasite.id, t: target.id, result, victim: victim?.id, ...extra });
       const safe = (p) => p.id === d.protectedId || (p.role === 'marine' && !broken(p));
-      if (broken(parasite)) {
+      if (d.tamed) {
+        const tamer = this.get(d.tamed);
+        kill(null, 'tamed', { by: tamer.id });
+        say(parasite, 'liontamer', `CRACK! ${tamer.name} is the Lion Tamer, and guessed who you are. You were stopped tonight.`, true);
+      } else if (broken(parasite)) {
         kill(null, 'glitched');
       } else if (target === parasite) {
         // Jumping hosts: the Parasite dies and a Saboteur takes over.
         d.deaths.push({ id: parasite.id, cause: 'starpass' });
         const minions = this.players.filter((p) => p.alive && ROLES[p.role].type === 'saboteur');
         const heir = minions.find((p) => p.role === 'incubator') || st.pick(minions, this.random);
-        d.starpass = heir ? { from: parasite.id, to: heir.id } : null;
+        d.starpass = heir ? { from: parasite.id, to: heir.id, role: parasite.role } : null;
         kill(parasite, 'starpass', { to: heir?.id });
       } else if (target.id === d.protectedId) {
         kill(null, 'protected');
       } else if (target.role === 'marine' && !broken(target)) {
         kill(null, 'marine');
+      } else if (target.role === 'acrobat' && !target.netUsed && !broken(target)) {
+        // the Acrobat's safety net: caught this time, and used up
+        (d.netUsed ||= []).push(target.id);
+        say(target, 'acrobat', 'Something struck at you in the night... and your safety net caught you! The net is used up now.', true);
+        kill(null, 'net');
       } else if (target.role === 'firstofficer' && !broken(target) && this.random() < 0.5) {
         // The First Officer might be saved, with someone else dying instead.
         const others = this.alive().filter((p) => p !== parasite && p !== target);
@@ -693,6 +847,32 @@ class Game {
         kill(target, 'died');
       }
     }
+    // The Method Actor's "kills" do nothing at all, but the real Parasite sees them.
+    for (const p of this.players.filter((x) => x.alive && x.role === 'actor')) {
+      const [t] = choice(p) || [];
+      if (t && parasite) say(parasite, 'actor', `Your Method Actor, ${p.name}, aimed at ${this.name(t)} tonight. (Nothing happened. It never does.)`, true);
+      d.events.push({ k: 'actor', a: p.id, t: t || null });
+    }
+
+    // The Knife Thrower's once-a-game knife ignores every kind of protection.
+    for (const p of this.players.filter((x) => x.alive && x.role === 'knifethrower')) {
+      const [t] = choice(p) || [];
+      if (!t) continue;
+      const works = !broken(p) && !d.deaths.some((x) => x.id === t);
+      if (works) d.deaths.push({ id: t, cause: 'knife' });
+      d.events.push({ k: 'knife', a: p.id, t, works });
+    }
+
+    // The Magician's once-a-game trick: a dead Crew member comes back.
+    for (const p of believers('magician')) {
+      const [t] = choice(p) || [];
+      if (!t) continue;
+      const target = this.get(t);
+      const works = !broken(p) && !!target && !target.alive && ROLES[target.role].type === 'crew';
+      if (works) d.revive = t;
+      d.events.push({ k: 'revive', a: p.id, t, works });
+    }
+
     const dying = d.deaths.map((x) => x.id);
 
     // A dead Hacker's glitch stops working at once, so later abilities tonight get true info.
@@ -710,9 +890,19 @@ class Game {
       const ex = this.get(this.executedYesterday);
       for (const p of believers('coroner')) {
         if (dying.includes(p.id)) continue;
-        const truthful = !broken(p);
-        const role = truthful ? this.reg(ex).role : st.pick(Object.keys(ROLES).filter((r) => r !== ex.role), this.random);
+        const truthful = !lies(p);
+        const role = truthful ? this.reg(ex).role : st.pick(scriptOf(this.script).roles.filter((r) => r !== ex.role), this.random);
         say(p, 'coroner', `${ex.name}, who was airlocked today, was the ${ROLES[role].name}.`, truthful);
+      }
+    }
+
+    // The Ticket Taker learns whether the Parasite voted today.
+    if (N > 1) {
+      for (const p of believers('tickettaker')) {
+        if (dying.includes(p.id)) continue;
+        const truth = this.votesToday.some((v) => v.voters.some((id) => this.isDemon(this.get(id))));
+        const value = lies(p) ? !truth : truth;
+        say(p, 'tickettaker', value ? 'The Parasite VOTED today.' : 'The Parasite did not vote today.', !lies(p), { value });
       }
     }
 
@@ -720,9 +910,9 @@ class Game {
     for (const p of believers('engineer')) {
       if (dying.includes(p.id)) continue;
       const truth = this.aliveNeighbours(p, dying).filter((o) => this.reg(o).evil).length;
-      const value = broken(p) ? st.otherNumber(truth, 2, this.random) : truth;
+      const value = lies(p) ? st.otherNumber(truth, 2, this.random) : truth;
       const names = this.aliveNeighbours(p, dying).map((o) => o.name).join(' & ');
-      say(p, 'engineer', `${value} of your living neighbours (${names}) ${value === 1 ? 'is' : 'are'} evil.`, !broken(p), { value });
+      say(p, 'engineer', `${value} of your living neighbours (${names}) ${value === 1 ? 'is' : 'are'} evil.`, !lies(p), { value });
     }
 
     // Scanner checks two players for the Parasite.
@@ -731,8 +921,8 @@ class Game {
       const targets = (choice(p) || []).map((id) => this.get(id));
       if (targets.length < 2) continue;
       const truth = targets.some((t) => this.reg(t).demon || t.id === this.redHerringId);
-      const value = broken(p) ? !truth : truth;
-      say(p, 'scanner', `Scan of ${targets[0].name} & ${targets[1].name}: ${value ? 'YES, a Parasite signal!' : 'no Parasite signal.'}`, !broken(p), { value, players: targets.map((t) => t.id) });
+      const value = lies(p) ? !truth : truth;
+      say(p, 'scanner', `Scan of ${targets[0].name} & ${targets[1].name}: ${value ? 'YES, a Parasite signal!' : 'no Parasite signal.'}`, !lies(p), { value, players: targets.map((t) => t.id) });
     }
 
     // Service Droid picks tomorrow's master.
@@ -771,6 +961,8 @@ class Game {
     const d = this.draft;
     if (!d || !this.draftReady()) return;
     this.glitch = d.glitch;
+    this.hexed = d.hexed ? { id: d.hexed } : null; // the Hexer's curse lasts through today
+    for (const id of d.netUsed || []) this.get(id).netUsed = true;
 
     for (const m of d.messages) this.tell(this.get(m.to), m.text, { kind: m.role, auto: false });
     for (const [droid, master] of Object.entries(d.masters)) this.get(droid).master = master;
@@ -785,18 +977,27 @@ class Game {
     }
     if (d.starpass && this.get(d.starpass.to)?.alive) {
       const heir = this.get(d.starpass.to);
-      heir.role = 'parasite';
-      heir.believed = 'parasite';
+      heir.role = d.starpass.role || 'parasite';
+      heir.believed = heir.role;
       this.tell(heir, 'The Parasite abandoned its old host and crawled into YOU. You are now the Parasite!', { kind: 'evil' });
       this.ev({ k: 'become-parasite', a: heir.id, cause: 'starpass' });
+    }
+
+    // the Magician's trick (a dead Crew member comes back)
+    const revived = [];
+    const back = d.revive && this.get(d.revive);
+    if (back && !back.alive) {
+      this.revive(back);
+      revived.push(back.id);
     }
 
     this.chapter.deaths = deaths;
     this.scoreDeathGuesses(deaths, d.parasiteId);
     this.logEvent({ k: 'dawn', deaths: deaths.map((x) => x.id), day: this.night });
-    const story = d.story || st.dawnStory(deaths.map((x) => ({ name: this.name(x.id), bio: this.get(x.id)?.bio })), this.random);
+    let story = d.story || st.dawnStory(deaths.map((x) => ({ name: this.name(x.id), bio: this.get(x.id)?.bio })), this.random, this.script);
+    for (const id of revived) story += ` ${st.reviveStory(this.name(id), this.random)}`;
     this.chapter.story = story;
-    this.dawn = { night: this.night, deaths, story, at: now };
+    this.dawn = { night: this.night, deaths, revived, story, at: now };
     if (d.hallucinate && !this.stats.hallucinated.includes(d.hallucinate)) this.stats.hallucinated.push(d.hallucinate);
     this.hallucination = d.hallucinate && this.get(d.hallucinate)?.alive
       ? { id: d.hallucinate, seed: Math.floor(this.random() * 1e9), clue: st.fakeClue(this, this.random) }
@@ -818,7 +1019,7 @@ class Game {
     }
 
     this.newChapter('day', this.day);
-    this.announce(deaths.length ? `Dawn. ${deaths.map((x) => this.name(x.id)).join(' and ')} did not wake up.` : 'Dawn. Everyone survived the night.', 'dawn');
+    this.announce((deaths.length ? `Dawn. ${deaths.map((x) => this.name(x.id)).join(' and ')} did not wake up.` : 'Dawn. Everyone survived the night.') + revived.map((id) => ` ✨ ${this.name(id)} is back from the dead!`).join(''), 'dawn');
     this.checkWin();
     this.setPhase('dawn', this.dur('dawn'), now);
   }
@@ -827,6 +1028,16 @@ class Game {
   // Death and winning
   // ---------------------------------------------------------------------------
 
+  // The Magician's trick: someone who died comes back to life (and keeps their role).
+  revive(p) {
+    p.alive = true;
+    p.ghostVote = false;
+    delete this.predictions[p.id];
+    this.ev({ k: 'revive', id: p.id });
+    this.logEvent({ k: 'revive', id: p.id });
+    this.tell(p, 'A top-hatted figure waved a wand... and you are BACK from the dead!', { kind: 'magician' });
+  }
+
   kill(p, cause) {
     if (!p.alive) return;
     const aliveBefore = this.aliveCount();
@@ -834,24 +1045,74 @@ class Game {
     p.ghostVote = true;
     this.ev({ k: 'death', id: p.id, cause });
     this.ready.delete(p.id);
+    if (this.block?.id === p.id) this.block = null; // whoever was heading for the airlock died another way first
+
+    // The Clown's last act: a pie in someone's face (if it lands on a villain, the crew loses).
+    if (p.role === 'clown' && !this.broken(p) && !this.winner) {
+      this.wish = { id: p.id, role: 'clown', until: null };
+      this.announce(`🥧 ${p.name} was the Clown! One last pie to throw...`, 'death');
+    }
 
     // The Hacker's glitch ends when the Hacker dies.
     if (p.role === 'hacker') this.glitch = null;
 
     // Incubator (Scarlet Woman) takes over if the Parasite dies with 5+ alive.
-    if (p.role === 'parasite' && cause !== 'starpass' && aliveBefore >= 5) {
+    if (this.isDemon(p) && cause !== 'starpass' && aliveBefore >= 5) {
       const inc = this.players.find((o) => o.alive && o.role === 'incubator' && !this.isGlitched(o));
       if (inc) {
-        inc.role = 'parasite';
-        inc.believed = 'parasite';
+        inc.role = p.role;
+        inc.believed = p.role;
         this.tell(inc, 'The Parasite is dead... but its spawn hatches inside YOU. You are now the Parasite!', { kind: 'evil' });
         this.ev({ k: 'become-parasite', a: inc.id, cause: 'incubator' });
       }
     }
   }
 
+  // ---- the Clown's pie ----
+
+  chooseWish(pid, targetId, now = Date.now()) {
+    const w = this.wish;
+    if (!w || w.id !== pid) throw new Error('You have no pie to throw.');
+    const target = this.get(targetId);
+    if (!target || !target.alive || target.id === pid) throw new Error('Pick a living player.');
+    this.resolveWish(target, now, false);
+  }
+
+  resolveWish(target, now, random) {
+    const clown = this.get(this.wish.id);
+    this.wish = null;
+    const evil = teamOf(target.role) === 'infiltrators';
+    this.ev({ k: 'pie', a: clown.id, t: target.id, evil, random });
+    this.logEvent({ k: 'pie', a: clown.id, t: target.id, evil, random });
+    const how = random ? 'The pie flies wild and lands on' : 'The pie sails across the bridge and lands on';
+    if (evil) {
+      this.announce(`🥧 ${how} ${target.name}... and ${target.name} was EVIL! The crowd cheers for the villain!`, 'death');
+      this.finish('infiltrators', `${clown.name} the Clown threw a pie at ${target.name}, and it was an infiltrator! The crowd goes wild for the wrong team.`);
+      this.dusk = { id: null, cause: 'pie', story: `${clown.name}'s pie lands on ${target.name}. A hush falls over the big top. Then a villainous laugh.` };
+      this.setPhase('dusk', this.dur('dusk'), now);
+    } else {
+      this.announce(`🥧 ${how} ${target.name}! A direct hit. ${target.name} wipes off the custard. (They are good. Phew.)`, 'vote');
+    }
+  }
+
+  // A Clown who never picks gets a random pie after a while.
+  tickWish(now) {
+    const w = this.wish;
+    if (!w || this.winner || this.phase === 'ended' || this.pausedRemaining != null) return false;
+    w.until ??= now + this.dur('wish');
+    if (now < w.until) return false;
+    const pool = this.players.filter((p) => p.alive && p.id !== w.id);
+    if (!pool.length) {
+      this.wish = null;
+      return true;
+    }
+    this.resolveWish(st.pick(pool, this.random), now, true);
+    return true;
+  }
+
   finish(winner, reason) {
     if (this.winner) return true;
+    this.wish = null;
     this.winner = winner;
     this.winReason = reason;
     this.history.push({ k: 'end', winner, reason });
@@ -863,9 +1124,9 @@ class Game {
 
   // Everyone who was the Parasite at any point this game (it can jump hosts).
   parasiteIds() {
-    const ids = new Set(this.players.filter((p) => p.role === 'parasite').map((p) => p.id));
+    const ids = new Set(this.players.filter((p) => this.isDemon(p)).map((p) => p.id));
     const setup = this.history.find((h) => h.k === 'setup');
-    for (const [id, r] of Object.entries(setup?.roles || {})) if (r === 'parasite') ids.add(id);
+    for (const [id, r] of Object.entries(setup?.roles || {})) if (ROLES[r]?.type === 'parasite') ids.add(id);
     for (const ch of this.history) for (const e of ch.events || []) if (e.k === 'become-parasite') ids.add(e.a);
     return ids;
   }
@@ -959,6 +1220,7 @@ class Game {
       winner: this.winner,
       days: this.day,
       minutes: this.startedAt ? Math.round(((this.endedAt || Date.now()) - this.startedAt) / 600) / 100 : null,
+      script: this.script,
       roles: this.players.map((p) => p.role),
       survivors: this.players.filter((p) => p.alive).map((p) => p.role),
     };
@@ -997,13 +1259,24 @@ class Game {
   checkWin() {
     if (this.winner) return true;
     const alive = this.alive();
-    if (!alive.some((p) => p.role === 'parasite')) {
+    const demonDead = !alive.some((p) => this.isDemon(p));
+    if (demonDead && !this.twinsAlive()) {
       return this.finish('crew', 'The Parasite is dead! The crew fires the engines and breaks free of the black hole.');
     }
     if (alive.length <= 2) {
-      return this.finish('infiltrators', 'Only two remain. The Parasite steers the ship into the black hole. There is no more space.');
+      return this.finish('infiltrators', demonDead
+        ? 'Only two remain. The Parasite is gone, but the Stage Double and their twin are still on stage, and the show goes on without the crew.'
+        : 'Only two remain. The Parasite steers the ship into the black hole. There is no more space.');
     }
     return false;
+  }
+
+  // The Stage Double and their good twin both live: the crew cannot win yet.
+  twinsAlive() {
+    if (!this.twin) return false;
+    const good = this.get(this.twin.good);
+    const evil = this.get(this.twin.evil);
+    return !!good?.alive && !!evil?.alive && !this.isGlitched(evil);
   }
 
   end(now) {
@@ -1057,6 +1330,23 @@ class Game {
     this.nominees.add(bId);
     this.ready.clear(); // a new accusation is worth talking about
     this.announce(`${a.name} nominates ${b.name}!`, 'nominate');
+
+    // The Hexer's curse: a hexed player who nominates dies (the nomination still counts).
+    const hexer = this.players.find((x) => x.alive && x.role === 'hexer');
+    if (this.hexed && this.hexed.id === aId && hexer && this.aliveCount() > 3) {
+      this.hexed = null;
+      this.ev({ k: 'hexed', id: aId, by: hexer.id });
+      this.announce(`💥 ${a.name} was HEXED! The nomination goes ahead, but ${a.name} vanishes in a puff of purple smoke.`, 'death');
+      this.logEvent({ k: 'hex', id: aId });
+      this.kill(a, 'hex');
+      this.checkWin();
+      if (this.winner) {
+        this.nomination = null;
+        this.dusk = { id: a.id, cause: 'hex', anim: 'poof', story: `${a.name} nominates ${b.name}, and the Hexer's curse finishes the job. Poof.` };
+        this.setPhase('dusk', this.dur('dusk'), now);
+        return;
+      }
+    }
 
     // Sentinel (Virgin): zaps a Crew nominator, once.
     if (b.role === 'sentinel' && !b.used) {
@@ -1175,7 +1465,7 @@ class Game {
       }
     }
     const nominee = this.get(nom.nominee);
-    if (nominee.role === 'parasite') this.lastParasiteVotes = Math.max(this.lastParasiteVotes, votes);
+    if (this.isDemon(nominee)) this.lastParasiteVotes = Math.max(this.lastParasiteVotes, votes);
     this.lastNomination = { nominator: nom.nominator, nominee: nom.nominee, voters, ignored, votes, threshold, result, at: now };
     this.votesToday.push(this.lastNomination);
     this.logEvent({ k: 'vote', a: nom.nominator, t: nom.nominee, voters, votes, threshold, result });
@@ -1221,7 +1511,7 @@ class Game {
   beginDusk(now) {
     if (this.nomination) throw new Error('Finish the current vote first.');
     const victim = this.block?.id ? this.get(this.block.id) : null;
-    if (victim) {
+    if (victim?.alive) {
       // a spotlight and 15 seconds for their last words, then the airlock
       this.lastWords = { id: victim.id };
       this.setPhase('lastwords', this.dur('lastwords'), now);
@@ -1236,6 +1526,10 @@ class Game {
       this.finish('crew', `Three survivors and no airlocking: First Officer ${fo.name} takes the helm and pulls the ship free!`);
     }
     this.dusk = { id: null, cause: null, story: 'The crew stares at each other in silence as the lights go down.' };
+    if (!this.winner && this.reflectionAlive()) {
+      this.finish('infiltrators', 'A whole day passed and nobody was airlocked. The Reflection smiles in every mirror: the show goes on without the crew.');
+      this.dusk.story = 'Nobody is airlocked. In the glass of every window, something smiles back.';
+    }
     this.setPhase('dusk', this.dur('dusk'), now);
   }
 
@@ -1247,7 +1541,19 @@ class Game {
   }
 
   execute(p, now, cause) {
-    const story = cause === 'sentinel' ? `${p.name} is fried by the Sentinel's defences and swept out of the airlock.` : st.executionStory(p.name, this.random, p.bio);
+    // The Acrobat's safety net catches them the first time (unless the net has a hole in it).
+    if (p.role === 'acrobat' && !p.netUsed && !this.broken(p) && cause !== 'sentinel') {
+      p.netUsed = true;
+      const saved = `${p.name} is sent out of the airlock... and bounces back off a safety net, unharmed! The Acrobat takes a bow.`;
+      this.ev({ k: 'net', id: p.id, votes: this.block?.votes || 0, story: saved });
+      this.executedToday = p.id;
+      this.announce(`${p.name} is airlocked... but a safety net catches them! ${p.name} is the Acrobat, and still alive!`, 'vote');
+      this.logEvent({ k: 'net', id: p.id, votes: this.block?.votes || 0 });
+      this.dusk = { id: p.id, cause: 'net', anim: null, survived: true, story: saved };
+      this.setPhase('dusk', this.dur('dusk'), now);
+      return;
+    }
+    const story = cause === 'sentinel' ? `${p.name} is fried by the Sentinel's defences and swept out of the airlock.` : st.executionStory(p.name, this.random, p.bio, this.script);
     this.ev({ k: 'execute', id: p.id, cause, votes: this.block?.votes || 0, story });
     this.kill(p, cause === 'sentinel' ? 'sentinel' : 'airlock');
     this.executedToday = p.id;
@@ -1255,6 +1561,12 @@ class Game {
     this.logEvent({ k: cause === 'sentinel' ? 'sentinel' : 'airlock', id: p.id, votes: this.block?.votes || 0 });
     if (p.role === 'ambassador' && !this.isGlitched(p)) {
       this.finish('infiltrators', `${p.name} was the Ambassador! Diplomatic incident: the galaxy declares war on the crew.`);
+    }
+    if (this.twin && p.id === this.twin.good) {
+      const double = this.get(this.twin.evil);
+      if (double?.alive && !this.isGlitched(double)) {
+        this.finish('infiltrators', `${p.name} was the Good Twin! The crew airlocked the wrong twin, and the Stage Double takes over the show.`);
+      }
     }
     this.checkWin();
     this.dusk = { id: p.id, cause, anim: 'airlock', story };
@@ -1697,6 +2009,7 @@ class Game {
     return {
       code: this.code,
       shipName: this.shipName,
+      script: this.script,
       phase: this.phase,
       mode: this.mode,
       people: this.players.filter((p) => !p.isBot && p.connected).length,
@@ -1911,7 +2224,8 @@ class Game {
     const away = this.hostAway(now);
     const awayChanged = away !== !!this.lastHostAway;
     this.lastHostAway = away;
-    return this.tickPhase(now) || cluesChanged || afk || awayChanged;
+    const wished = this.tickWish(now);
+    return this.tickPhase(now) || cluesChanged || afk || awayChanged || wished;
   }
 
   tickPhase(now) {
@@ -2009,14 +2323,19 @@ class Game {
   }
 
   evilTeamFor(p) {
+    // the Method Actor sees a team of Saboteurs that is not real
+    if (p.role === 'actor' && p.fakeTeam && this.evilInfoShared()) {
+      return [{ id: p.id, name: p.name, parasite: true }, ...p.fakeTeam.map((id) => ({ id, name: this.name(id), parasite: false }))];
+    }
     if (!p.role || teamOf(p.role) !== 'infiltrators' || !this.evilInfoShared()) return null;
-    return this.players.filter((o) => teamOf(o.role) === 'infiltrators').map((o) => ({ id: o.id, name: o.name, parasite: o.role === 'parasite' }));
+    return this.players.filter((o) => teamOf(o.role) === 'infiltrators').map((o) => ({ id: o.id, name: o.name, parasite: this.isDemon(o) }));
   }
 
   baseView() {
     const nom = this.nomination;
     return {
       code: this.code,
+      script: this.script,
       shipName: this.shipName,
       round: this.season.games + (this.phase === 'ended' ? 0 : 1),
       season: this.seasonView(),
@@ -2111,7 +2430,8 @@ class Game {
       blackbox: this.blackbox && this.blackbox.id === pid ? { done: !!this.blackbox.target } : null,
       gunner: p.believed === 'gunner' && p.alive && !p.used,
       evilTeam: this.evilTeamFor(p),
-      bluffs: p.role === 'parasite' && this.evilInfoShared() ? this.bluffs : null,
+      bluffs: ROLES[p.believed]?.type === 'parasite' && this.evilInfoShared() ? this.bluffs : null,
+      wish: this.wish && this.wish.id === pid ? { role: this.wish.role, until: this.wish.until } : null,
       manifest: p.role === 'mimic' && p.alive ? this.mimicManifest : null,
       master: p.role === 'droid' && p.alive ? p.master : null,
       ready: this.ready.has(pid),

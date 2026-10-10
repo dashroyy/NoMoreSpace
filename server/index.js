@@ -12,6 +12,7 @@ const { Game, DEATH_ANIMS, ROOM_NAMES, HAUNTS, REACTIONS, HAUNTS_PER_DAY } = req
 const { ROLES, TYPES, DISTRIBUTION, MIN_PLAYERS, MAX_PLAYERS, EVIL_INFO_MIN, teamOf } = require('./roles');
 const cosmetics = require('./cosmetics');
 const { TASKS } = require('./tasks');
+const { SCRIPTS } = require('./scripts');
 const qrcode = require('qrcode-generator');
 const records = require('./records');
 const persist = require('./persist');
@@ -37,6 +38,7 @@ if (process.env.TURN_URL) {
 
 const GAME_DATA = JSON.stringify({
   roles: ROLES,
+  scripts: SCRIPTS,
   types: TYPES,
   distribution: DISTRIBUTION,
   minPlayers: MIN_PLAYERS,
@@ -323,9 +325,10 @@ io.on('connection', (socket) => {
     for (const d of r.game.drawings.filter((x) => x.published)) socket.emit('drawing', { id: d.id, data: d.data });
   }
 
-  on('create', ({ name, look, mode, practice }) => {
+  on('create', ({ name, look, mode, practice, script }) => {
     if (rooms.size >= MAX_ROOMS) throw new Error('The station is full right now. Try again soon.');
     const g = new Game(newRoomCode(), { mode: mode === 'captain' && !practice ? 'captain' : 'autopilot' });
+    if (SCRIPTS[script]) g.script = script;
     if (process.env.NMS_TEST_PACE) g.pace = Number(process.env.NMS_TEST_PACE); // automated tests only: speeds up every timer
     const r = { code: g.code, game: g, sockets: new Map(), positions: {}, captainLeftAt: null, emptySince: null };
     const person = g.mode === 'captain' ? g.addCaptain(name) : g.addPlayer(name, look);
@@ -339,6 +342,9 @@ io.on('connection', (socket) => {
     seat(r, person);
   });
   on('add-bot', () => game().addBot(me));
+  on('script', ({ id }) => game().setScript(me, String(id)));
+  // a dead Clown's pie
+  on('wish', ({ target }) => game().chooseWish(me, String(target)));
   on('public', ({ on: value }) => game().setPublic(me, value));
   // the public ships list for the title screen
   on('list-public', () => {
@@ -503,6 +509,13 @@ io.on('connection', (socket) => {
     const message = { from: me, name: captain ? `Captain ${g.captain.name}` : sender?.name, text: clean, at: now, ghost: sender ? !sender.alive : false };
 
     if (channel === 'evil') {
+      if (sender?.role === 'actor' && g.evilInfoShared() && g.phase === 'night') {
+        // the Method Actor believes they have a team: their words go nowhere (the Captain, if any, can see them)
+        message.channel = 'evil';
+        personSocket(room, me)?.emit('chat', message);
+        if (g.captain) personSocket(room, g.captain.id)?.emit('chat', message);
+        return { heard: 0, channel: 'evil' };
+      }
       if (!sender || teamOf(sender.role || 'crew') !== 'infiltrators' || !g.evilInfoShared()) throw new Error('You have no secret channel.');
       if (g.phase !== 'night') throw new Error('The secret channel only opens at night.');
       message.channel = 'evil';

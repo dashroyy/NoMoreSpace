@@ -5,7 +5,8 @@
 // the Recluse shows up as evil... This file makes those choices automatically.
 // The human Captain can override any of them from the Command Station.
 
-const { ROLES, DISTRIBUTION, rolesOfType, teamOf } = require('./roles');
+const { ROLES, DISTRIBUTION, rolesOfType, rolesOfTypeIn, teamOf } = require('./roles');
+const { scriptOf, inScript } = require('./scripts');
 
 function pick(list, random) {
   return list[Math.floor(random() * list.length)];
@@ -42,29 +43,40 @@ function typeCounts(playerCount, roleIds = []) {
 // Build a balanced random role list. Rules of thumb borrowed from experienced
 // storytellers: keep at least half the crew on information roles, and never
 // leave the crew without any information at all.
-function pickRoles(playerCount, random = Math.random) {
+function pickRoles(playerCount, random = Math.random, scriptId = 'classic') {
+  const script = scriptOf(scriptId);
   for (let attempt = 0; attempt < 50; attempt++) {
     const base = typeCounts(playerCount);
-    const saboteurs = sample(rolesOfType('saboteur').filter((r) => allowed(r, playerCount)), base.saboteur, random);
+    const saboteurs = sample(rolesOfTypeIn(script.id, 'saboteur').filter((r) => allowed(r, playerCount)), base.saboteur, random);
     const counts = typeCounts(playerCount, saboteurs);
-    const drifterPool = rolesOfType('drifter').filter((r) => allowed(r, playerCount));
+    const drifterPool = rolesOfTypeIn(script.id, 'drifter').filter((r) => allowed(r, playerCount));
     if (counts.drifter > drifterPool.length) continue;
     const drifters = sample(drifterPool, counts.drifter, random);
-    const crew = sample(rolesOfType('crew').filter((r) => allowed(r, playerCount)), counts.crew, random);
+    const crew = sample(rolesOfTypeIn(script.id, 'crew').filter((r) => allowed(r, playerCount)), counts.crew, random);
 
     const infoRoles = crew.filter((r) => ROLES[r].tags.includes('info')).length;
     if (infoRoles < Math.ceil(crew.length / 2)) continue;
-    return ['parasite', ...saboteurs, ...drifters, ...crew];
+    return [pickDemon(script, playerCount, random), ...saboteurs, ...drifters, ...crew];
   }
   throw new Error('Could not build a role list.');
 }
 
+// Which Demon haunts this game. Scripts with more than one list a chance for each extra one.
+function pickDemon(script, playerCount, random) {
+  const options = script.demons.filter((r) => allowed(r, playerCount));
+  for (const id of options.slice(1).reverse()) {
+    if (random() < (script.demonChance?.[id] ?? 0.5)) return id;
+  }
+  return options[0];
+}
+
 // Check a Captain's hand-picked role list against the setup table.
-function validateRoles(roleIds, playerCount) {
+function validateRoles(roleIds, playerCount, scriptId = 'classic') {
   if (!DISTRIBUTION[playerCount]) return `No setup for ${playerCount} players.`;
   if (roleIds.length !== playerCount) return `Pick exactly ${playerCount} roles (you picked ${roleIds.length}).`;
   if (new Set(roleIds).size !== roleIds.length) return 'Each role can only be used once.';
   for (const id of roleIds) if (!ROLES[id]) return `Unknown role: ${id}`;
+  for (const id of roleIds) if (!inScript(id, scriptId)) return `${ROLES[id].name} is not on the ${scriptOf(scriptId).name} script.`;
   const want = typeCounts(playerCount, roleIds);
   for (const type of ['crew', 'drifter', 'saboteur', 'parasite']) {
     const have = roleIds.filter((id) => ROLES[id].type === type).length;
@@ -137,17 +149,55 @@ function fillBio(template, name, bio) {
 }
 
 // dead: names, or { name, bio } (bios are used most of the time when set)
-function dawnStory(dead, random = Math.random) {
-  if (!dead.length) return pick(QUIET_NIGHT_LINES, random);
+// The Cosmic Carnival tells its stories in a circus voice.
+const CARNIVAL_NIGHT_DEATH_LINES = [
+  '{name} wandered into the Hall of Mirrors. Only the mirror came out.',
+  '{name} volunteered to be sawn in half. Nobody volunteered to put them back together.',
+  'The cotton-candy machine was hungry again. {name} was the last thing it was seen with.',
+  '{name} went to feed the fire-breathing lizard. The lizard says it was a misunderstanding.',
+  'The human cannon went off at midnight with {name} inside. Nobody remembers loading it.',
+  '{name} took the Ghost Train alone. The Ghost Train says it was not alone.',
+  'Somebody found {name}\'s big shoes in the ball pit. Just the shoes.',
+  'The Parasite did a card trick: "Pick a card, any card." It picked {name}.',
+];
+
+const CARNIVAL_QUIET_NIGHT_LINES = [
+  'The big top creaked, the calliope played one wrong note, and everyone woke up. The Parasite must be rehearsing.',
+  'A quiet night under the canvas. Even the clowns are suspicious.',
+  'Not a single act went missing. The audience feels strangely cheated.',
+  'The lights flickered over the midway, and yet the whole troupe made it to breakfast.',
+];
+
+const CARNIVAL_EXECUTION_LINES = [
+  '{name} is fired out of the airlock cannon, trailing streamers. Ten out of ten from the judges.',
+  'With a drumroll and a rude noise, the troupe sends {name} out of the big top for good.',
+  '{name} takes a bow, and the trapdoor takes {name}.',
+  '{name} is escorted to the airlock. "I was only the dancing bear!" they protest. (Nobody believes them.)',
+];
+
+// A little extra when the Magician brings someone back.
+const REVIVE_LINES = [
+  'Then, in a puff of glitter, {name} steps out of the Magician\'s cabinet and takes a bow. Nobody asked how.',
+  'A wand flashes, a rabbit looks embarrassed, and {name} is somehow alive again.',
+  'And then, with a drumroll nobody ordered, {name} came back from the void. Please do not ask questions.',
+];
+
+function reviveStory(name, random = Math.random) {
+  return fill(pick(REVIVE_LINES, random), name);
+}
+
+function dawnStory(dead, random = Math.random, scriptId = 'classic') {
+  const carnival = scriptId === 'carnival';
+  if (!dead.length) return pick(carnival ? CARNIVAL_QUIET_NIGHT_LINES : QUIET_NIGHT_LINES, random);
   return dead
     .map((d) => (typeof d === 'string' ? { name: d } : d))
-    .map(({ name, bio }) => (bio && random() < 0.7 ? fillBio(pick(BIO_DEATH_LINES, random), name, bio) : fill(pick(NIGHT_DEATH_LINES, random), name)))
+    .map(({ name, bio }) => (bio && random() < 0.7 ? fillBio(pick(BIO_DEATH_LINES, random), name, bio) : fill(pick(carnival ? CARNIVAL_NIGHT_DEATH_LINES : NIGHT_DEATH_LINES, random), name)))
     .join(' ');
 }
 
-function executionStory(name, random = Math.random, bio = '') {
+function executionStory(name, random = Math.random, bio = '', scriptId = 'classic') {
   if (bio && random() < 0.5) return fillBio(pick(BIO_EXECUTION_LINES, random), name, bio);
-  return fill(pick(EXECUTION_LINES, random), name);
+  return fill(pick(scriptId === 'carnival' ? CARNIVAL_EXECUTION_LINES : EXECUTION_LINES, random), name);
 }
 
 const SHIP_NAMES = [
@@ -247,6 +297,7 @@ function fakeClue(game, random = Math.random) {
 }
 
 module.exports = {
+  reviveStory,
   fakeClue,
   pick,
   shuffle,

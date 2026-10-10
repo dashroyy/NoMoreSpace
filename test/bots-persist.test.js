@@ -171,7 +171,7 @@ test('public ships: the host lists a ship; practice ships stay private', () => {
   g.setPublic(host.id, true);
   assert.ok(g.viewFor(host.id).isPublic);
   const line = g.listing();
-  assert.deepStrictEqual(Object.keys(line).sort(), ['code', 'mode', 'people', 'phase', 'robots', 'round', 'seats', 'shipName', 'watching']);
+  assert.deepStrictEqual(Object.keys(line).sort(), ['code', 'mode', 'people', 'phase', 'robots', 'round', 'script', 'seats', 'shipName', 'watching']);
   assert.strictEqual(line.robots, 3);
   assert.strictEqual(line.people, 1);
   g.practice = true;

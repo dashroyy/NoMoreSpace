@@ -8,6 +8,8 @@
 //
 // This file is plain data so the browser can show the same role cards.
 
+const { scriptOf } = require('./scripts');
+
 const TEAMS = { crew: 'crew', infiltrators: 'infiltrators' };
 
 const TYPES = {
@@ -292,6 +294,9 @@ const ROLES = {
   },
 };
 
+// The Cosmic Carnival script's extra roles (scripts.js says which roles each script uses).
+Object.assign(ROLES, require('./roles-carnival').CARNIVAL_ROLES);
+
 // Blood on the Clocktower's setup table, extended down to 3 players ("Short Haul").
 //               crew drifters saboteurs parasite
 const DISTRIBUTION = {
@@ -320,8 +325,13 @@ function rolesOfType(type) {
   return Object.keys(ROLES).filter((id) => ROLES[id].type === type);
 }
 
+// The roles of one type that are on a script (by default the classic one).
+function rolesOfTypeIn(scriptId, type) {
+  return scriptOf(scriptId).roles.filter((id) => ROLES[id]?.type === type);
+}
+
 function teamOf(roleId) {
   return TYPES[ROLES[roleId].type].team;
 }
 
-module.exports = { ROLES, TYPES, TEAMS, DISTRIBUTION, MIN_PLAYERS, MAX_PLAYERS, EVIL_INFO_MIN, rolesOfType, teamOf };
+module.exports = { ROLES, TYPES, TEAMS, DISTRIBUTION, MIN_PLAYERS, MAX_PLAYERS, EVIL_INFO_MIN, rolesOfType, rolesOfTypeIn, teamOf };

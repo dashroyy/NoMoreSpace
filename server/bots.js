@@ -44,6 +44,11 @@ function inside(rect, shrink = 0.3) {
   return { x: (x0 + x1) / 2 + (Math.random() - 0.5) * w, z: (z0 + z1) / 2 + (Math.random() - 0.5) * d };
 }
 
+// In the Cosmic Carnival (7+ players) the Reflection might be in play, and then a day without an airlocking loses.
+function needsAirlocking(g) {
+  return g.script === 'carnival' && g.players.length >= 7;
+}
+
 function evil(p) {
   return !!p.role && teamOf(p.role) === 'infiltrators';
 }
@@ -55,7 +60,7 @@ function teammates(g, p) {
   return new Set(team ? team.map((t) => t.id) : [p.id]);
 }
 
-const EVIL_ROLE = /(Hacker|Mimic|Incubator|Smuggler|Holo-Jester|The Parasite)/;
+const EVIL_ROLE = /(Hacker|Mimic|Incubator|Smuggler|Holo-Jester|The Parasite|The Reflection|Knife Thrower|Stage Double|Hexer)/;
 
 // What a clue (a role's private info, or one shared at the meeting) says about
 // one player: positive = suspicious, negative = probably good.
@@ -72,6 +77,9 @@ function readClue(text, name) {
 // How much a robot distrusts someone (higher = more suspicious).
 function suspicion(g, p, t, brain) {
   if (t.id === p.id) return -1;
+  // the Stage Double and the good twin know each other (the double wants their twin airlocked)
+  if (g.twin && evil(p) && g.twin.evil === p.id && t.id === g.twin.good) return 2;
+  if (g.twin && !evil(p) && g.twin.good === p.id && t.id === g.twin.evil) return 1.5;
   brain.noise[t.id] ??= Math.random();
   const gut = brain.noise[t.id];
   if (evil(p)) return teammates(g, p).has(t.id) ? -1 : 0.4 + gut * 0.6;
@@ -115,19 +123,31 @@ function mostSuspicious(g, p, brain, candidates) {
 // Night targets that make sense for the role.
 function nightTargets(g, p, prompt, brain) {
   const team = teammates(g, p);
-  const pool = g.players.filter((t) => (prompt.target === 'any' || t.alive) && !(prompt.notSelf && t.id === p.id));
+  const pool = g.players.filter((t) => (prompt.target === 'any' || (prompt.target === 'dead' ? !t.alive : t.alive)) && !(prompt.notSelf && t.id === p.id));
   const others = pool.filter((t) => t.id !== p.id);
   const infoClaim = (t) => (g.claims[t.id]?.role && ROLES[g.claims[t.id].role]?.tags?.includes('info') ? 0.5 : 0);
   const ranked = (list, score) => list.map((t) => [t, score(t) + Math.random() * 0.4]).sort((a, b) => b[1] - a[1]).map(([t]) => t);
   let list;
   switch (prompt.role) {
     case 'parasite':
+    case 'reflection':
       list = ranked(others.filter((t) => !team.has(t.id)), infoClaim); // hunt whoever claims to know things
       break;
     case 'hacker':
     case 'jester':
+    case 'hexer':
+    case 'knifethrower':
       list = ranked(others.filter((t) => !team.has(t.id)), infoClaim);
       break;
+    case 'liontamer':
+      list = ranked(others.filter((t) => t.id !== p.lastPick), (t) => suspicion(g, p, t, brain)); // guess the most suspicious, never twice in a row
+      break;
+    case 'palmreader':
+    case 'stagehand':
+      list = ranked(others, (t) => suspicion(g, p, t, brain));
+      break;
+    case 'magician':
+      list = ranked(others, (t) => -suspicion(g, p, t, brain) + infoClaim(t)); // bring back someone trusted
     case 'medic':
       list = ranked(others, (t) => infoClaim(t) - suspicion(g, p, t, brain)); // protect trusted info roles
       break;
@@ -146,9 +166,9 @@ function nightTargets(g, p, prompt, brain) {
 
 // The role a robot claims: the truth (as it believes it) if good, a bluff if evil.
 function claimFor(g, p) {
-  if (!evil(p)) return p.believed;
+  if (!evil(p) && ROLES[p.believed].type !== 'parasite') return p.believed;
   const taken = new Set(Object.values(g.claims).map((c) => c.role));
-  const bluffs = (p.role === 'parasite' && g.bluffs?.length ? g.bluffs : rolesOfType('crew').filter((r) => ROLES[r].minPlayers <= g.players.length));
+  const bluffs = (ROLES[p.believed].type === 'parasite' && g.bluffs?.length ? g.bluffs : g.rolesOf('crew').filter((r) => ROLES[r].minPlayers <= g.players.length));
   return bluffs.find((r) => !taken.has(r)) || pick(bluffs);
 }
 
@@ -315,6 +335,7 @@ function runBots(room, now, api, dt = 0.25) {
       b.actAt = now + (2500 + Math.random() * 9000) * tempo;
       b.nominateAt = now + (6000 + Math.random() * 30_000) * tempo;
       b.triedNominate = false;
+      b.willNominate = undefined;
       b.said = {};
     }
     if (g.phase === 'lobby' || g.phase === 'roam') walk(room, g, p, b, now, dt);
@@ -325,6 +346,11 @@ function runBots(room, now, api, dt = 0.25) {
       const bet = evil(p) ? pick(living.filter((t) => !teammates(g, p).has(t.id))) : mostSuspicious(g, p, b, living)?.[0];
       if (bet) act(() => g.predict(p.id, bet.id, now));
     }
+    // a dead Clown throws a pie (a robot has no way to be sure who is good, so it is a coin flip, like for anyone)
+    if (g.wish && g.wish.id === p.id && now > b.actAt) {
+      const living = g.players.filter((t) => t.alive && t.id !== p.id);
+      if (living.length) act(() => g.chooseWish(p.id, pick(living).id, now));
+    }
     if (g.phase === 'lobby' && Math.random() < 0.002) api.emote(p.id, pick(['dance', 'wave', 'scooby', 'scuba', 'jump']));
 
     if (g.phase === 'night') {
@@ -332,7 +358,11 @@ function runBots(room, now, api, dt = 0.25) {
         act(() => g.submitChoice(p.id, [mostSuspicious(g, p, b, g.players.filter((t) => t.id !== p.id))[0].id], now));
       }
       const prompt = g.prompts[p.id];
-      if (prompt && !g.choices[p.id] && !g.draft && now > b.actAt) act(() => g.submitChoice(p.id, nightTargets(g, p, prompt, b), now));
+      if (prompt && !g.choices[p.id] && !g.draft && now > b.actAt) {
+        // a once-per-game ability (Knife Thrower, Magician) is saved some of the time, and never used from night 2 when robots are unsure
+        const save = prompt.once && Math.random() < 0.55;
+        act(() => g.submitChoice(p.id, save ? [] : nightTargets(g, p, prompt, b), now));
+      }
       if (!g.deathGuesses[p.id] && !g.draft && now > b.actAt) {
         const living = g.players.filter((t) => t.alive && t.id !== p.id);
         act(() => g.setDeathGuess(p.id, Math.random() < 0.2 || !living.length ? 'none' : pick(living).id));
@@ -397,7 +427,14 @@ function runBots(room, now, api, dt = 0.25) {
           // evil robots back good nominees, but not every time, so they don't stand out
           const { rank, of } = suspectRank(g, p, b, nominee.id);
           const top = rank >= 0 && rank < Math.max(1, Math.ceil(of * 0.45));
-          const yes = evil(p) ? s > 0 && Math.random() < 0.5 : p.alive ? top || s > 0.75 : rank === 0 && s > 0.6;
+          let yes = evil(p) ? s > 0 && Math.random() < 0.5 : p.alive ? top || s > 0.75 : rank === 0 && s > 0.6;
+          // The Cosmic Carnival's Reflection may be in play: a day with nobody airlocked loses, so a good crew pushes
+          // for an airlocking as the day runs out (and the Reflection's friends vote against).
+          const lateDay = !g.block && g.phaseEndsAt != null && g.phaseEndsAt - now < g.dur('nominations') * 0.55;
+          if (needsAirlocking(g) && !evil(p) && p.alive && lateDay) yes = true;
+          // once somebody is heading for the airlock, a good crew does not tie it up with a rival vote
+          if (needsAirlocking(g) && !evil(p) && g.block?.id && g.block.id !== nom.nominee) yes = false;
+          if (evil(p) && g.reflectionAlive()) yes = false;
           act(() => g.setHand(p.id, yes));
         }
       }
@@ -405,10 +442,22 @@ function runBots(room, now, api, dt = 0.25) {
 
     // nominating someone they suspect
     if (g.phase === 'nominations' && !nom && p.alive && !g.nominators.has(p.id) && !b.triedNominate && now > b.nominateAt) {
-      b.triedNominate = true;
       const choices = g.players.filter((t) => t.alive && t.id !== p.id && !g.nominees.has(t.id));
       const best = mostSuspicious(g, p, b, choices);
-      if (best && best[1] > 0 && Math.random() < (evil(p) ? 0.5 : 0.7)) act(() => g.nominate(p.id, best[0].id, now));
+      const hurry = needsAirlocking(g) && !evil(p); // a good crew in a carnival nominates every day...
+      if (hurry && g.block?.id) b.triedNominate = true; // ...until somebody is heading for the airlock
+      const chance = evil(p) ? (g.reflectionAlive() ? 0 : 0.5) : hurry ? 1 : 0.7;
+      b.willNominate ??= Math.random() < chance; // decided once a day
+      if (!best || !(best[1] > 0 || hurry) || !b.willNominate) b.triedNominate = true;
+      else {
+        try {
+          g.nominate(p.id, best[0].id, now);
+          b.triedNominate = true;
+          changed = true;
+        } catch {
+          b.nominateAt = now + (1500 + Math.random() * 3000) * tempo; // somebody else's vote is going on: wait and try again
+        }
+      }
     }
 
     // last words
