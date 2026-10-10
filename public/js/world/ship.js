@@ -5,6 +5,7 @@ import { ROOMS, CORRIDORS, TASK_STATIONS, DRAWING_SLOTS, TABLE_RADIUS, seatPosit
 import { buildExterior } from './station.js';
 import { buildDecor } from './decor.js';
 import { makeTextSprite } from './avatar.js';
+import { CARNIVAL_LIGHTS } from './carnival-rooms.js';
 
 const WALL_H = 2.4;
 const LOW_WALL_H = 0.9; // south-facing walls are low so they don't hide players from the camera
@@ -204,6 +205,9 @@ export function buildShip(scene, space) {
   }
 
   // ---------- room lights, labels, props ----------
+  // the space-station props live in their own group, so the Cosmic Carnival can hide them
+  const sciProps = new THREE.Group();
+  ship.add(sciProps);
   for (const room of ROOMS) {
     const [x0, z0, x1, z1] = room.rect;
     const cx = (x0 + x1) / 2;
@@ -219,7 +223,7 @@ export function buildShip(scene, space) {
     label.position.set(cx, 0.02, z0 + 1.2);
     ship.add(label);
 
-    buildProps(ship, room, cx, cz);
+    buildProps(ship, room, cx, cz, sciProps);
   }
 
   // ---------- task consoles ----------
@@ -259,7 +263,15 @@ export function buildShip(scene, space) {
   // the Cosmic Carnival turns the table's little black hole into a bobbing red clown nose
   const holoColors = holo.children.map((m) => m.material.color.getHex());
   const carnivalColors = [0xe8203a, 0xffd23f, 0xff4fa3, 0xff4fa3];
-  const setHoloTheme = (carnival) => holo.children.forEach((m, i) => m.material.color.setHex((carnival ? carnivalColors : holoColors)[i]));
+  // the Cosmic Carnival: no space-station props, circus-coloured room lights, a clown-nose hologram
+  const setTheme = (carnival) => {
+    holo.children.forEach((m, i) => m.material.color.setHex((carnival ? carnivalColors : holoColors)[i]));
+    sciProps.visible = !carnival;
+    decor.setTheme(carnival);
+    lights.forEach((light, i) => {
+      light.color.setHex(carnival ? CARNIVAL_LIGHTS[ROOMS[i].id] : ROOMS[i].light);
+    });
+  };
   const seats = new THREE.Group();
   seats.userData.dynamic = true;
   bridge.add(seats);
@@ -316,6 +328,11 @@ export function buildShip(scene, space) {
 
   const exterior = buildExterior(ship);
   const decor = buildDecor(ship);
+  // the props and the "spaceship details" are merged on their own, so they can be hidden as a set
+  for (const set of [sciProps, decor.tech]) {
+    mergeStatic(set);
+    set.userData.dynamic = true; // the whole-ship merge below leaves them alone
+  }
   mergeStatic(ship);
 
   return {
@@ -326,7 +343,7 @@ export function buildShip(scene, space) {
     flicker,
     stations,
     holo,
-    setHoloTheme,
+    setTheme,
     disk,
     setSeats,
     easels,
@@ -334,10 +351,10 @@ export function buildShip(scene, space) {
 }
 
 // Little bits of scenery per room.
-function buildProps(ship, room, cx, cz) {
+function buildProps(ship, room, cx, cz, parent = ship) {
   const g = new THREE.Group();
   g.position.set(cx, 0, cz);
-  ship.add(g);
+  parent.add(g);
   const metal = m(0x4a5272, { metalness: 0.7, roughness: 0.35 });
   switch (room.id) {
     case 'observation': {
@@ -421,12 +438,12 @@ function buildProps(ship, room, cx, cz) {
       }
       // the ship cat
       const cat = new THREE.Group();
-      cat.position.set(3.5, 0, 1.5);
+      cat.position.set(cx + 3.5, 0, cz + 1.5);
       add(cat, new THREE.CapsuleGeometry(0.2, 0.4, 4, 8), m(0xff9a3c), 0, 0.25, 0, [Math.PI / 2, 0, 0]);
       add(cat, new THREE.SphereGeometry(0.19, 10, 8), m(0xff9a3c), 0, 0.4, 0.35);
       for (const s of [-1, 1]) add(cat, new THREE.ConeGeometry(0.06, 0.12, 4), m(0xff9a3c), s * 0.1, 0.58, 0.35);
       cat.userData.dynamic = true;
-      g.add(cat);
+      ship.add(cat); // not in `g`: the cat stays on board when the props are hidden
       ship.userData.cat = cat;
       break;
     }

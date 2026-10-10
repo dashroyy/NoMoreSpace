@@ -342,6 +342,7 @@ export function buildAmbience(ship, { lowFx = false } = {}) {
 
   // ---------- animation ----------
   return {
+    root,
     sweepy: bot,
     set onVent(fn) {
       onVent = fn;

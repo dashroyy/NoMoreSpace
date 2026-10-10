@@ -204,6 +204,8 @@ export function buildDecor(ship) {
   const bulbs = []; // fairy lights
   const leds = []; // blinking panel lights
   const wire = [];
+  const tech = new THREE.Group(); // pipes, pillars, panels, data screens, racks, hazard stripes: hidden in the Cosmic Carnival
+  ship.add(tech);
 
   // ---------- fairy lights along the tops of the walls ----------
   const BULB_COLORS = [0xffe6b0, 0xffb347, 0xff7a1a, 0xb06bff, 0x5ce1e6, 0xff6fb5, 0xff7a1a, 0xb06bff];
@@ -305,8 +307,8 @@ export function buildDecor(ship) {
     // round glowing pillars where the angled back corners meet the side walls
     const c = chamferOf(room.rect);
     for (const [px, pz] of [[x0 + 0.2, z0 + c], [x1 - 0.2, z0 + c], [x0 + c, z0 + 0.2], [x1 - c, z0 + 0.2]]) {
-      add(ship, new THREE.CylinderGeometry(0.24, 0.28, 2.5, 12), pillarMat, px, 1.25, pz);
-      add(ship, new THREE.CylinderGeometry(0.06, 0.06, 2.2, 6), trim, px, 1.2, pz + 0.22);
+      add(tech, new THREE.CylinderGeometry(0.24, 0.28, 2.5, 12), pillarMat, px, 1.25, pz);
+      add(tech, new THREE.CylinderGeometry(0.06, 0.06, 2.2, 6), trim, px, 1.2, pz + 0.22);
     }
 
     for (const seg of wallSegments(room.rect, others, chamferOf(room.rect))) {
@@ -318,11 +320,11 @@ export function buildDecor(ship) {
         const inset = seg.side === 'east' ? -0.26 : 0.26;
         for (const [r, y] of [[0.07, 0.32], [0.05, 0.55]]) {
           if (seg.axis === 'x') {
-            add(ship, new THREE.CylinderGeometry(r, r, len - 0.6, 10), pipeMat, mid, y, seg.fixed + 0.26, [0, 0, Math.PI / 2]);
-            for (let p = seg.from + 1; p < seg.to - 0.6; p += 1.8) add(ship, new THREE.CylinderGeometry(r * 1.5, r * 1.5, 0.09, 10), jointMat, p, y, seg.fixed + 0.26, [0, 0, Math.PI / 2]);
+            add(tech, new THREE.CylinderGeometry(r, r, len - 0.6, 10), pipeMat, mid, y, seg.fixed + 0.26, [0, 0, Math.PI / 2]);
+            for (let p = seg.from + 1; p < seg.to - 0.6; p += 1.8) add(tech, new THREE.CylinderGeometry(r * 1.5, r * 1.5, 0.09, 10), jointMat, p, y, seg.fixed + 0.26, [0, 0, Math.PI / 2]);
           } else {
-            add(ship, new THREE.CylinderGeometry(r, r, len - 0.6, 10), pipeMat, seg.fixed + inset, y, mid, [Math.PI / 2, 0, 0]);
-            for (let p = seg.from + 1; p < seg.to - 0.6; p += 1.8) add(ship, new THREE.CylinderGeometry(r * 1.5, r * 1.5, 0.09, 10), jointMat, seg.fixed + inset, y, p, [Math.PI / 2, 0, 0]);
+            add(tech, new THREE.CylinderGeometry(r, r, len - 0.6, 10), pipeMat, seg.fixed + inset, y, mid, [Math.PI / 2, 0, 0]);
+            for (let p = seg.from + 1; p < seg.to - 0.6; p += 1.8) add(tech, new THREE.CylinderGeometry(r * 1.5, r * 1.5, 0.09, 10), jointMat, seg.fixed + inset, y, p, [Math.PI / 2, 0, 0]);
           }
         }
       }
@@ -331,7 +333,7 @@ export function buildDecor(ship) {
         const zc = (seg.from + seg.to) / 2;
         const dir = seg.side === 'west' ? 1 : -1;
         const px = seg.fixed + dir * 0.19;
-        add(ship, new THREE.BoxGeometry(0.08, 0.9, 1.5), panelMat, px, 1.35, zc);
+        add(tech, new THREE.BoxGeometry(0.08, 0.9, 1.5), panelMat, px, 1.35, zc);
         for (let r = 0; r < 4; r++) for (let c = 0; c < 8; c++) leds.push({ x: px + dir * 0.05, y: 1.08 + r * 0.17, z: zc - 0.6 + c * 0.17, color: pick([0x5bff8f, 0xffc23b, 0xff3b5c, 0x4fd6ff, 0x5bff8f]), speed: 0.5 + rnd() * 3, phase: rnd() * 6.28 });
       }
     }
@@ -339,14 +341,14 @@ export function buildDecor(ship) {
     // holographic data screen near the back wall
     const sx = rnd() < 0.5 ? x0 + 2.2 : x1 - 2.2;
     if (!blocked(sx, z0 + 1.3) && room.id !== 'bridge') {
-      add(ship, new THREE.CylinderGeometry(0.04, 0.06, 1.0, 6), jointMat, sx, 0.5, z0 + 1.2);
-      add(ship, new THREE.PlaneGeometry(1.3, 0.85), screenMat, sx, 1.35, z0 + 1.25, [-0.25, 0, 0]);
+      add(tech, new THREE.CylinderGeometry(0.04, 0.06, 1.0, 6), jointMat, sx, 0.5, z0 + 1.2);
+      add(tech, new THREE.PlaneGeometry(1.3, 0.85), screenMat, sx, 1.35, z0 + 1.25, [-0.25, 0, 0]);
     }
   }
 
   // server racks with blinking lights
   for (const [x, z] of [[-8.3, -6.5], [8.3, -6.5], [21, -28.9], [22, -28.9], [-21.5, -28.9], [-8.6, 46.8], [-7.6, 46.8]]) {
-    add(ship, new THREE.BoxGeometry(0.85, 2.1, 0.6), rackMat, x, 1.05, z);
+    add(tech, new THREE.BoxGeometry(0.85, 2.1, 0.6), rackMat, x, 1.05, z);
     for (let r = 0; r < 9; r++) for (let c = 0; c < 3; c++) leds.push({ x: x - 0.2 + c * 0.2, y: 0.35 + r * 0.19, z: z + 0.31, color: pick([0x5bff8f, 0x4fd6ff, 0x5bff8f, 0xffc23b]), speed: 1 + rnd() * 4, phase: rnd() * 6.28 });
   }
 
@@ -354,14 +356,14 @@ export function buildDecor(ship) {
   for (const [x0, z0, x1, z1] of CORRIDORS) {
     const along = x1 - x0 > z1 - z0 ? 'x' : 'z';
     if (along === 'x') {
-      for (const z of [z0 + 0.14, z1 - 0.14]) add(ship, new THREE.BoxGeometry(x1 - x0, 0.03, 0.07), stripMat, (x0 + x1) / 2, 0.02, z);
+      for (const z of [z0 + 0.14, z1 - 0.14]) add(tech, new THREE.BoxGeometry(x1 - x0, 0.03, 0.07), stripMat, (x0 + x1) / 2, 0.02, z);
       for (const x of [x0 + 0.3, x1 - 0.3]) {
-        const stripe = add(ship, new THREE.PlaneGeometry(0.5, z1 - z0), hazardMat, x, 0.012, (z0 + z1) / 2, [-Math.PI / 2, 0, 0]);
+        const stripe = add(tech, new THREE.PlaneGeometry(0.5, z1 - z0), hazardMat, x, 0.012, (z0 + z1) / 2, [-Math.PI / 2, 0, 0]);
         stripe.userData.hazard = true;
       }
     } else {
-      for (const x of [x0 + 0.14, x1 - 0.14]) add(ship, new THREE.BoxGeometry(0.07, 0.03, z1 - z0), stripMat, x, 0.02, (z0 + z1) / 2);
-      for (const z of [z0 + 0.3, z1 - 0.3]) add(ship, new THREE.PlaneGeometry(x1 - x0, 0.5), hazardMat, (x0 + x1) / 2, 0.012, z, [-Math.PI / 2, 0, 0]);
+      for (const x of [x0 + 0.14, x1 - 0.14]) add(tech, new THREE.BoxGeometry(0.07, 0.03, z1 - z0), stripMat, x, 0.02, (z0 + z1) / 2);
+      for (const z of [z0 + 0.3, z1 - 0.3]) add(tech, new THREE.PlaneGeometry(x1 - x0, 0.5), hazardMat, (x0 + x1) / 2, 0.012, z, [-Math.PI / 2, 0, 0]);
     }
   }
 
@@ -427,6 +429,11 @@ export function buildDecor(ship) {
   let last = 0;
   const col = new THREE.Color();
   return {
+    tech,
+    setTheme(carnival) {
+      tech.visible = !carnival;
+      ledMesh.visible = !carnival;
+    },
     bulbCount: bulbs.length,
     update(t, { night = false, progress = 0 } = {}) {
       screenTex.offset.y = (t * 0.03) % 1;

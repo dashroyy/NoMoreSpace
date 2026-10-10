@@ -9,6 +9,7 @@ import { PartyFx } from './party-fx.js';
 import { buildAmbience } from './ambience.js';
 import { Soundscape } from './soundscape.js';
 import { CarnivalDecor } from './carnival.js';
+import { CarnivalRooms } from './carnival-rooms.js';
 import { moveWithCollision, roomAt, roomById, walkable, seatPosition, TASK_STATIONS, SPAWN, DRAWING_SLOTS } from './layout.js';
 
 const SEATED = ['dawn', 'meeting', 'nominations', 'lastwords', 'dusk'];
@@ -87,6 +88,7 @@ export class World {
     // the rooms' little moving details, and their sounds (louder the closer you are)
     this.ambience = buildAmbience(this.ship.group, { lowFx: this.lowFx });
     this.carnival = new CarnivalDecor(this.scene, { lowFx: this.lowFx }); // the circus ring (only shown for the Cosmic Carnival script)
+    this.carnivalRooms = new CarnivalRooms(this.ship.group, { lowFx: this.lowFx }); // circus dressing for every room (same)
     this.soundscape = new Soundscape();
     this.ambience.onVent = (x, z) => this.soundscape.oneShot('vent', { x, z }, this.listener());
     this.ambience.onChirp = (x, z) => this.soundscape.oneShot('chirp', { x, z }, this.listener());
@@ -410,7 +412,8 @@ export class World {
     this.updateAmbience(dt, t);
     this.ship.decor.update(t, { night: this.night, progress: this.progress });
     this.carnival.update(t, dt);
-    this.ambience.update(dt, t, { night: this.night, progress: this.progress, alarm: t < this.alarmUntil });
+    this.carnivalRooms.update(t, dt);
+    if (this.ambience.root.visible) this.ambience.update(dt, t, { night: this.night, progress: this.progress, alarm: t < this.alarmUntil });
     this.soundscape.update({ ...this.listener(), phase: this.phase, night: this.phase === 'night' });
     this.ship.exterior.update(t);
     this.updateBeams(dt);
@@ -673,7 +676,9 @@ export class World {
     if (this.space.script === (id || 'classic')) return;
     this.space.script = id || 'classic';
     this.backdrop.setScript(id);
-    this.ship.setHoloTheme(id === 'carnival');
+    this.ship.setTheme(id === 'carnival');
+    this.carnivalRooms.setActive(id === 'carnival');
+    this.ambience.root.visible = id !== 'carnival'; // steam, sparks and robots belong to the space station
     this.space.last = -1; // repaint the windows now
   }
 
