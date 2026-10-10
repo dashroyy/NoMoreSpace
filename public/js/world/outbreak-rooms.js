@@ -35,7 +35,7 @@ export const OUTBREAK_LIGHTS = {
 };
 
 const FLOORS = {
-  observation: ['checker', WHITE, 0x9fd8c8], navigation: ['checker', 0x1c3a4a, 0x2a5a6a], comms: ['diag', 0x2a2a35, HAZ], medbay: ['checker', WHITE, 0xcfe8f0],
+  observation: ['checker', WHITE, 0x9fd8c8], navigation: ['checker', 0x1c3a4a, 0x2a5a6a], comms: ['diag', 0x2a2a35, HAZ], medbay: ['checker', 0xdceff5, 0xb4d6e4],
   galley: ['checker', WHITE, 0xe0c8a0], reactor: ['diag', 0x2a2a30, 0xff9a3a], engine: ['stripes', 0x3a4650, 0x56646f], hydroponics: ['dots', 0x1f4a2a, 0x6bd83a],
   airlock: ['diag', HAZ, BLACK], quarters: ['checker', 0x555e6a, 0x6a7480], cargo: ['checker', 0xcfe9ff, 0xa9d0e8], bridge: null,
 };
@@ -312,8 +312,8 @@ export class OutbreakRooms {
     const s = R.at(0, 0, 0);
     // isolation beds wrapped in plastic sheeting
     for (const x of [-5.2, -1.8, 1.6]) {
-      add(s, box(2.2, 0.5, 1.1), M(WHITE), x, 0.4, -3.6);
-      add(s, box(2.1, 0.12, 1.0), M(0xa9d8ee), x, 0.72, -3.6);
+      add(s, box(2.2, 0.5, 1.1), M(0x6f98a8), x, 0.4, -3.6);
+      add(s, box(2.1, 0.12, 1.0), M(0x3f86ad), x, 0.72, -3.6);
       add(s, box(2.5, 1.6, 1.5), glass(0xbfe8ff, 0.2), x, 1.0, -3.6);
       for (const [dx, dz] of [[-1.25, -0.75], [1.25, -0.75], [-1.25, 0.75], [1.25, 0.75]]) add(s, cyl(0.04, 0.04, 1.8, 5), T('diag', HAZ, BLACK, 1, 3), x + dx, 0.9, -3.6 + dz);
       add(s, ball(0.1, 8), M(RED, { e: 1.6 }), x, 1.95, -3.6);
@@ -392,7 +392,7 @@ export class OutbreakRooms {
       add(s, box(1.8, 1.8, 0.9), M(0x3a4650, { r: 0.4 }), x, 0.9, 3.4);
       for (let r = 0; r < 4; r++) add(s, box(1.5, 0.08, 0.05), M(TOXIC, { e: 1 }), x, 0.3 + r * 0.4, 2.93);
     }
-    add(s, cyl(0.5, 0.5, 18, 12), M(0x6a7480, { metalness: 0.6, r: 0.4 }), 0, 2.7, 5.6, [0, 0, Math.PI / 2]);
+    add(s, cyl(0.45, 0.45, 12, 12), M(0x6a7480, { metalness: 0.6, r: 0.4 }), 0, 3.4, -5.6, [0, 0, Math.PI / 2]); // along the north wall, out of the camera's way
   }
 
   // ---------- 🍄 Hydroponics → The Mould Garden ----------

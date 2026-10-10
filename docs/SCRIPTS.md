@@ -6,11 +6,12 @@ A **script** is a whole cast of characters plus a story, exactly like Blood on t
 |---|---|---|
 | 🕳️ **Black Hole Blues** (`classic`) | 3–15 | The original game: a ship falling into a black hole. The gentlest script, built on *Trouble Brewing*. |
 | 🎪 **Cosmic Carnival** (`carnival`) | 5–15 | A space circus with a Parasite in the troupe. Twins, tricks, pies, a method actor and a mirror demon. |
+| 🦠 **Outbreak** (`outbreak`) | 5–15 | A research station in a spreading spore cloud. The Demon infects instead of killing; the infected burst a night later unless cured. |
 
 Everything about scripts lives in a few places:
 
 - `server/scripts.js`: the registry (name, icon, story, rules, role lists, which demons can appear).
-- `server/roles.js` + `server/roles-carnival.js`: every role. Roles are shared across scripts; a script just lists the ids it uses.
+- `server/roles.js` + `server/roles-carnival.js` + `server/roles-outbreak.js`: every role. Roles are shared across scripts; a script just lists the ids it uses.
 - `server/storyteller.js`: dealing a cast for a script (`pickRoles(n, random, script)`), plus the stories each script tells.
 - `server/engine.js`: the rules. Abilities that need more than "choose a player and learn something" are coded here.
 
@@ -100,6 +101,58 @@ Robot-only simulation (about 1,100 games, 6 to 15 players) was used to catch rul
 
 It also found two things that were fixed: robots tying a vote (a second nomination with equal votes cancels the first), which made the Reflection nearly unbeatable; and a real engine bug where a player dying while "on the block" made dusk wait forever.
 
+---
+
+## 🦠 Outbreak
+
+*Station Petri is sealed. Outside, the Bloom presses against the glass, a cloud of spores as big as a moon. Inside, one of the staff is a Carrier, and the first fever is already on its way.*
+
+The big idea: **the Demon does not kill, it infects.** A Parasite makes a death and a mystery. A Carrier makes a *patient*: someone who is told at once that they have a fever, whose abilities start to lie, and who will burst when the next night ends, unless the crew finds them in time. That turns the usual night-time guessing into a daytime race, with the sick standing in front of everybody.
+
+### How the sickness works
+
+- **Night N:** the Carrier infects a player (nobody dies this night). The victim is told at dawn, privately and clearly: *you are INFECTED*.
+- **Night N+1:** unless a Vaccinator cures them that night, the victim **bursts** when the night ends (they die at dawn).
+- **While infected,** a player's abilities malfunction: information is false, and attacks and protections fail.
+- **Cures and shields:** the Vaccinator cures an infected player, or shields a healthy one from infection for a night. A Blood Donor can swap places with a patient. A Hazmat Tech cannot be infected at all.
+- The first infection is on night 1, so the first burst is on the second morning: the same pace as a Parasite, but each victim gets one whole day to be saved.
+
+### The cast
+
+| Role | Type | Inspired by | What it does |
+|---|---|---|---|
+| 💉 Vaccinator | Crew | Monk / Doctor | Each night, cure an infected player or shield a healthy one (not the same twice, not yourself). |
+| 🧭 Contact Tracer | Crew | Fortune Teller | Each night, choose 2 players: learn how many are infected. |
+| 🥽 Hazmat Tech | Crew | Soldier | Cannot be infected. The first attempt is reported to you. |
+| 🩸 Blood Donor | Crew | Sailor | Once per game, cure an infected player and catch it yourself. |
+| 🚨 Biohazard Sensor | Crew | Empath | Each night, learn whether anyone was newly infected. |
+| 🤒 Patient Zero | Drifter | Saint | Starts infected. Bursts when night 2 ends unless cured. |
+| 😷 Hypochondriac | Drifter | Recluse | Told every dawn they have a fever, but never do. Contact Tracers count them as infected. |
+| 🧪 Bioterrorist | Saboteur | Poisoner | Once per game, infect a second player. |
+| 🎭 Quack Doctor | Saboteur | Pit-Hag | Each night, give a player a fake fever (indistinguishable from a real one). |
+| 🍄 Spore Host | Saboteur | Psychopath | If airlocked, the player who nominated them is infected. |
+| 🦠 The Carrier | Demon | Pukka | Each night, infect a player. If it dies, evil loses. |
+
+The script also borrows eight Crew roles (Engineer, Scanner, Coroner, Black Box, First Officer, Gunner, Comms Officer, Security), two Drifters (Space Drunk, Stowaway) and two Saboteurs (Hacker, Incubator).
+
+### Why it should be fun
+
+- **A public clue that can be faked.** Everyone who has a fever says so, and so does the Quack Doctor's victim, and so does the Hypochondriac. The Vaccinator has one jab and a table full of coughing people. Contact Tracers and the Sensor are how the crew separates them.
+- **Reversals.** A Blood Donor swaps places with the one person who could have named the Carrier. A Hazmat Tech sits on three nights of failed infections. A Spore Host takes the nominator down with them.
+- **No obvious "should".** Curing the loudest patient is a gamble; shielding an info role is a gamble; the Carrier can infect a player who is already shielded and waste the night, and the Sensor will notice.
+
+### Check by simulation
+
+About 400 robot games (6 to 15 players): every game finishes, the crew wins about 20% (Black Hole Blues: about 24% in the same run). Robots are worse than people at deduction, so human crews should win more often. Per game, on average: 6.8 infections, 2.0 cures, 3.9 bursts, 0.3 Blood Donor swaps and 2.8 fake fevers. Games run longer than Black Hole Blues (about 7.8 days against 5.7) because every victim gets a day to be saved.
+
+### A universe of its own: the Bloom
+
+- **The disaster** is **the Bloom**, a vast living cell with glowing spore clouds, wavy tendrils and an eye for a nucleus. It grows as the station nears the end, and swallows it when only two players are left ("Quarantine failed"). It is painted in every window and in the sea under the station, with tendrils creeping up the hull.
+- **The rooms** are a research lab gone wrong (room ids and rules are unchanged): the Bridge is **The Containment Hub** (a giant biohazard symbol, specimen tanks), the Observation Deck is **The Specimen Gallery**, Navigation is **The Genome Lab** (a spinning DNA helix, a centrifuge), Comms is **The Alarm Center** (sweeping red beacons, a siren tower), the Medbay is **The Sick Bay** (plastic-wrapped isolation beds), the Galley is **The Test Kitchen** (a pot of green goo), the Reactor is **The Incinerator**, the Engine Room is **The Ventilation Plant** (great fans), Hydroponics is **The Mold Garden** (giant glowing mushrooms), the Airlock is **The Decon Chamber** (shower heads, a round bulkhead door), Crew Quarters is **The Quarantine Cells** and the Cargo Bay is **The Cold Storage** (cryo pods, freezers). Hazard tape runs along every north wall and spores drift through the air.
+- **The outside:** instead of solar wings, a glowing biodome on a boardwalk, cooling towers breathing steam, a long cryo tank, a radar mast with a biohazard beacon and floating specimen pods, a quarantine pod, and a giant biohazard ring under the Containment Hub.
+- **Sounds:** a slow heartbeat and a PA "ding-dong" in the hub, a geiger counter and bubbling glass in the gallery, a sequencer chattering in the Genome Lab, a siren in the Alarm Center, muffled coughing through the walls, fans, a furnace roar, wet pops in the Mold Garden and a decon shower.
+- **Characters:** 3D models for all 11 roles in the end-game reveal, and replay captions for every infection, cure, fever and burst.
+
 ### Making a new script
 
 1. Add roles to a `roles-<name>.js` file (the same fields as in `roles.js`) and merge them in `roles.js`.
@@ -111,7 +164,6 @@ It also found two things that were fixed: robots tying a vote (a second nominati
 
 ### Ideas for the next scripts
 
-- **Outbreak** (from *Bad Moon Rising*'s Pukka and Zombuul, and the community's "poison and cure" scripts): the Parasite *infects* instead of killing; the infected person's abilities malfunction and they burst the next night unless cured. Executing the carrier cures everyone. Roles: a Vaccinator, a Contact Tracer (does the infected sit next to X?), a Lab Technician (how many abilities malfunctioned?), a Quarantine Officer.
 - **Quantum Rift** (from *Sects & Violets*): clones and swaps. A Cryo Technician who swaps roles with the Parasite when they pick it (the Snake Charmer), a Copycat that borrows an ability (the Philosopher), a Re-roller (the Pit-Hag), and a Reflection that makes everything false.
 - **Mutiny at the Hub** (from *Trouble Brewing* plus Traveller ideas): late joiners who arrive mid-game as stowaways with a one-night ability.
 - **Cult Night** (from the Cult Leader and Fearmonger): a secret "join us" vote where the crew can win by all agreeing.

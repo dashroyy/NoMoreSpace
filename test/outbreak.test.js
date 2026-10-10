@@ -310,3 +310,21 @@ test('outbreak stories, execution lines and the persisted game', () => {
   night(g, { [p[0].id]: [p[3].id] });
   assert.strictEqual(g.summary().script, 'outbreak');
 });
+
+test('an Outbreak game survives a restart: who is infected, the warning given, and the cure still works', () => {
+  const persist = require('../server/persist');
+  const { g, p } = outbreak(SEVEN);
+  night(g, { [p[0].id]: [p[3].id] }); // the Tracer is infected
+  const room = { code: 'TEST', game: g, positions: {} };
+  const text = persist.serialize(new Map([['TEST', room]]), 5000);
+  const [{ game: back }] = persist.deserialize(text, 6000);
+  assert.strictEqual(back.script, 'outbreak');
+  assert.strictEqual(back.players[3].infected, 1);
+  assert.ok(back.broken(back.players[3]), 'still malfunctioning');
+  assert.deepStrictEqual(back.viewFor(back.players[3].id).you.infected, { since: 1, bursts: 2 });
+  // night 2 on the restored game: a Vaccinator cures them
+  nextNight(back);
+  const [carrier, , vax, tracer] = back.players;
+  night(back, { [carrier.id]: [back.players[5].id], [vax.id]: [tracer.id] });
+  assert.ok(tracer.alive && tracer.infected === null);
+});

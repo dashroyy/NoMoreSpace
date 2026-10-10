@@ -114,7 +114,9 @@ The Carnival has its **own universe**: no black hole. The Big Top is drifting in
 
 The Carnival also uses the Engineer, Scanner, Coroner, Medic, Black Box, First Officer, Gunner, Space Drunk, Stowaway, Hacker and Incubator. Its Demon is the Parasite, or (7+ players, about 4 games in 10) the Reflection; nobody is told which, so a day without an airlocking is a gamble.
 
-For the research behind it, the design reasoning, simulation results and how to make the next script, see [SCRIPTS.md](SCRIPTS.md).
+- 🦠 **Outbreak**: a research station adrift in a spreading spore cloud, the **Bloom** (5–15 players, **🦠 Practice: Outbreak** on the title screen). The Demon, **The Carrier**, does not kill: it **infects** a player each night. An infected player is told at once, their abilities malfunction, and they **burst** (die) when the next night ends, unless a **Vaccinator** cures them. 11 new roles: Vaccinator, Contact Tracer, Hazmat Tech, Blood Donor, Biohazard Sensor (Crew), Patient Zero, Hypochondriac (Drifters), Bioterrorist, Quack Doctor (whose fake fevers are indistinguishable from real ones), Spore Host (Saboteurs), and the Carrier. The station becomes a lab (a Containment Hub with a biohazard symbol, a Genome Lab with a spinning helix, a Mold Garden of giant mushrooms, a Decon Chamber, cryo pods), with its own sounds, a research complex outside and a Bloom with an eye in every window.
+
+For the research behind them, the design reasoning, simulation results and how to make the next script, see [SCRIPTS.md](SCRIPTS.md).
 
 ## 3. Player counts & balance
 
