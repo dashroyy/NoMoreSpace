@@ -304,6 +304,157 @@ export function buildRoleModel(roleId, accentHex = '#ffffff') {
       root = p.g;
       break;
     }
+    // ---------------- Cosmic Carnival ----------------
+    case 'liontamer': {
+      const p = person({ outfit: 0xc0392b, pants: 0x1a1a1a, skin: SKINS[2] });
+      part(p.hatAt, new THREE.CylinderGeometry(0.34, 0.34, 0.03, 18), m(0x111111), 0, -0.08, 0);
+      part(p.hatAt, new THREE.CylinderGeometry(0.2, 0.2, 0.4, 18), m(0x111111), 0, 0.13, 0);
+      part(p.hatAt, new THREE.CylinderGeometry(0.205, 0.205, 0.06, 18), m(accent), 0, -0.03, 0);
+      for (const y of [0.9, 1.05, 1.2]) part(p.g, new THREE.SphereGeometry(0.03, 8, 6), glow(0xffd23f, 0.9), 0, y, 0.3);
+      part(p.hand, new THREE.CylinderGeometry(0.015, 0.015, 0.7, 5), m(0x5a3a1a), 0, 0.2, 0.1, [0.9, 0, 0]);
+      part(p.hand, new THREE.TorusGeometry(0.12, 0.012, 5, 12, Math.PI * 1.4), m(0x5a3a1a), 0, 0.5, 0.4, [0, 0.5, 0]);
+      root = p.g;
+      break;
+    }
+    case 'acrobat': {
+      const p = person({ outfit: 0x16a085, pants: 0xf1c40f, skin: SKINS[1] });
+      p.armL.rotation.z = 2.5; // ta-da!
+      p.armR.rotation.z = -2.5;
+      p.armL.position.set(-0.38, 1.25, 0);
+      p.armR.position.set(0.38, 1.25, 0);
+      part(p.g, new THREE.TorusGeometry(0.62, 0.035, 6, 28), m(accent), 0, 0.06, 0, [Math.PI / 2, 0, 0]);
+      part(p.g, new THREE.CircleGeometry(0.6, 24), m(0xffffff, { transparent: true, opacity: 0.22, side: THREE.DoubleSide }), 0, 0.05, 0, [-Math.PI / 2, 0, 0]);
+      part(p.hatAt, new THREE.TorusGeometry(0.16, 0.05, 6, 12), m(0xf1c40f), 0.18, -0.15, -0.1); // a pony-tail bob
+      root = p.g;
+      break;
+    }
+    case 'palmreader': {
+      const p = person({ outfit: 0x6c3483, pants: 0x4a235a, skin: SKINS[3] });
+      part(p.hatAt, new THREE.SphereGeometry(0.3, 16, 12), m(0xf5eef8), 0, -0.1, 0, null, [1, 0.8, 1]);
+      part(p.hatAt, new THREE.SphereGeometry(0.06, 10, 8), glow(0xb46bff, 2), 0, -0.02, 0.27);
+      part(p.hand, new THREE.CylinderGeometry(0.1, 0.1, 0.04, 14), m(0xc9a24a, { metalness: 0.8 }), 0, 0.0, 0);
+      part(p.hand, new THREE.SphereGeometry(0.13, 16, 12), glow(0xb46bff, 1.8), 0, 0.14, 0);
+      part(p.g, new THREE.ConeGeometry(0.42, 0.8, 16, 1, true), m(0x6c3483, { side: THREE.DoubleSide }), 0, 0.55, 0);
+      root = p.g;
+      break;
+    }
+    case 'tickettaker': {
+      const p = person({ outfit: 0x1f4e79, pants: 0x14304d, skin: SKINS[0] });
+      capHat(p.hatAt, 0x1f4e79, 0xffd23f);
+      part(p.g, new THREE.BoxGeometry(0.44, 0.06, 0.03), m(0xffd23f), 0, 1.14, 0.3, [0, 0, 0.5]);
+      part(p.hand, new THREE.BoxGeometry(0.34, 0.15, 0.02), m(0xffd23f), 0, 0.1, 0);
+      part(p.hand, new THREE.BoxGeometry(0.06, 0.15, 0.025), m(0xc0392b), 0.12, 0.1, 0);
+      part(p.hand, new THREE.CylinderGeometry(0.03, 0.03, 0.12, 8), m(0xb0b8c4, { metalness: 0.8 }), -0.2, 0.0, 0.03, [0, 0, Math.PI / 2]);
+      root = p.g;
+      break;
+    }
+    case 'stagehand': {
+      const p = person({ outfit: 0x1b1b1f, pants: 0x101012, skin: SKINS[1] });
+      part(p.hatAt, new THREE.TorusGeometry(0.27, 0.02, 6, 20, Math.PI), m(0x222222), 0, -0.26, 0, [0, 0, 0]);
+      part(p.g, new THREE.CylinderGeometry(0.01, 0.01, 0.2, 4), m(0x222222), 0.18, 1.42, 0.22, [0.9, 0, 0.2]);
+      part(p.g, new THREE.SphereGeometry(0.03, 8, 6), glow(0xff3b5c, 1.5), 0.2, 1.36, 0.32);
+      part(p.hand, new THREE.CylinderGeometry(0.05, 0.08, 0.28, 10), m(0x333333), 0, 0.05, 0.1, [0.9, 0, 0]);
+      part(p.hand, new THREE.SphereGeometry(0.07, 10, 8), glow(0xfff3b0, 2.5), 0, 0.05, 0.28);
+      part(p.g, new THREE.BoxGeometry(0.2, 0.06, 0.05), m(accent), 0, 1.15, 0.28);
+      root = p.g;
+      break;
+    }
+    case 'magician': {
+      const p = person({ outfit: 0x151521, pants: 0x0d0d15, skin: SKINS[4] });
+      part(p.hatAt, new THREE.CylinderGeometry(0.34, 0.34, 0.03, 18), m(0x111111), 0, -0.08, 0);
+      part(p.hatAt, new THREE.CylinderGeometry(0.22, 0.22, 0.5, 18), m(0x111111), 0, 0.17, 0);
+      part(p.hatAt, new THREE.CylinderGeometry(0.225, 0.225, 0.07, 18), m(accent), 0, -0.02, 0);
+      for (const s2 of [-1, 1]) part(p.hatAt, new THREE.CapsuleGeometry(0.035, 0.18, 4, 8), m(0xffffff), s2 * 0.07, 0.55, 0, [0, 0, -s2 * 0.2]); // rabbit ears
+      part(p.hand, new THREE.CylinderGeometry(0.015, 0.015, 0.5, 6), m(0x111111), 0, 0.25, 0);
+      part(p.hand, new THREE.CylinderGeometry(0.017, 0.017, 0.08, 6), m(0xffffff), 0, 0.5, 0);
+      part(p.hand, new THREE.SphereGeometry(0.05, 8, 6), glow(0xfff3b0, 2.5), 0, 0.62, 0);
+      part(p.g, new THREE.ConeGeometry(0.46, 0.9, 16, 1, true), m(0x7a1f5c, { side: THREE.DoubleSide }), 0, 0.6, -0.08);
+      root = p.g;
+      break;
+    }
+    case 'clown': {
+      const p = person({ outfit: 0xff5fa2, pants: 0x3498db, skin: SKINS[4] });
+      for (const [x, c] of [[-0.26, 0xe74c3c], [0.26, 0x2ecc71], [0, 0xf1c40f]]) part(p.hatAt, new THREE.SphereGeometry(0.17, 10, 8), m(c), x, -0.08 + (x === 0 ? 0.15 : 0), 0);
+      part(p.g, new THREE.SphereGeometry(0.075, 10, 8), m(0xe0233a), 0, 1.54, 0.28);
+      for (const s2 of [-1, 1]) part(p.g, new THREE.BoxGeometry(0.2, 0.1, 0.34), m(0xf1c40f), s2 * 0.14, 0.05, 0.1);
+      part(p.hand, new THREE.CylinderGeometry(0.16, 0.16, 0.06, 16), m(0xf5deb3), 0, 0.1, 0);
+      part(p.hand, new THREE.SphereGeometry(0.13, 12, 8), m(0xffffff), 0, 0.17, 0, null, [1, 0.45, 1]);
+      part(p.hand, new THREE.SphereGeometry(0.035, 8, 6), m(0xc0392b), 0, 0.22, 0);
+      part(p.g, new THREE.TorusGeometry(0.2, 0.05, 6, 16), m(accent), 0, 1.22, 0.1, [Math.PI / 2, 0, 0]);
+      root = p.g;
+      break;
+    }
+    case 'actor': {
+      const p = person({ outfit: 0x8e44ad, pants: 0x2c1a3a, skin: SKINS[0] });
+      part(p.g, new THREE.ConeGeometry(0.55, 0.95, 16, 1, true), m(0x5b2c83, { side: THREE.DoubleSide }), 0, 0.6, -0.1);
+      part(p.hatAt, new THREE.ConeGeometry(0.06, 0.4, 6), m(0xff5fa2), 0.12, 0.05, 0, [0, 0, -0.5]);
+      part(p.hand, new THREE.CylinderGeometry(0.012, 0.012, 0.5, 5), m(0x6b4a2b), 0, 0.2, 0);
+      const mask = part(p.hand, new THREE.SphereGeometry(0.16, 14, 10), m(0x5a1a8a, { emissive: 0x2a0050, emissiveIntensity: 0.5 }), 0, 0.5, 0, null, [1, 1.1, 0.5]);
+      for (const s2 of [-1, 1]) part(mask, new THREE.SphereGeometry(0.035, 8, 6), glow(0xffffaa, 1.2), s2 * 0.06, 0.03, 0.08);
+      for (let i = 0; i < 4; i++) part(mask, new THREE.CylinderGeometry(0.008, 0.025, 0.2, 5), m(0x5a1a8a), -0.12 + i * 0.08, -0.14, 0.04, [0, 0, 0.2 - i * 0.1]);
+      part(p.hand, new THREE.BoxGeometry(0.2, 0.28, 0.04), m(0xf5deb3), -0.55, 0.0, 0.05);
+      root = p.g;
+      break;
+    }
+    case 'knifethrower': {
+      const p = person({ outfit: 0x6e2c1d, pants: 0x2a1a12, skin: SKINS[2] });
+      part(p.hatAt, new THREE.TorusGeometry(0.27, 0.035, 6, 20), m(0xc0392b), 0, -0.2, 0, [Math.PI / 2, 0, 0]);
+      for (let i = 0; i < 5; i++) part(p.g, new THREE.BoxGeometry(0.035, 0.22, 0.02), m(0xcfd8dc, { metalness: 0.9, roughness: 0.2 }), -0.22 + i * 0.11, 0.98 + i * 0.03, 0.31, [0, 0, 0.55]);
+      part(p.hand, new THREE.BoxGeometry(0.05, 0.4, 0.02), m(0xcfd8dc, { metalness: 0.9, roughness: 0.2 }), 0, 0.24, 0);
+      part(p.hand, new THREE.BoxGeometry(0.06, 0.12, 0.04), m(accent), 0, 0.0, 0);
+      root = p.g;
+      break;
+    }
+    case 'stagedouble': {
+      const a = person({ outfit: 0xe8e8ef, pants: 0xb0b0b8, skin: SKINS[0] });
+      const b = person({ outfit: 0x1a1a22, pants: 0x0d0d12, skin: SKINS[0] });
+      a.g.position.x = -0.38;
+      b.g.position.x = 0.38;
+      a.g.scale.setScalar(0.92);
+      b.g.scale.setScalar(0.92);
+      for (const s2 of [-1, 1]) part(b.g, new THREE.SphereGeometry(0.045, 8, 6), glow(0xff3b5c, 2), s2 * 0.1, 1.58, 0.26);
+      part(a.g, new THREE.TorusGeometry(0.28, 0.02, 6, 20), m(accent), 0, 1.84, 0, [Math.PI / 2, 0, 0]);
+      part(b.hand, new THREE.TorusGeometry(0.1, 0.025, 6, 14), m(0xffffff), 0, 0.1, 0);
+      part(b.hand, new THREE.TorusGeometry(0.05, 0.015, 6, 10, Math.PI), m(0xc0392b), 0, 0.06, 0, [0, 0, Math.PI]);
+      const both = new THREE.Group();
+      both.add(a.g, b.g);
+      anim.wobble = true;
+      root = both;
+      break;
+    }
+    case 'hexer': {
+      const p = person({ outfit: 0x2c1a4a, pants: 0x1a0f2e, skin: 0x8bc34a });
+      part(p.hatAt, new THREE.CylinderGeometry(0.4, 0.4, 0.03, 18), m(0x1a0f2e), 0, -0.08, 0);
+      part(p.hatAt, new THREE.ConeGeometry(0.25, 0.7, 16), m(0x1a0f2e), 0.03, 0.3, 0, [0, 0, -0.15]);
+      part(p.hatAt, new THREE.CylinderGeometry(0.255, 0.255, 0.07, 16), m(accent), 0, -0.02, 0);
+      part(p.hand, new THREE.CylinderGeometry(0.02, 0.025, 0.9, 6), m(0x4a2f1a), 0, 0.3, 0, [0, 0, 0.1]);
+      part(p.hand, new THREE.SphereGeometry(0.09, 12, 10), glow(0x9bff6b, 2.4), 0.04, 0.78, 0);
+      part(p.g, new THREE.ConeGeometry(0.5, 0.9, 16, 1, true), m(0x2c1a4a, { side: THREE.DoubleSide }), 0, 0.55, 0);
+      anim.pulse = true;
+      root = p.g;
+      break;
+    }
+    case 'reflection': {
+      const g = new THREE.Group();
+      const frame = part(g, new THREE.TorusGeometry(0.62, 0.07, 10, 36), m(0xc9a24a, { metalness: 0.85, roughness: 0.25 }), 0, 1.15, 0, null, [1, 1.4, 1]);
+      part(g, new THREE.CircleGeometry(0.58, 32), m(0xbcd4ff, { metalness: 1, roughness: 0.04, emissive: 0x335577, emissiveIntensity: 0.5 }), 0, 1.15, 0.01, null, [1, 1.4, 1]);
+      const flesh = m(0x5a1a8a, { emissive: 0x2a0050, emissiveIntensity: 0.6, roughness: 0.4 });
+      const tentacles = [];
+      for (let i = 0; i < 6; i++) {
+        const t = new THREE.Group();
+        t.position.set(-0.55 + i * 0.22, 1.9, -0.08);
+        part(t, new THREE.CylinderGeometry(0.02, 0.08, 0.7, 8), flesh, 0, 0.2, 0, [0, 0, 0.1 * (i - 2.5)]);
+        g.add(t);
+        tentacles.push(t);
+      }
+      for (const s2 of [-1, 1]) part(g, new THREE.SphereGeometry(0.1, 10, 8), glow(0xff3b5c, 2), s2 * 0.2, 1.4, 0.05);
+      part(g, new THREE.CylinderGeometry(0.5, 0.6, 0.12, 20), m(0x3a2f20), 0, 0.06, 0);
+      part(g, new THREE.TorusGeometry(0.62, 0.03, 6, 28), m(accent, { emissive: accent, emissiveIntensity: 0.5 }), 0, 0.14, 0, [Math.PI / 2, 0, 0]);
+      anim.tentacles = tentacles;
+      g.scale.setScalar(1.1);
+      root = g;
+      break;
+    }
     case 'parasite':
     default: {
       const g = new THREE.Group();

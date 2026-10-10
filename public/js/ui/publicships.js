@@ -2,7 +2,7 @@
 // title screen when your own group is short of players (games already under
 // way are joined as a spectator, who becomes crew at the next rematch).
 import { $, el, problem } from '../util.js';
-import { send } from '../store.js';
+import { send, store } from '../store.js';
 import { openModal } from './rolecard.js';
 import { sfx } from '../audio.js';
 
@@ -33,7 +33,7 @@ function row(s, look) {
   };
   return el('div', { className: 'ship-row' },
     el('div', { className: 'ship-main' },
-      el('b', {}, s.shipName), el('span', { className: 'code' }, s.code),
+      el('b', {}, s.shipName), el('span', { className: 'code' }, s.code), s.script && s.script !== 'classic' ? el('span', { className: 'chip', title: store.data.scripts?.[s.script]?.name }, `${store.data.scripts?.[s.script]?.icon || ''} ${store.data.scripts?.[s.script]?.name || s.script}`) : null,
       el('div', { className: 'hint' },
         `${PHASES[s.phase] || s.phase} · 👥 ${s.people} ${s.people === 1 ? 'person' : 'people'}${s.robots ? ` · 🤖 ${s.robots}` : ''} · ${s.seats}/15 seats${s.watching ? ` · 👀 ${s.watching}` : ''}${s.round > 1 ? ` · round ${s.round}` : ''}${s.mode === 'captain' ? ' · 👨‍✈️ Captain' : ''}`),
     ),

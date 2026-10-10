@@ -50,6 +50,10 @@ function deserialize(text, now = Date.now()) {
     // short-lived effects simply end
     g.shipEvent = null;
     g.resetSystems();
+    g.script ||= 'classic'; // saves from before scripts existed
+    g.twin ??= null;
+    g.hexed ??= null;
+    g.wish ??= null;
     g.activeFloor = now;
     g.afk = new Set();
     for (const p of g.players) {

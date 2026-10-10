@@ -196,7 +196,7 @@ export class Reveal {
         for (const d of ch.deaths || []) steps.push({ dur: 2.4, focus: d.id, caption: `💀 ${name(d.id)} did not wake up.`, enter: () => this.kill(d.id, d.anim) });
       }
       if (ch.k === 'day') {
-        const interesting = ch.events.filter((e) => ['nomination', 'execute', 'shot', 'sentinel', 'become-parasite', 'story', 'system'].includes(e.k) && !(e.k === 'nomination' && e.result === 'safe' && e.votes < 2));
+        const interesting = ch.events.filter((e) => ['nomination', 'execute', 'shot', 'sentinel', 'become-parasite', 'story', 'system', 'net', 'pie', 'hexed'].includes(e.k) && !(e.k === 'nomination' && e.result === 'safe' && e.votes < 2));
         if (!interesting.length) continue;
         steps.push({ dur: 2, chapter: `DAY ${ch.n}`, caption: '', overview: true, enter: () => { sfx('dawn'); this.lighting('day'); } });
         for (const e of interesting) {
@@ -242,6 +242,8 @@ export class Reveal {
           starpass: `🦑 The Parasite (${name(e.a)}) turned on ITSELF… and leapt into ${name(e.to)}!`,
           bounced: `🦑 The Parasite went for First Officer ${name(e.t)}, who dodged. ${name(e.victim)} died instead!`,
           'bounced-safe': `🦑 The Parasite went for First Officer ${name(e.t)}, who dodged it entirely!`,
+          tamed: `🦁 The Parasite (${name(e.a)}) crept out to hunt, but ${name(e.by)} the Lion Tamer cracked the whip and stopped it cold!`,
+          net: `🦑 The Parasite (${name(e.a)}) struck at ${name(e.t)}... and the Acrobat's safety net caught them! 🤸`,
         }[e.result];
         return { dur: 3, focus: e.a, beam: [e.a, e.result === 'starpass' ? e.to || e.a : e.t, 0xc77dff], caption: text, enter: () => sfx('death') };
       }
@@ -249,7 +251,8 @@ export class Reveal {
         const r = R[e.role];
         const who = this.cast.get(e.a);
         const drunk = who?.startRole === 'drunk';
-        const verdict = e.truthful ? '✔ TRUE' : drunk ? '✘ FALSE (they were the Space Drunk)' : '✘ FALSE (glitched by the Hacker)';
+        const mirror = this.state.history.find((h) => h.k === 'setup' && Object.values(h.roles).includes('reflection'));
+        const verdict = e.truthful ? '✔ TRUE' : drunk ? '✘ FALSE (they were the Space Drunk)' : mirror && R[who?.startRole]?.type === 'crew' ? '✘ FALSE (the Reflection\'s mirror lies!)' : '✘ FALSE (glitched by the Hacker)';
         return { dur: 3, focus: e.a, caption: `${r.icon} ${name(e.a)} the ${r.name} learned: “${e.text}” — ${verdict}`, enter: () => sfx(e.truthful ? 'blip' : 'buzz') };
       }
       case 'blackbox':
@@ -258,6 +261,16 @@ export class Reveal {
         return { dur: 3, focus: e.a, caption: `🥚 ${name(e.a)} became the new Parasite!`, enter: () => this.transform(e.a) };
       case 'unglitch':
         return { dur: 2.4, focus: e.t, caption: `💻 With ${name(e.a)} the Hacker dead, ${name(e.t)}'s systems rebooted.`, enter: () => sfx('blip') };
+      case 'tame':
+        return e.hit && e.works ? null : { dur: 2.4, focus: e.a, beam: [e.a, e.t, 0xffb547], caption: `🦁 ${name(e.a)} the Lion Tamer eyed ${name(e.t)}${e.works === false ? '... but the whip was glitched.' : '... and guessed wrong.'}`, enter: () => sfx('blip') };
+      case 'hex':
+        return { dur: 2.6, focus: e.a, beam: [e.a, e.t, 0xa05bff], caption: `🧙 ${name(e.a)} the Hexer cursed ${name(e.t)}: nominate tomorrow and vanish!${e.works === false ? ' (...the curse fizzled.)' : ''}`, enter: () => sfx('whisper') };
+      case 'knife':
+        return { dur: 2.8, focus: e.a, beam: [e.a, e.t, 0xcfd8dc], caption: `🗡️ ${name(e.a)} the Knife Thrower threw their one knife at ${name(e.t)}${e.works === false ? '... and missed completely.' : ', which no protection can stop!'}`, enter: () => sfx('shot') };
+      case 'actor':
+        return { dur: 2.6, focus: e.a, beam: e.t ? [e.a, e.t, 0xff8fd8] : null, caption: `🎬 ${name(e.a)} the Method Actor${e.t ? ` pointed menacingly at ${name(e.t)}` : ' brooded'}, completely sure they were the Parasite. (They weren't.)`, enter: () => sfx('pop') };
+      case 'revive':
+        return { dur: 3, focus: e.t || e.id, beam: e.t ? [e.a, e.t, 0xfff3b0] : null, caption: e.t ? `🎩 ${name(e.a)} the Magician waved a wand over ${name(e.t)}${e.works ? '... and they came BACK from the dead!' : '... but nothing happened.'}` : `🎩 ${name(e.id)} came back from the dead!`, enter: () => { sfx(e.works === false ? 'buzz' : 'fanfare'); if (e.works) this.revive(e.t); } };
       default:
         return null;
     }
@@ -284,6 +297,12 @@ export class Reveal {
         return { dur: 3, focus: e.a, beam: [e.t, e.a, 0xffe14f], caption: `⚡ ${name(e.a)} nominated the Sentinel ${name(e.t)} and got fried!`, enter: () => { sfx('zap'); this.kill(e.a, 'airlock'); } };
       case 'become-parasite':
         return { dur: 3, focus: e.a, caption: `🥚 With the Parasite dead, ${name(e.a)} the Incubator hatched a new one!`, enter: () => this.transform(e.a) };
+      case 'net':
+        return { dur: 3.4, focus: e.id, caption: `🤸 ${name(e.id)} was airlocked... and the Acrobat's safety net bounced them right back!`, enter: () => sfx('fanfare') };
+      case 'hexed':
+        return { dur: 3, focus: e.id, beam: [e.by, e.id, 0xa05bff], caption: `🧙 ${name(e.id)} was hexed, nominated anyway, and vanished in a puff of purple smoke!`, enter: () => { sfx('zap'); this.kill(e.id, 'confetti'); } };
+      case 'pie':
+        return { dur: 3.6, focus: e.a, beam: [e.a, e.t, e.evil ? 0xff3b5c : 0xfff3b0], caption: `🥧 ${name(e.a)} the Clown threw their last pie at ${name(e.t)}${e.random ? ' (blindly!)' : ''}: ${e.evil ? 'an infiltrator! The crew loses!' : 'a good player. Phew.'}`, enter: () => sfx(e.evil ? 'doom' : 'pop') };
       case 'story':
         return { dur: 3.6, bubble: e.text, caption: '', overview: true };
       case 'system': {
@@ -350,6 +369,25 @@ export class Reveal {
     c.deathAnim = anim;
     c.deathT = 0;
     c.avatar.burst(20, anim === 'airlock' ? 0xffffff : 0xc77dff, 3);
+  }
+
+  // The Magician's trick: someone who died stands up again.
+  revive(id) {
+    const c = this.cast.get(id);
+    if (!c || !c.dead) return;
+    c.dead = false;
+    c.deathAnim = null;
+    const obj = c.revealed ? c.model : c.avatar.body;
+    obj.position.copy(c.pos);
+    obj.rotation.x = 0;
+    obj.traverse((o) => {
+      if (o.material?.userData.ghosted) {
+        o.material.opacity = 1;
+        o.material.transparent = false;
+        o.material.userData.ghosted = false;
+      }
+    });
+    c.avatar.burst(60, null, 3.5);
   }
 
   beam(fromId, toId, color) {

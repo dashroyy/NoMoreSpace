@@ -5,7 +5,7 @@
 //      show by each seat on the bridge table.
 //   📜 Day log: everything the table has seen happen, searchable.
 import { $, el, clear, problem, toast } from '../util.js';
-import { store, send, socket, player, isCaptain, role } from '../store.js';
+import { store, send, socket, player, isCaptain, role, scriptRoleIds } from '../store.js';
 import { sfx } from '../audio.js';
 import { ROOMS } from '../world/layout.js';
 import { systemLine } from './chat.js';
@@ -97,7 +97,7 @@ function renderClaimMenu() {
       mine ? el('button', { className: 'ghost small', onclick: () => postClaim(null, '') }, 'Take back') : null,
     ),
     ...groups.map((type) => el('div', { className: 'pick-row' },
-      ...Object.keys(roles).filter((id) => roles[id].type === type).map((id) =>
+      ...scriptRoleIds(type).map((id) =>
         el('button', { className: `small ${pickedRole === id ? 'on' : ''}`, title: roles[id].ability, onclick: () => { pickedRole = pickedRole === id ? null : id; renderClaimMenu(); } }, `${roles[id].icon} ${roles[id].name}`),
       ),
     )),
@@ -148,6 +148,10 @@ function describe(e) {
     case 'dawn': return e.deaths.length ? `💀 At dawn: ${e.deaths.map(name).join(' and ')} did not wake up.` : '🌅 Everyone survived the night.';
     case 'clue': return `🔭 A clue drifted past the Observation Deck: "${e.caption}"`;
     case 'claim': return `📣 ${name(e.id)} claims to be the ${role(e.role)?.name || '?'} ${role(e.role)?.icon || ''}`;
+    case 'hex': return `💥 ${name(e.id)} nominated and was HEXED: there is a Hexer aboard!`;
+    case 'net': return `🤸 ${name(e.id)} was airlocked, but a safety net caught them: they are the Acrobat!`;
+    case 'pie': return `🥧 ${name(e.a)} the Clown threw a pie at ${name(e.t)}${e.evil ? ' (an infiltrator: the crew loses!)' : ' (a good player)'}.`;
+    case 'revive': return `✨ ${name(e.id)} came back from the dead!`;
     default: return null;
   }
 }

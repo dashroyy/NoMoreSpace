@@ -3,6 +3,7 @@
 // on paper. It lives only in this browser, and your guesses show up as small
 // badges on the bridge table.
 import { el } from '../util.js';
+import { scriptRoleIds } from '../store.js';
 import { store, role, suitHex } from '../store.js';
 
 const PREFIX = 'nms-notebook:';
@@ -71,8 +72,8 @@ function update(playerId, patch, onChange) {
 function roleSelect(value, onPick) {
   const groups = ['crew', 'drifter', 'saboteur', 'parasite'].map((type) =>
     el('optgroup', { label: `${store.data.types[type].name}s` },
-      ...Object.entries(store.data.roles)
-        .filter(([, r]) => r.type === type)
+      ...scriptRoleIds(type)
+        .map((id) => [id, store.data.roles[id]])
         .map(([id, r]) => el('option', { value: id, selected: id === value }, `${r.icon} ${r.name}`)),
     ),
   );

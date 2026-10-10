@@ -453,7 +453,7 @@ test('Clown: a dead Clown throws a pie; a good target is harmless, an evil one l
   const third = carnival(deal, { seed: 8 });
   firstDawn(third.g);
   third.g.kill(third.p[5], 'airlock');
-  assert.strictEqual(third.g.tick(10_000), false, 'the clock starts');
+  assert.strictEqual(third.g.tick(10_000), true, 'the clock starts, and the Clown is told when the pie will fly');
   assert.ok(third.g.wish.until > 10_000);
   assert.strictEqual(third.g.tick(third.g.wish.until + 1), true);
   assert.strictEqual(third.g.wish, null);
@@ -550,4 +550,43 @@ test('if the player on the block dies another way before dusk, nobody is airlock
   g.nomination = null;
   g.beginDusk(3200);
   assert.strictEqual(g.phase, 'dusk', 'straight to dusk: nobody to airlock');
+});
+
+test('a Cosmic Carnival game survives a restart with its twin, hex and pending pie', () => {
+  const persist = require('../server/persist');
+  const deal = ['parasite', 'stagedouble', 'liontamer', 'acrobat', 'palmreader', 'clown', 'tickettaker', 'stagehand'];
+  const { g, p } = carnival(deal);
+  firstDawn(g);
+  g.hexed = { id: p[2].id };
+  g.kill(p[5], 'airlock'); // the Clown dies: a pie is pending
+  assert.ok(g.wish);
+  const room = { code: 'TEST', game: g, positions: {} };
+  const text = persist.serialize(new Map([['TEST', room]]), 5000);
+  const [{ game: back }] = persist.deserialize(text, 6000);
+  assert.strictEqual(back.script, 'carnival');
+  assert.deepStrictEqual(back.twin, g.twin);
+  assert.deepStrictEqual(back.hexed, { id: p[2].id });
+  assert.strictEqual(back.wish.id, p[5].id);
+  assert.strictEqual(back.players[5].role, 'clown');
+  // the restored game still works: the pie can be thrown and the twin rule still holds
+  back.chooseWish(back.players[5].id, back.players[3].id, 7000);
+  assert.strictEqual(back.wish, null);
+  assert.ok(back.twinsAlive() || !back.get(back.twin.good).alive);
+  assert.strictEqual(back.rolesOf('crew').length, 13, 'its script still decides the roles');
+});
+
+test('Palm Reader visions are false (neither is real) when the Hacker glitches them', () => {
+  const deal = ['parasite', 'hacker', 'liontamer', 'acrobat', 'palmreader', 'stagehand', 'tickettaker'];
+  const { g, p } = carnival(deal);
+  const [parasite, hacker, tamer, acrobat, reader, hand] = p;
+  g.submitChoice(hacker.id, [reader.id], 1000);
+  g.submitChoice(reader.id, [tamer.id], 1000);
+  g.submitChoice(hand.id, [hacker.id, tamer.id], 1000);
+  g.resolveNight(1000);
+  const palm = g.draft.messages.find((m) => m.role === 'palmreader');
+  assert.strictEqual(palm.truthful, false, 'glitched');
+  assert.ok(!palm.shown.includes('liontamer'), 'neither vision is the real role');
+  assert.strictEqual(palm.shown.filter((r) => ['saboteur', 'parasite'].includes(ROLES[r].type)).length, 1, 'but it still looks like one good and one evil');
+  // the Stagehand was not glitched: the Hacker woke (1) and the Lion Tamer did not on night 1
+  assert.strictEqual(g.draft.messages.find((m) => m.role === 'stagehand').value, 1);
 });

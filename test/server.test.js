@@ -292,6 +292,32 @@ test('locking a room for a private chat: intruders are kept out, knocks reach th
   await waitFor(() => room.positions[id(d)]?.room === 'galley');
 });
 
+test('the host picks a script over the network; a dead Clown throws a pie from their own screen', async () => {
+  const { host, players, room } = await makeShip(8);
+  assert.ok(!(await call(players[1], 'script', { id: 'carnival' })).ok, 'only the host picks');
+  assert.ok(!(await call(host, 'script', { id: 'nope' })).ok);
+  assert.ok((await call(host, 'script', { id: 'carnival' })).ok);
+  await waitFor(() => latest(players[3]).script === 'carnival');
+  assert.ok((await call(host, 'start', { deal: ['parasite', 'hexer', 'liontamer', 'acrobat', 'palmreader', 'stagehand', 'tickettaker', 'clown'] })).ok);
+  await waitFor(() => latest(players[7]).you.role === 'clown');
+  room.game.resolveNight(Date.now());
+  room.game.applyDraft(Date.now());
+  const clown = players[7];
+  assert.strictEqual(latest(clown).you.wish, null, 'alive: no pie yet');
+  room.game.kill(room.game.players[7], 'parasite');
+  await call(host, 'chat', { text: 'x' }).catch(() => {}); // any event makes the server send fresh state
+  await waitFor(() => latest(clown).you.wish?.role === 'clown');
+  assert.ok(!(await call(players[2], 'wish', { target: room.game.players[0].id })).ok, 'only the Clown can');
+  assert.ok((await call(clown, 'wish', { target: room.game.players[3].id })).ok);
+  await waitFor(() => latest(clown).you.wish === null);
+  assert.ok(room.game.dayLog.some((e) => e.k === 'pie'));
+  // the carnival shows up in the public ship list
+  assert.ok((await call(host, 'public', { on: true })).ok);
+  const stranger = await connect();
+  const list = (await call(stranger, 'list-public')).ships.find((x) => x.code === room.code);
+  assert.strictEqual(list?.script, 'carnival');
+});
+
 test('whisper requests beam both players into an empty room; claims, bug reports and stats work', async () => {
   const { host, players, room } = await makeShip(5);
   assert.ok((await call(host, 'start')).ok);

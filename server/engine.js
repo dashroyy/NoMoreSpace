@@ -1033,7 +1033,7 @@ class Game {
     p.alive = true;
     p.ghostVote = false;
     delete this.predictions[p.id];
-    this.ev({ k: 'revive', id: p.id });
+    this.ev({ k: 'revived', id: p.id });
     this.logEvent({ k: 'revive', id: p.id });
     this.tell(p, 'A top-hatted figure waved a wand... and you are BACK from the dead!', { kind: 'magician' });
   }
@@ -1099,7 +1099,10 @@ class Game {
   tickWish(now) {
     const w = this.wish;
     if (!w || this.winner || this.phase === 'ended' || this.pausedRemaining != null) return false;
-    w.until ??= now + this.dur('wish');
+    if (w.until == null) {
+      w.until = now + this.dur('wish');
+      return true; // tell the Clown's screen when the pie flies on its own
+    }
     if (now < w.until) return false;
     const pool = this.players.filter((p) => p.alive && p.id !== w.id);
     if (!pool.length) {
@@ -1342,7 +1345,7 @@ class Game {
       this.checkWin();
       if (this.winner) {
         this.nomination = null;
-        this.dusk = { id: a.id, cause: 'hex', anim: 'poof', story: `${a.name} nominates ${b.name}, and the Hexer's curse finishes the job. Poof.` };
+        this.dusk = { id: a.id, cause: 'hex', anim: 'confetti', story: `${a.name} nominates ${b.name}, and the Hexer's curse finishes the job. Poof.` };
         this.setPhase('dusk', this.dur('dusk'), now);
         return;
       }

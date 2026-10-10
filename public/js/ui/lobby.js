@@ -2,12 +2,13 @@
 // choose the roles and launch.
 import { isUnlocked, UNLOCKS } from '../progress.js';
 import { $, el, clear, problem, toast } from '../util.js';
-import { store, send, suitHex, isController, isCaptain } from '../store.js';
+import { store, send, suitHex, isController, isCaptain, scriptInfo, scriptRoleIds } from '../store.js';
 import { HAT_LABELS, PET_LABELS } from '../world/avatar.js';
 import { sfx } from '../audio.js';
 import { rememberLook } from './extras.js';
 
 let rolePicks = null; // array of role ids when hand-picking
+let scriptHelp = false; // the "how this script plays" panel is open
 
 export function initLobby({ onLeave }) {
   $('lobby-copy').addEventListener('click', () => {
@@ -81,6 +82,7 @@ export function renderLobby(state) {
     ),
   ));
 
+  renderScript(state, ctl);
   const setup = $('lobby-setup');
   const wait = $('lobby-wait');
   if (!ctl && state.hostAway && state.players.length >= data.minPlayers) {
@@ -97,9 +99,11 @@ export function renderLobby(state) {
     return;
   }
   wait.textContent = state.mode === 'captain' ? 'You are the Captain: you will see everything and run the game.' : 'You are the host. ARIA (the autopilot) will run the game; you play too.';
-  const enough = n >= data.minPlayers;
+  const script = scriptInfo(state.script);
+  const needed = Math.max(data.minPlayers, script.minPlayers);
+  const enough = n >= needed;
   const dist = data.distribution[n];
-  const counts = dist ? `${dist[0]} Crew · ${dist[1]} Drifters · ${dist[2]} Saboteurs · 1 Parasite` : '';
+  const counts = dist ? `${dist[0]} Crew · ${dist[1]} Drifters · ${dist[2]} Saboteurs · 1 ${script.demons.length > 1 ? 'Demon' : 'Parasite'}` : '';
   const pace = el('select', { onchange: (e) => send('pace', { pace: Number(e.target.value) }).catch((er) => problem(er.message)) },
     el('option', { value: 1.3, selected: state.pace === 1.3 }, '🐢 Relaxed (long chats)'),
     el('option', { value: 1, selected: state.pace === 1 }, '⏱️ Standard (~1h for 10)'),
@@ -110,7 +114,7 @@ export function renderLobby(state) {
   clear(setup,
     el('h3', {}, '🚀 Launch settings'),
     el('label', {}, 'Pace', pace),
-    el('div', { className: 'hint' }, enough ? `${n} players: ${counts}${n <= 4 ? ' (Short Haul: quick game)' : ''}` : `Need at least ${data.minPlayers} players to launch.`),
+    el('div', { className: 'hint' }, enough ? `${n} players: ${counts}${n <= 4 ? ' (Short Haul: quick game)' : ''}` : `${script.name} needs at least ${needed} players to launch.`),
     roleToggle,
     picking ? rolePicker(state, n) : null,
     state.practice ? null : el('label', { className: 'check', title: 'Anyone can find this ship under "Public ships" on the title screen and join.' },
@@ -129,7 +133,7 @@ export function renderLobby(state) {
         if (rolePicks) send('roles', { roles: rolePicks }).then(go).catch((e) => problem(e.message));
         else go();
       },
-    }, enough ? '🚀 Launch the ship' : `Waiting for crew (${n}/${data.minPlayers})`),
+    }, enough ? '🚀 Launch the ship' : `Waiting for crew (${n}/${needed})`),
   );
 }
 
@@ -143,7 +147,8 @@ function rolePicker(state, n) {
   return el('div', {},
     el('div', { className: 'hint' }, groups.map((t) => `${data.types[t].name}: ${rolePicks.filter((r) => data.roles[r].type === t).length}/${want[t]}`).join(' · ')),
     el('div', { className: 'role-picker' }, ...groups.flatMap((type) =>
-      Object.entries(data.roles).filter(([, r]) => r.type === type).map(([id, r]) => {
+      scriptRoleIds(type, state.script).map((id) => {
+        const r = data.roles[id];
         const locked = r.minPlayers > n;
         return el('label', { className: locked ? 'locked' : '', title: r.ability },
           el('input', { type: 'checkbox', checked: rolePicks.includes(id), disabled: locked, onchange: (e) => { if (e.target.checked) rolePicks.push(id); else rolePicks = rolePicks.filter((x) => x !== id); renderLobby(store.state); } }),
@@ -151,6 +156,26 @@ function rolePicker(state, n) {
         );
       }),
     )),
+  );
+}
+
+// Which script (cast of characters and story) the ship plays. The host picks; everyone sees.
+function renderScript(state, ctl) {
+  const box = $('lobby-script');
+  const scripts = Object.values(store.data.scripts || {});
+  if (!scripts.length) return clear(box);
+  const mine = scriptInfo(state.script);
+  const n = state.players.length;
+  const card = (s) => el('button', {
+    className: `script-card ${s.id === mine.id ? 'selected' : ''}`, disabled: !ctl || s.id === mine.id, title: s.blurb,
+    onclick: () => send('script', { id: s.id }).then(() => { rolePicks = null; sfx('pop'); }).catch((e) => problem(e.message)),
+  }, el('span', { className: 'script-ico' }, s.icon), el('b', {}, s.name), el('small', {}, s.tagline), el('small', { className: 'script-min' }, s.minPlayers > 3 ? `${s.minPlayers}+ players` : 'any group size'));
+  clear(box,
+    el('h3', {}, '🎭 Script'),
+    ctl ? el('div', { className: 'script-cards' }, ...scripts.map(card)) : el('div', { className: 'script-current' }, el('span', { className: 'script-ico' }, mine.icon), el('div', {}, el('b', {}, mine.name), el('small', {}, mine.tagline))),
+    el('button', { className: 'small ghost', onclick: () => { scriptHelp = !scriptHelp; renderLobby(store.state); } }, scriptHelp ? 'Hide the rules ▲' : 'ℹ️ How this script plays ▼'),
+    scriptHelp ? el('div', { className: 'script-help' }, el('p', {}, mine.blurb), el('ul', {}, ...mine.rules.map((r) => el('li', {}, r)))) : null,
+    n < mine.minPlayers ? el('div', { className: 'hint warn' }, `${mine.name} needs ${mine.minPlayers}+ players (you have ${n}).`) : null,
   );
 }
 

@@ -4,7 +4,7 @@ A spooky, slightly silly space spin-off of **Blood on the Clocktower**, played o
 
 *The ship is falling into a black hole. Something aboard is not human. Find it before there is no more space.*
 
-- 🎭 **23 hidden roles**: 22 matching Blood on the Clocktower's *Trouble Brewing* (Crew, Drifters, Saboteurs, The Parasite) plus the 🤡 **Holo-Jester**, who makes a player hallucinate, unlocked by player count
+- 🎭 **35 hidden roles in two scripts**: 🕳️ *Black Hole Blues* has 23 (22 matching Blood on the Clocktower's *Trouble Brewing*, plus the 🤡 Holo-Jester), and 🎪 **Cosmic Carnival** is a second script with 12 new roles: a Lion Tamer who guesses the Parasite, a Method Actor who thinks it is the Parasite, a Clown whose last pie can lose the game, a Stage Double whose twin the crew cannot afford to lose, and a mirror Demon that makes every clue lie (see [docs/SCRIPTS.md](docs/SCRIPTS.md))
 - 👥 **3–15 players**, using BotC's own setup table (plus a quick 3–4 player "Short Haul" mode)
 - 👨‍✈️ Play with a human **Captain** (Storyteller) running a full **Command Station**, or let **ARIA the autopilot** run the game
 - 🚀 **3D ship** with 12 rooms that each have their own moving details and sounds, proximity text & voice chat, 11 task minigames, window clues, night drawings on the walls

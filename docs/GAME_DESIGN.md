@@ -23,7 +23,7 @@ No More Space is a spooky, slightly silly space version of **Blood on the Clockt
 **Good wins** when the Parasite is dead.
 **Evil wins** when only 2 players are left alive. The ship falls into the black hole: no more space.
 
-## 2. All 23 roles
+## 2. The 23 Black Hole Blues roles
 
 Each role does exactly what its Trouble Brewing counterpart does. *Night\** means every night except the first.
 
@@ -85,6 +85,36 @@ Eight roles also get a **once-per-game ship system**, an extra ability that uses
 The good systems give the crew more ways to find information; the evil ones muddy exactly that information (a blackout blinds door logs and sensors, a spoof or disguise makes chat lie). Everything timed ends when the emergency meeting is called. The Captain sees through every trick in their chat.
 
 The role card also has a private **🗒️ Notebook**, like the scrap of paper BotC players keep: for each player, note the role they claim, whether you trust them (😇 / 😈) and a few words. Your guesses appear as small badges on the bridge table. It's stored only in your browser and is wiped when a new game starts.
+
+## 2a. Scripts, and the 🎪 Cosmic Carnival
+
+A **script** is a cast of characters plus a story, like BotC's *Trouble Brewing*, *Bad Moon Rising* and *Sects & Violets*. The host picks one in the docking bay (cards under **🎭 Script**; everyone sees the choice, with a "how this script plays" panel). ARIA only deals roles from the chosen script, and the wiki, claim menu and notebook list only those roles. There are two:
+
+- 🕳️ **Black Hole Blues**: the original game described in this document (3–15 players).
+- 🎪 **Cosmic Carnival**: a space circus with 12 new roles and two possible Demons (5–15 players). Also available as **🎪 Practice: Cosmic Carnival** on the title screen.
+
+The Carnival changes the look too: a red and white circus ring around the bridge table, balloons, spotlights and confetti, and its stories (dawn, airlock) are told in a circus voice by *ARIA, Ringmaster of the Big Top*.
+
+**New roles** (each inspired by a Blood on the Clocktower character; `*` = not on the first night):
+
+| Role | Type | What it does |
+|---|---|---|
+| 🦁 **Lion Tamer** | Crew | Each night*, choose a player (not the same as last night): if they are the Parasite, it is stopped tonight and learns who you are. |
+| 🤸 **Acrobat** | Crew | The 1st time you die, you don't: a safety net catches you (night attack or airlock). A net that saved you from the airlock shows everyone you are good. |
+| 🖐️ **Palm Reader** | Crew | Each night, choose a player: see 2 roles (one good, one evil), one of them real. |
+| 🎟️ **Ticket Taker** | Crew | Each night*, learn if the Parasite voted today. |
+| 🎪 **Stagehand** | Crew | Each night, choose 2 players: learn how many were woken by their abilities tonight. |
+| 🎩 **Magician** | Crew | Once per game, at night*, choose a dead player: if they are Crew, they come back to life (announced at dawn). Can be saved for a later night. |
+| 🎈 **Clown** | Drifter | When you die, a screen asks you to throw a pie at a living player. If they are evil, the crew loses. If you dither for 40 seconds, the pie flies at random. |
+| 🎬 **Method Actor** | Drifter | Believes they are the Parasite (role card, bluffs, and an imaginary team). Each night they "kill" someone; nothing happens, and the real Parasite is told who they aimed at. |
+| 🗡️ **Knife Thrower** | Saboteur | Once per game, at night*, kill a player even through protection (Medic, Marine, safety net). Can be saved. |
+| 👯 **Stage Double** | Saboteur | You and a good Crew player (your twin) are told about each other. If the crew airlocks your twin, evil wins. **The crew cannot win while you and your twin both live.** |
+| 🧙 **Hexer** | Saboteur | Each night, choose a player: if they nominate tomorrow, they die on the spot (the nomination still counts). The victim isn't told. Stops at 3 players alive or when the Hexer dies. |
+| 🪞 **The Reflection** | Demon | Each night*, choose a player: they die. **All Crew information is false** while it lives (protections still work). **If a day ends with nobody airlocked, evil wins.** |
+
+The Carnival also uses the Engineer, Scanner, Coroner, Medic, Black Box, First Officer, Gunner, Space Drunk, Stowaway, Hacker and Incubator. Its Demon is the Parasite, or (7+ players, about 4 games in 10) the Reflection; nobody is told which, so a day without an airlocking is a gamble.
+
+For the research behind it, the design reasoning, simulation results and how to make the next script, see [SCRIPTS.md](SCRIPTS.md).
 
 ## 3. Player counts & balance
 

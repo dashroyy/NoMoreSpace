@@ -110,6 +110,18 @@
         }).join('')}</div><p class="hint">Crew wins / games. The dashed line is 50%. Amber means it may need balancing (once there are 5+ games).</p>`;
       }
 
+      // Crew win % for each script (Black Hole Blues, Cosmic Carnival...)
+      const SCRIPT_NAMES = { classic: '🕳️ Classic', carnival: '🎪 Carnival' };
+      function scriptsCard(s) {
+        const rows = Object.entries(s.scripts || {});
+        if (!rows.length) return '<p class="hint">No finished games yet.</p>';
+        return `<div class="bars">${rows.map(([id, v]) => {
+          const p = v.crewWinPercent ?? 0;
+          const cls = v.games < 5 || (p >= 35 && p <= 65) ? 'ok' : 'off';
+          return `<div class="bar ${cls}"><span>${esc(SCRIPT_NAMES[id] || id)}</span><div class="track"><i style="width:${p}%"></i><span class="half"></span></div><span>${p}% <span class="hint">of ${v.games}</span></span></div>`;
+        }).join('')}</div><p class="hint">Crew win rate per script. Amber: it may need balancing.</p>`;
+      }
+
       function perDay(s) {
         const days = Object.entries(s.perDay || {});
         if (!days.length) return '<p class="hint">No games yet.</p>';
@@ -153,6 +165,7 @@
           </div></section>
           <section class="card"><h2>⚖️ Crew wins by player count</h2>${balance(s)}</section>
           <section class="card"><h2>📅 Games per day</h2>${perDay(s)}</section>
+          <section class="card"><h2>🎭 Scripts</h2>${scriptsCard(s)}</section>
           <section class="card wide"><h2>🎭 Roles</h2>${roles(s)}</section>
           <section class="card wide"><h2>🕹️ Recent games</h2>${recent(s)}</section>
           ${reportsCard()}`;

@@ -284,3 +284,43 @@ input[type='range'] { flex: 1; padding: 0; height: 22px; accent-color: var(--amb
 .knock-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; }
 .knock-row > span { flex: 1 1 100%; }
 @media (max-width: 820px) { .door-card { bottom: 130px; right: 6px; } }
+
+/* ---------- Scripts (the cast of characters) in the docking bay ---------- */
+.lobby-script { display: grid; gap: 8px; margin: 10px 0; }
+.lobby-script h3 { margin: 0; }
+.script-cards { display: grid; gap: 6px; }
+.script-card { display: grid; grid-template-columns: 2.2rem 1fr; grid-template-rows: auto auto auto; gap: 0 10px; align-items: center; text-align: left; padding: 8px 10px; }
+.script-card .script-ico { grid-row: 1 / span 3; font-size: 1.8rem; text-align: center; }
+.script-card b { font-size: 0.95rem; }
+.script-card small { color: var(--muted); text-transform: none; letter-spacing: 0; font-family: var(--font-body); font-size: 0.95rem; line-height: 1.1; }
+.script-card .script-min { color: var(--amber); }
+.script-card.selected { border-color: var(--amber); background: rgba(255, 181, 71, 0.12); }
+.script-card:disabled { cursor: default; opacity: 1; }
+.script-current { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border: 1px solid var(--line); background: rgba(255, 255, 255, 0.03); }
+.script-current .script-ico { font-size: 1.8rem; }
+.script-current small { display: block; color: var(--muted); }
+.script-help { padding: 8px 10px; border: 1px solid var(--line); font-size: 1rem; line-height: 1.2; }
+.script-help ul { margin: 6px 0 0; padding-left: 1.2em; }
+.script-help li { margin-bottom: 4px; }
+.hint.warn { color: var(--amber); }
+
+/* ---------- The Clown's last pie ---------- */
+.wish { position: fixed; inset: 0; z-index: 12; display: grid; place-items: center; background: rgba(8, 4, 20, 0.78); zoom: var(--ui-zoom, 1); }
+.wish[hidden] { display: none; }
+.wish-card { width: min(520px, calc(100% - 28px)); max-height: 92vh; overflow-y: auto; display: grid; gap: 10px; text-align: center; padding: 18px 16px; background: var(--panel-solid); border: 2px solid var(--amber); box-shadow: 0 0 40px rgba(255, 181, 71, 0.4); }
+.wish-ico { font-size: 3rem; line-height: 1; animation: wish-bob 1.2s ease-in-out infinite; }
+@keyframes wish-bob { 50% { transform: translateY(-6px) rotate(8deg); } }
+.wish-list { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; }
+.wish-pick { display: inline-flex; align-items: center; gap: 6px; padding: 8px 12px; }
+.wish-pick .dot { width: 12px; height: 12px; border-radius: 50%; }
+.wish-pick.chosen { border-color: var(--amber); background: rgba(255, 181, 71, 0.2); }
+
+/* ---------- The wiki's Scripts page ---------- */
+.wiki-script { padding: 12px 14px; margin: 10px 0; border: 1px solid var(--line); background: rgba(255, 255, 255, 0.03); display: grid; gap: 6px; }
+.wiki-script.current { border-color: var(--amber); box-shadow: 0 0 18px rgba(255, 181, 71, 0.2); }
+.wiki-script p { margin: 0; }
+.wiki-script-roles { display: flex; flex-wrap: wrap; gap: 4px; font-size: 1.4rem; line-height: 1.2; }
+.wiki-script-roles span { cursor: help; }
+.wiki-scenarios { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 8px; }
+.wiki-scenario { display: flex; gap: 10px; padding: 10px 12px; border: 1px solid var(--line); background: rgba(255, 255, 255, 0.03); }
+.wiki-scenario p { margin: 2px 0 0; font-size: 0.95rem; line-height: 1.25; color: var(--ink); }

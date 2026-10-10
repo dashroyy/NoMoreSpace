@@ -27,6 +27,7 @@ import { openWiki } from './ui/wiki.js';
 import { initSettings } from './ui/settings.js';
 import { initSession, renderSession } from './ui/session.js';
 import { initCaptions } from './ui/captions.js';
+import { initWish } from './ui/wish.js';
 import { initDoors } from './ui/doors.js';
 import { openProfile } from './ui/profile.js';
 import { openPublicShips } from './ui/publicships.js';
@@ -107,6 +108,7 @@ async function boot() {
   initSettings({ moods: MOODS });
   initSession();
   initCaptions();
+  initWish();
   initDoors(world);
   for (const id of ['home-profile', 'lobby-profile']) $(id).addEventListener('click', () => openProfile());
   $('home-public').addEventListener('click', () => openPublicShips({ look: savedLook }));
@@ -199,6 +201,7 @@ async function boot() {
   onState((state, prev) => {
     route(state);
     world.syncPlayers(state);
+    world.setScript(state.script);
     if (!prev || prev.phase !== state.phase || prev.code !== state.code) onPhaseChange(state, prev, world, reveal);
     world.setProgressFromState(state);
 
@@ -310,7 +313,9 @@ function onPhaseChange(state, prev, world, reveal) {
       const dawn = state.dawn;
       if (dawn) {
         const names = dawn.deaths.map((d) => player(d.id)?.name).filter(Boolean);
-        showStory(dawn.story, names.map((n) => `💀 ${n}`), 9000 + dawn.story.length * 60); // up for most of the dawn
+        const back = (dawn.revived || []).map((id) => player(id)?.name).filter(Boolean);
+        showStory(dawn.story, [...names.map((n) => `💀 ${n}`), ...back.map((n) => `✨ ${n}`)], 9000 + dawn.story.length * 60); // up for most of the dawn
+        if (back.length) setTimeout(() => sfx('fanfare'), 1600);
         if (dawn.deaths.length) {
           setTimeout(() => sfx('death'), 1200);
           world.playDeaths(dawn.deaths);
@@ -346,14 +351,18 @@ function onPhaseChange(state, prev, world, reveal) {
       break;
     case 'dusk': {
       const dusk = state.dusk;
-      if (dusk?.id) {
+      if (dusk?.survived) {
+        // the Acrobat's safety net: airlocked, and bounced right back
+        sfx('fanfare');
+        showStory(dusk.story, ['🤸 The net holds!'], 9000);
+      } else if (dusk?.id) {
         sfx('airlock');
         world.playDeaths([{ id: dusk.id, anim: dusk.anim || 'airlock' }]);
         showStory(dusk.story, [], 7000);
       } else {
         showStory(dusk?.story || 'Nobody is airlocked today.', [], 5000);
       }
-      phaseBanner('🌇 Dusk', dusk?.id ? `${player(dusk.id)?.name} is airlocked` : 'Nobody is airlocked');
+      phaseBanner(dusk?.survived ? '🤸 The net holds!' : '🌇 Dusk', dusk?.survived ? `${player(dusk.id)?.name} survives the airlock` : dusk?.id ? `${player(dusk.id)?.name} is airlocked` : 'Nobody is airlocked');
       break;
     }
     case 'ended': {
@@ -465,6 +474,10 @@ function setupHome() {
   $('home-practice').addEventListener('click', () => {
     unlockAudio();
     send('create', { name: $('home-name').value || 'Rookie', practice: true, look: savedLook() }).then(() => sfx('whoosh')).catch((e) => problem(e.message));
+  });
+  $('home-practice-carnival').addEventListener('click', () => {
+    unlockAudio();
+    send('create', { name: $('home-name').value || 'Rookie', practice: true, script: 'carnival', look: savedLook() }).then(() => sfx('whoosh')).catch((e) => problem(e.message));
   });
   $('home-create').addEventListener('click', () => {
     unlockAudio();

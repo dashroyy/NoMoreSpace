@@ -8,6 +8,7 @@ import { Hallucinations } from './hallucinate.js';
 import { PartyFx } from './party-fx.js';
 import { buildAmbience } from './ambience.js';
 import { Soundscape } from './soundscape.js';
+import { CarnivalDecor } from './carnival.js';
 import { moveWithCollision, roomAt, roomById, walkable, seatPosition, TASK_STATIONS, SPAWN, DRAWING_SLOTS } from './layout.js';
 
 const SEATED = ['dawn', 'meeting', 'nominations', 'lastwords', 'dusk'];
@@ -85,6 +86,7 @@ export class World {
     this.ship = buildShip(this.scene, this.space);
     // the rooms' little moving details, and their sounds (louder the closer you are)
     this.ambience = buildAmbience(this.ship.group, { lowFx: this.lowFx });
+    this.carnival = new CarnivalDecor(this.scene, { lowFx: this.lowFx }); // the circus ring (only shown for the Cosmic Carnival script)
     this.soundscape = new Soundscape();
     this.ambience.onVent = (x, z) => this.soundscape.oneShot('vent', { x, z }, this.listener());
     this.ambience.onChirp = (x, z) => this.soundscape.oneShot('chirp', { x, z }, this.listener());
@@ -177,7 +179,12 @@ export class World {
         a.labelColor = labelColor;
       }
       if (!p.alive && !a.ghost && !a.deathState && !a.pendingDeath) a.setGhost(true);
-      if (p.alive && a.ghost) a.setGhost(false);
+      if (p.alive && a.ghost) {
+        // back from the dead (the Magician's trick)
+        a.setGhost(false);
+        a.deathState = null;
+        a.burst(70, null, 4);
+      }
       a.seat = p.seat;
     }
     for (const [id, a] of this.avatars) {
@@ -402,6 +409,7 @@ export class World {
     this.updateCamera(dt);
     this.updateAmbience(dt, t);
     this.ship.decor.update(t, { night: this.night, progress: this.progress });
+    this.carnival.update(t, dt);
     this.ambience.update(dt, t, { night: this.night, progress: this.progress, alarm: t < this.alarmUntil });
     this.soundscape.update({ ...this.listener(), phase: this.phase, night: this.phase === 'night' });
     this.ship.exterior.update(t);
@@ -657,6 +665,11 @@ export class World {
       st.ring.scale.setScalar(1 + Math.sin(t * 3) * 0.05);
       st.icon.position.y = 1.7 + Math.sin(t * 2) * 0.08;
     }
+  }
+
+  // The script this ship is playing (the Cosmic Carnival gets a circus ring on the bridge).
+  setScript(id) {
+    this.carnival.setActive(id === 'carnival');
   }
 
   // where the ears are: your spacesuit, the bridge table when seated, or the camera for spectators

@@ -80,6 +80,7 @@ function statsSummary() {
   const byPlayers = {};
   const roles = {};
   const perDay = {};
+  const scripts = {}; // per script: games and crew wins
   let minutes = 0;
   let crewWins = 0;
   for (const g of games) {
@@ -91,6 +92,9 @@ function statsSummary() {
       crewWins += 1;
     }
     minutes += g.minutes || 0;
+    const sc = (scripts[g.script || 'classic'] ||= { games: 0, crewWins: 0 });
+    sc.games += 1;
+    if (g.winner === 'crew') sc.crewWins += 1;
     for (const r of g.roles || []) {
       roles[r] ||= { dealt: 0, survived: 0, wins: 0, name: ROLES[r]?.name || r, icon: ROLES[r]?.icon || '', type: ROLES[r]?.type || '' };
       roles[r].dealt += 1;
@@ -106,6 +110,7 @@ function statsSummary() {
     crewWinPercent: pct(crewWins, games.length),
     averageMinutes: games.length ? Math.round(minutes / games.length) : null,
     byPlayerCount: byPlayers,
+    scripts: Object.fromEntries(Object.entries(scripts).map(([id, v]) => [id, { ...v, crewWinPercent: pct(v.crewWins, v.games) }])),
     roles,
     recent: games.slice(-10),
     perDay: Object.fromEntries(Object.entries(perDay).sort().slice(-21)),

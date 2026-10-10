@@ -10,6 +10,13 @@ const INSTRUCTIONS = {
   parasite: () => 'Choose a victim. (Choose yourself to jump hosts: you die and a Saboteur becomes the Parasite.)',
   scanner: () => 'Choose 2 players to scan for the Parasite.',
   droid: () => 'Choose your master. Tomorrow you may only vote when they vote.',
+  reflection: () => 'Choose a victim. (Choose yourself to jump hosts: you die and a Saboteur becomes the Reflection.) While you live, all Crew information is false.',
+  liontamer: () => 'Choose the player you think is the Parasite. If you are right, it is stopped tonight and learns who you are. (Not the same player two nights in a row.)',
+  palmreader: () => 'Choose a player (not yourself): you will see two roles for them, one good and one evil. One of the two is their real role.',
+  stagehand: () => 'Choose 2 living players (not yourself): you learn how many of them were woken tonight by their own abilities.',
+  magician: () => 'Once per game: choose a DEAD player. If they were Crew, they come back to life at dawn. Or save your trick for later.',
+  knifethrower: () => 'Once per game: choose a player. They die tonight, even if protected. Or save your knife for later.',
+  hexer: () => 'Choose a player to hex. If they nominate tomorrow, they die on the spot. (They are not told.)',
 };
 
 let chosen = [];
@@ -105,15 +112,15 @@ export function renderNight(state) {
   }
   if (prompt.done) {
     const names = (prompt.chosen || []).map((id) => state.players.find((p) => p.id === id)?.name).join(' & ');
-    clear(box, el('div', { className: 'role-line' }, el('span', { className: 'ico' }, r.icon), el('div', {}, el('h3', {}, r.name), el('div', { className: 'hint' }, `You chose ${names}. Now wait for dawn…`))));
+    clear(box, el('div', { className: 'role-line' }, el('span', { className: 'ico' }, r.icon), el('div', {}, el('h3', {}, r.name), el('div', { className: 'hint' }, names ? `You chose ${names}. Now wait for dawn…` : 'You are saving it for another night. Now wait for dawn…'))));
     return;
   }
-  renderPicker(box, state, { icon: r.icon, title: r.name, text: INSTRUCTIONS[prompt.role]?.() || 'Choose.', choose: prompt.choose, target: prompt.target, notSelf: prompt.notSelf });
+  renderPicker(box, state, { icon: r.icon, title: r.name, text: INSTRUCTIONS[prompt.role]?.() || 'Choose.', choose: prompt.choose, target: prompt.target, notSelf: prompt.notSelf, once: prompt.once });
 }
 
-function renderPicker(box, state, { icon, title, text, choose, target, notSelf }) {
+function renderPicker(box, state, { icon, title, text, choose, target, notSelf, once }) {
   const you = state.you;
-  const options = state.players.filter((p) => (target === 'any' || p.alive) && !(notSelf && p.id === you.id));
+  const options = state.players.filter((p) => (target === 'any' || (target === 'dead' ? !p.alive : p.alive)) && !(notSelf && p.id === you.id));
   const list = el('div', { className: 'pick-list' }, ...options.map((p) =>
     el('button', {
       className: `pick ${chosen.includes(p.id) ? 'chosen' : ''} ${p.alive ? '' : 'dead'}`,
@@ -124,7 +131,7 @@ function renderPicker(box, state, { icon, title, text, choose, target, notSelf }
           if (chosen.length > choose) chosen.shift();
         }
         sfx('click');
-        renderPicker(box, store.state, { icon, title, text, choose, target, notSelf });
+        renderPicker(box, store.state, { icon, title, text, choose, target, notSelf, once });
       },
     }, el('span', { className: 'dot', style: { background: suitHex(p) } }), `${p.name}${p.id === you.id ? ' (you)' : ''}${p.alive ? '' : ' 👻'}`),
   ));
@@ -134,11 +141,14 @@ function renderPicker(box, state, { icon, title, text, choose, target, notSelf }
       send('choose', { targets: chosen }).then(() => sfx('lock')).catch((e) => problem(e.message));
     },
   }, chosen.length === choose ? 'Confirm' : `Pick ${choose - chosen.length} more`);
+  // a once-per-game ability can be saved for another night
+  const save = once ? el('button', { className: 'ghost small', onclick: () => send('choose', { targets: [] }).then(() => sfx('click')).catch((e) => problem(e.message)) }, 'Not tonight (save it for later)') : null;
   clear(box,
-    el('div', { className: 'role-line' }, el('span', { className: 'ico' }, icon), el('div', {}, el('h3', {}, title), el('div', { className: 'hint' }, 'If you don\'t choose in time, ARIA picks at random.'))),
+    el('div', { className: 'role-line' }, el('span', { className: 'ico' }, icon), el('div', {}, el('h3', {}, title), el('div', { className: 'hint' }, once ? 'If you don\'t choose, you simply save it for another night.' : 'If you don\'t choose in time, ARIA picks at random.'))),
     el('p', {}, text),
-    list,
+    options.length ? list : el('p', { className: 'hint' }, 'Nobody to choose yet.'),
     confirm,
+    save,
   );
 }
 

@@ -1,7 +1,7 @@
 // The role card (R): your ability, tips, everything you've learned, plus the
 // full almanac of roles and a "how to play" guide.
 import { $, el, clear } from '../util.js';
-import { store, role, player, send } from '../store.js';
+import { store, role, player, send, scriptRoleIds, scriptInfo } from '../store.js';
 import { notebookTab } from './notebook.js';
 import { logTab } from './social.js';
 import { openBugReport } from './report.js';
@@ -135,10 +135,10 @@ function almanac() {
   const groups = ['crew', 'drifter', 'saboteur', 'parasite'];
   const n = store.state?.playerCount || 0;
   return el('div', {},
-    el('p', { className: 'hint' }, 'Every role that can be aboard. Greyed-out roles need more players. The Parasite\'s bluffs and the Space Drunk always pretend to be good roles from this list.'),
+    el('p', { className: 'hint' }, `${scriptInfo().icon} ${scriptInfo().name}: every role that can be aboard. Greyed-out roles need more players. The Parasite's bluffs and the Space Drunk always pretend to be good roles from this list.`),
     ...groups.map((type) => {
       const t = store.data.types[type];
-      const ids = Object.keys(store.data.roles).filter((id) => store.data.roles[id].type === type);
+      const ids = scriptRoleIds(type);
       return el('div', {},
         el('h3', { style: { color: t.color, marginTop: '14px' } }, `${t.name}s — ${t.blurb}`),
         el('div', { className: 'almanac' }, ...ids.map((id) => {

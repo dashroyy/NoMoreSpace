@@ -2,12 +2,13 @@
 // players can learn before (or between) games. Open it from the title
 // screen, the lobby or the 📖 button in the top bar.
 import { $, el, clear } from '../util.js';
-import { store } from '../store.js';
+import { store, scriptInfo } from '../store.js';
 import { openModal, closeModal, wakeText } from './rolecard.js';
 
 const SVG = 'http://www.w3.org/2000/svg';
 const PAGES = [
   ['basics', '🕳️', 'The basics'],
+  ['scripts', '🎪', 'Scripts'],
   ['day', '🔄', 'A day aboard'],
   ['voting', '☝️', 'Voting'],
   ['roles', '🎭', 'Roles'],
@@ -21,6 +22,7 @@ const PLURAL = { crew: 'Crew', drifter: 'Drifters', saboteur: 'Saboteurs', paras
 
 let page = 'basics';
 let roleFilter = 'all';
+let scriptFilter = null; // which script's roles the Roles page shows (null: the one this ship is playing)
 let roleSearch = '';
 
 // tiny SVG helper: svg('circle', { cx: 1 }, ...children)
@@ -42,7 +44,7 @@ function render() {
   const nav = el('nav', { className: 'wiki-nav' }, ...PAGES.map(([id, icon, label]) =>
     el('button', { className: page === id ? 'active' : '', onclick: () => { page = id; render(); $('modal-body').scrollTop = 0; } }, `${icon} ${label}`),
   ));
-  const body = { basics, day, voting, roles, crew, lies, ghosts, controls }[page]();
+  const body = { basics, scripts, day, voting, roles, crew, lies, ghosts, controls }[page]();
   openModal(el('div', { className: 'wiki' }, el('h2', { className: 'wiki-title' }, "📖 The Ship's Wiki"), nav, el('div', { className: 'wiki-page' }, body)));
 }
 
@@ -160,14 +162,51 @@ function roles() {
     el('input', { className: 'wiki-search', placeholder: 'Search roles…', value: roleSearch, oninput: (e) => { roleSearch = e.target.value; refreshCards(); } }),
   );
   const grid = el('div', { className: 'wiki-roles', id: 'wiki-roles' });
+  const scriptId = scriptFilter || store.state?.script || 'classic';
+  const scriptPicker = el('div', { className: 'wiki-filters' },
+    ...Object.values(data.scripts || {}).map((s) =>
+      el('button', { className: `small ${scriptId === s.id ? 'active' : ''}`, onclick: () => { scriptFilter = s.id; render(); } }, `${s.icon} ${s.name}`)),
+  );
   const refreshCards = () => {
     const q = roleSearch.trim().toLowerCase();
-    const list = Object.entries(data.roles).filter(([, r]) => (roleFilter === 'all' || r.type === roleFilter) && (!q || `${r.name} ${r.ability} ${r.tb}`.toLowerCase().includes(q)));
+    const onScript = new Set(scriptInfo(scriptId).roles);
+    const list = Object.entries(data.roles).filter(([id, r]) => onScript.has(id) && (roleFilter === 'all' || r.type === roleFilter) && (!q || `${r.name} ${r.ability} ${r.tb}`.toLowerCase().includes(q)));
     clear(grid, ...list.map(([id, r]) => roleCard(id, r)));
     if (!list.length) grid.append(el('p', { className: 'hint' }, 'No roles match.'));
   };
   refreshCards();
-  return el('div', {}, el('p', { className: 'hint' }, 'Every role that can be aboard. Tap a card to see its strategy tips. Bigger crews unlock more roles.'), filters, grid);
+  return el('div', {}, el('p', { className: 'hint' }, `The roles on the ${scriptInfo(scriptId).name} script. Tap a card to see its strategy tips. Bigger crews unlock more roles.`), scriptPicker, filters, grid);
+}
+
+// The scripts: each one is a whole cast of characters and a story, like Blood on the Clocktower's Trouble Brewing and Bad Moon Rising.
+const SCENARIOS = [
+  ['🥧', 'The Great Pie Fight', 'The crew airlocks the Clown. A hush falls. The Clown, with one last pie, points at the player everybody trusts... who turns out to be the Stage Double. The crew loses to a custard pie.'],
+  ['🦁', 'The Lion Tamer\'s gamble', 'Night 3: the Lion Tamer picks Dana and nobody dies. Night 4 she cannot pick Dana again, so she picks Priya... a death. Was it Dana all along? (Or did the Parasite simply have a quiet night?)'],
+  ['👯', 'Twin trouble', 'You have been secretly told that Sam is your evil twin. Sam is claiming YOUR role, loudly, and everyone believes Sam. The crew must not airlock you... and cannot win while you both live.'],
+  ['🎬', 'The method actor', 'Rex is absolutely certain he is the Parasite. Every night he "kills" someone. Nobody dies. He is getting suspicious of himself. The real Parasite is delighted.'],
+  ['💥', 'Poof!', 'Everyone nominates carefully, except Kit, who nominates the second the clock starts and vanishes in purple smoke. Now everyone knows there is a Hexer... and nobody dares speak first.'],
+  ['🪞', 'The mirror cracks', 'Every clue the crew has is a lie, and the Reflection wins if a day ends with nobody airlocked. Trust nothing, and airlock somebody. Anybody. Quickly.'],
+];
+
+function scripts() {
+  const data = store.data;
+  const mine = store.state?.script;
+  return el('div', {},
+    el('p', { className: 'wiki-lead' }, 'A script is a whole cast of characters and a story, like Blood on the Clocktower\'s Trouble Brewing or Bad Moon Rising. The host picks one in the docking bay; ARIA only deals roles that are on it.'),
+    ...Object.values(data.scripts || {}).map((s) => el('div', { className: `wiki-script ${mine === s.id ? 'current' : ''}` },
+      el('div', { className: 'wiki-role-head' },
+        el('span', { className: 'wiki-role-icon' }, s.icon),
+        el('div', {}, el('b', {}, s.name), el('div', { className: 'wiki-role-meta' }, `${s.minPlayers > 3 ? `${s.minPlayers}+ players` : 'any group size'} · ${s.roles.length} roles${mine === s.id ? ' · playing now' : ''}`)),
+      ),
+      el('p', {}, el('i', {}, s.tagline)),
+      el('p', {}, s.blurb),
+      el('ul', { className: 'tips' }, ...s.rules.map((r) => el('li', {}, r))),
+      el('div', { className: 'wiki-script-roles' }, ...s.roles.map((id) => el('span', { title: `${data.roles[id].name}: ${data.roles[id].ability}` }, data.roles[id].icon))),
+      el('button', { className: 'small', onclick: () => { scriptFilter = s.id; roleFilter = 'all'; page = 'roles'; render(); $('modal-body').scrollTop = 0; } }, `See the ${s.name} roles`),
+    )),
+    el('h3', {}, '🎪 Moments the Cosmic Carnival is made of'),
+    el('div', { className: 'wiki-scenarios' }, ...SCENARIOS.map(([icon, title, text]) => el('div', { className: 'wiki-scenario' }, el('span', { className: 'wiki-role-icon' }, icon), el('div', {}, el('b', {}, title), el('p', {}, text))))),
+  );
 }
 
 function roleCard(id, r) {
@@ -178,7 +217,7 @@ function roleCard(id, r) {
       el('span', { className: 'wiki-role-icon' }, r.icon),
       el('div', {},
         el('b', {}, r.name),
-        el('div', { className: 'wiki-role-meta' }, el('span', { style: { color: t.color } }, t.name), ` · ${r.minPlayers}+ players · like BotC's ${r.tb}`),
+        el('div', { className: 'wiki-role-meta' }, el('span', { style: { color: t.color } }, t.name), ` · ${r.minPlayers}+ players · like BotC's ${r.tb}`, store.data.scripts?.classic.roles.includes(id) ? '' : ' · 🎪 Carnival only'),
       ),
     ),
     el('p', {}, r.ability),

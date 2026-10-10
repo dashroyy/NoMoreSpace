@@ -39,6 +39,17 @@ export function role(id) {
   return store.data?.roles[id] || null;
 }
 
+// The script (cast of characters) this ship is playing; before a ship exists, the classic one.
+export function scriptInfo(id = store.state?.script) {
+  return store.data?.scripts?.[id] || store.data?.scripts?.classic || { id: 'classic', name: 'Black Hole Blues', icon: '🕳️', minPlayers: 3, roles: Object.keys(store.data?.roles || {}), demons: ['parasite'], rules: [], blurb: '', tagline: '' };
+}
+
+// The roles on that script, optionally just one type of them.
+export function scriptRoleIds(type = null, id = store.state?.script) {
+  const ids = scriptInfo(id).roles;
+  return type ? ids.filter((r) => store.data.roles[r]?.type === type) : ids;
+}
+
 export function isCaptain() {
   return !!store.state?.you?.isCaptain;
 }
