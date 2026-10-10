@@ -274,6 +274,10 @@ const SCRIPTS = {
       plants: 'Water the 6 wilting garden roses before the Blood Moon blackens them.',
       demonName: 'The Head Traitor',
       demonDoes: 'Every night it murders a Faithful.',
+      banishQuestion: '☝️ Who should be banished?',
+      banishYes: 'banish them',
+      banishVotes: 'votes to banish',
+      banishNominate: 'put someone up for banishment.',
       jokes: [
         '📢 Attention guests: the Prize Pot is safe in the vault. The vault is safe in the dungeon. The dungeon is not safe at all.',
         '📢 Reminder: the Round Table is for banishing, not for dining. Please remove your soup.',

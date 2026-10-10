@@ -141,7 +141,7 @@ function describe(e) {
       const res = { block: '☠️ on the block', tie: '⚖️ tie', safe: '🛟 safe' }[e.result];
       return `☝️ ${name(e.a)} nominated ${name(e.t)}: ${e.votes}/${e.threshold} votes, ${res}. YES: ${e.voters.length ? e.voters.map(name).join(', ') : 'nobody'}`;
     }
-    case 'airlock': return `🚪 ${name(e.id)} was airlocked (${e.votes} votes).`;
+    case 'airlock': return e.unmask ? `🗡️ ${name(e.id)} was banished (${e.votes} votes), and unmasked: ${e.unmask === 'traitor' ? 'a TRAITOR!' : 'FAITHFUL.'}` : `🚪 ${name(e.id)} was airlocked (${e.votes} votes).`;
     case 'sentinel': return `⚡ ${name(e.id)} nominated the Sentinel and was fried!`;
     case 'noexec': return '🌇 Nobody was airlocked.';
     case 'shot': return `🔫 ${name(e.a)} fired at ${name(e.t)}${e.hit ? ` and vaporised them!` : '… nothing happened.'}`;

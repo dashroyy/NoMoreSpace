@@ -28,6 +28,7 @@ import { initSettings } from './ui/settings.js';
 import { initSession, renderSession } from './ui/session.js';
 import { initCaptions } from './ui/captions.js';
 import { initWish } from './ui/wish.js';
+import { initOffer } from './ui/offer.js';
 import { initDoors } from './ui/doors.js';
 import { openProfile } from './ui/profile.js';
 import { openPublicShips } from './ui/publicships.js';
@@ -109,6 +110,7 @@ async function boot() {
   initSession();
   initCaptions();
   initWish();
+  initOffer();
   initDoors(world);
   for (const id of ['home-profile', 'lobby-profile']) $(id).addEventListener('click', () => openProfile());
   $('home-public').addEventListener('click', () => openPublicShips({ look: savedLook }));
@@ -489,6 +491,10 @@ function setupHome() {
   $('home-practice-outbreak').addEventListener('click', () => {
     unlockAudio();
     send('create', { name: $('home-name').value || 'Rookie', practice: true, script: 'outbreak', look: savedLook() }).then(() => sfx('whoosh')).catch((e) => problem(e.message));
+  });
+  $('home-practice-traitors').addEventListener('click', () => {
+    unlockAudio();
+    send('create', { name: $('home-name').value || 'Rookie', practice: true, script: 'traitors', look: savedLook() }).then(() => sfx('whoosh')).catch((e) => problem(e.message));
   });
   $('home-create').addEventListener('click', () => {
     unlockAudio();

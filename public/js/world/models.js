@@ -455,6 +455,152 @@ export function buildRoleModel(roleId, accentHex = '#ffffff') {
       root = g;
       break;
     }
+    // ---------------- Citadel of Traitors ----------------
+    case 'seer': {
+      const p = person({ outfit: 0x4a2a7a, pants: 0x2a1a4a, skin: SKINS[1] });
+      part(p.hatAt, new THREE.ConeGeometry(0.3, 0.55, 12), m(0x3a1f66), 0, 0.12, 0); // a pointed hood
+      part(p.hatAt, new THREE.TorusGeometry(0.25, 0.05, 6, 16), m(0xc9a24a, { metalness: 0.8, roughness: 0.3 }), 0, -0.04, 0, [Math.PI / 2, 0, 0]);
+      part(p.hand, new THREE.CylinderGeometry(0.1, 0.14, 0.1, 12), m(0xc9a24a, { metalness: 0.8, roughness: 0.3 }), 0, 0.05, 0.15);
+      part(p.hand, new THREE.SphereGeometry(0.2, 18, 14), m(0x9be8ff, { transparent: true, opacity: 0.55, emissive: 0x2a6a9a, emissiveIntensity: 0.9, roughness: 0.1 }), 0, 0.28, 0.15);
+      part(p.hand, new THREE.SphereGeometry(0.08, 10, 8), glow(0xe8ffff, 1.6), 0, 0.28, 0.15);
+      const stars = new THREE.Group();
+      stars.position.y = 1.25;
+      for (let i = 0; i < 6; i++) part(stars, new THREE.OctahedronGeometry(0.06), glow(0xffe28a, 1.4), Math.cos(i * 1.05) * 0.7, (i % 3) * 0.25, Math.sin(i * 1.05) * 0.7);
+      p.g.add(stars);
+      anim.orbit = stars;
+      root = p.g;
+      break;
+    }
+    case 'daggerbearer': {
+      const p = person({ outfit: 0x6b4a2a, pants: 0x2a2a30, skin: SKINS[2] });
+      for (const [rz, x] of [[0.5, 0], [-0.5, 0.06]]) {
+        const d = new THREE.Group();
+        part(d, new THREE.BoxGeometry(0.06, 0.5, 0.015), m(0xdfe6ee, { metalness: 0.95, roughness: 0.15 }), 0, 0.25, 0);
+        part(d, new THREE.ConeGeometry(0.03, 0.12, 4), m(0xdfe6ee, { metalness: 0.95, roughness: 0.15 }), 0, 0.56, 0);
+        part(d, new THREE.BoxGeometry(0.2, 0.04, 0.05), m(0xc9a24a, { metalness: 0.8 }), 0, 0, 0);
+        part(d, new THREE.CylinderGeometry(0.025, 0.025, 0.14, 6), m(0x3a1f14), 0, -0.1, 0);
+        part(d, new THREE.SphereGeometry(0.035, 8, 6), m(0xd7263d, { emissive: 0x5a0010, emissiveIntensity: 0.8 }), 0, -0.19, 0);
+        d.rotation.z = rz;
+        d.position.set(x, 0.1, 0.1);
+        p.hand.add(d);
+      }
+      part(p.g, new THREE.TorusGeometry(0.2, 0.025, 6, 16), glow(0xffd23f, 1.1), 0.0, 1.85, 0.0, [Math.PI / 2, 0, 0]); // a golden halo for the double vote
+      root = p.g;
+      break;
+    }
+    case 'guardian': {
+      const p = person({ outfit: 0x8a93a3, pants: 0x4a525e, skin: SKINS[0] });
+      part(p.hatAt, new THREE.SphereGeometry(0.31, 16, 12, 0, Math.PI * 2, 0, Math.PI * 0.62), m(0xaeb7c4, { metalness: 0.85, roughness: 0.3 }), 0, -0.05, 0);
+      part(p.hatAt, new THREE.BoxGeometry(0.06, 0.28, 0.06), m(0xaeb7c4, { metalness: 0.85, roughness: 0.3 }), 0, -0.17, 0.27); // the nose guard
+      part(p.hatAt, new THREE.ConeGeometry(0.05, 0.3, 6), m(0xd7263d), 0, 0.28, 0); // a plume
+      // a heraldic shield on the other arm
+      const shield = new THREE.Group();
+      part(shield, new THREE.CylinderGeometry(0.34, 0.34, 0.06, 6), m(0x2a3a8a, { metalness: 0.4 }), 0, 0, 0, [Math.PI / 2, 0, 0]);
+      part(shield, new THREE.BoxGeometry(0.08, 0.5, 0.02), m(0xc9a24a, { metalness: 0.8 }), 0, 0, 0.04);
+      part(shield, new THREE.BoxGeometry(0.4, 0.08, 0.02), m(0xc9a24a, { metalness: 0.8 }), 0, 0.05, 0.04);
+      shield.position.set(-0.52, 0.95, 0.15);
+      shield.rotation.y = 0.3;
+      p.g.add(shield);
+      part(p.hand, new THREE.CylinderGeometry(0.02, 0.02, 1.0, 6), m(0x6b4a2a), 0, 0.3, 0.1);
+      part(p.hand, new THREE.ConeGeometry(0.06, 0.2, 6), m(0xdfe6ee, { metalness: 0.9 }), 0, 0.88, 0.1);
+      root = p.g;
+      break;
+    }
+    case 'loyalist': {
+      const p = person({ outfit: 0xb3122c, pants: 0x1a1a22, skin: SKINS[3] });
+      part(p.g, new THREE.BoxGeometry(0.62, 0.1, 0.05), m(0xffd23f), 0, 1.2, 0.3); // gold braid
+      for (let i = 0; i < 3; i++) part(p.g, new THREE.SphereGeometry(0.035, 8, 6), m(0xffd23f, { metalness: 0.8 }), 0, 1.05 - i * 0.14, 0.31);
+      part(p.hatAt, new THREE.CylinderGeometry(0.2, 0.26, 0.5, 14), m(0x1a1a22, { roughness: 0.9 }), 0, 0.18, 0); // a tall bearskin hat
+      part(p.hatAt, new THREE.SphereGeometry(0.2, 12, 8), m(0x1a1a22, { roughness: 0.9 }), 0, 0.42, 0);
+      part(p.hatAt, new THREE.CylinderGeometry(0.205, 0.205, 0.05, 14), m(0xd7263d), 0, -0.02, 0);
+      part(p.hand, new THREE.CylinderGeometry(0.025, 0.025, 1.3, 6), m(0x6b4a2a), 0, 0.4, 0.1);
+      part(p.hand, new THREE.BoxGeometry(0.2, 0.3, 0.02), m(0xdfe6ee, { metalness: 0.9 }), 0, 1.0, 0.1); // a halberd blade
+      root = p.g;
+      break;
+    }
+    case 'recruiter': {
+      const p = person({ outfit: 0x15151c, pants: 0x0d0d12, skin: SKINS[4] });
+      part(p.hatAt, new THREE.ConeGeometry(0.34, 0.5, 14), m(0x15151c), 0, 0.1, -0.05);
+      part(p.g, new THREE.ConeGeometry(0.62, 1.4, 16, 1, true), m(0x15151c, { side: THREE.DoubleSide }), 0, 0.75, -0.1); // a long black cloak
+      for (const s2 of [-1, 1]) part(p.g, new THREE.SphereGeometry(0.035, 8, 6), glow(0xff2d4a, 1.6), s2 * 0.1, 1.58, 0.25);
+      // a black envelope with a red wax seal
+      part(p.hand, new THREE.BoxGeometry(0.34, 0.22, 0.02), m(0x0a0a0e), 0, 0.1, 0.15, [0, 0.3, 0.2]);
+      part(p.hand, new THREE.SphereGeometry(0.045, 10, 8), m(0xd7263d, { emissive: 0x5a0010, emissiveIntensity: 0.8 }), 0.03, 0.09, 0.17);
+      // a raven on the shoulder
+      const raven = new THREE.Group();
+      raven.position.set(0.3, 1.5, 0);
+      part(raven, new THREE.SphereGeometry(0.11, 10, 8), m(0x0a0a0e), 0, 0, 0, null, [1, 0.8, 1.3]);
+      part(raven, new THREE.SphereGeometry(0.06, 8, 6), m(0x0a0a0e), 0, 0.1, 0.12);
+      part(raven, new THREE.ConeGeometry(0.025, 0.08, 4), m(0xc9a24a), 0, 0.09, 0.2, [Math.PI / 2, 0, 0]);
+      p.g.add(raven);
+      root = p.g;
+      break;
+    }
+    case 'mole': {
+      const p = person({ outfit: 0x5a5a62, pants: 0x2a2a30, skin: SKINS[0] });
+      part(p.g, new THREE.ConeGeometry(0.46, 0.9, 12, 1, true), m(0x4a4a52, { side: THREE.DoubleSide }), 0, 0.95, 0); // a trench coat
+      part(p.hatAt, new THREE.CylinderGeometry(0.34, 0.34, 0.04, 16), m(0x2a2a30), 0, -0.04, 0);
+      part(p.hatAt, new THREE.CylinderGeometry(0.2, 0.22, 0.2, 16), m(0x2a2a30), 0, 0.06, 0);
+      // a Faithful mask on one half of the face, and a grin on the other
+      part(p.g, new THREE.SphereGeometry(0.28, 14, 12, 0, Math.PI, 0, Math.PI), m(0xf4f1e8, { roughness: 0.4 }), 0, 1.55, 0.02, [0, Math.PI / 2, 0]);
+      part(p.g, new THREE.TorusGeometry(0.06, 0.012, 6, 12, Math.PI), m(0xd7263d), 0.12, 1.45, 0.26, [0, 0, Math.PI]);
+      // the Faithful badge, and a Traitor's brooch hidden underneath
+      part(p.g, new THREE.CylinderGeometry(0.07, 0.07, 0.02, 12), glow(0x6cf0ff, 1), -0.2, 1.18, 0.3, [Math.PI / 2, 0, 0]);
+      part(p.g, new THREE.CylinderGeometry(0.05, 0.05, 0.02, 12), glow(0xff2d4a, 1.2), -0.2, 1.18, 0.28, [Math.PI / 2, 0, 0]);
+      root = p.g;
+      break;
+    }
+    case 'blackmailer': {
+      const p = person({ outfit: 0x3a2a1a, pants: 0x1a1a22, skin: SKINS[1] });
+      part(p.hatAt, new THREE.CylinderGeometry(0.4, 0.4, 0.03, 18), m(0x15151c), 0, -0.04, 0);
+      part(p.hatAt, new THREE.CylinderGeometry(0.22, 0.24, 0.24, 16), m(0x15151c), 0, 0.08, 0);
+      part(p.hatAt, new THREE.CylinderGeometry(0.245, 0.245, 0.05, 16), m(0xd7263d), 0, 0.0, 0);
+      part(p.g, new THREE.BoxGeometry(0.22, 0.1, 0.06), m(0xe9e4d6), 0, 1.43, 0.27); // a hand over the mouth, or a note
+      part(p.hand, new THREE.BoxGeometry(0.3, 0.2, 0.02), m(0xf2ead0), 0, 0.1, 0.15, [0, 0.2, 0.1]);
+      part(p.hand, new THREE.BoxGeometry(0.3, 0.2, 0.02), m(0xe0d6b8), 0.04, 0.08, 0.17, [0, 0.4, -0.1]);
+      part(p.armL, new THREE.BoxGeometry(0.2, 0.15, 0.1), m(0x15151c), 0, -0.3, 0.12); // a little camera
+      part(p.armL, new THREE.CylinderGeometry(0.04, 0.04, 0.06, 10), glow(0xffffff, 1.2), 0, -0.3, 0.2, [Math.PI / 2, 0, 0]);
+      root = p.g;
+      break;
+    }
+    case 'recruit': {
+      const p = person({ outfit: 0x4a6a8a, pants: 0x2a2a30, skin: SKINS[0] });
+      // half in a black cape, half out of it
+      part(p.g, new THREE.ConeGeometry(0.5, 1.0, 12, 1, true, 0, Math.PI), m(0x15151c, { side: THREE.DoubleSide }), 0.12, 0.95, -0.08);
+      part(p.g, new THREE.SphereGeometry(0.035, 8, 6), glow(0xff2d4a, 1.6), 0.1, 1.58, 0.25);
+      // a snake coiled round the arm
+      part(p.armR, new THREE.TorusGeometry(0.11, 0.03, 6, 14), m(0x3a8a3a), 0, -0.05, 0, [Math.PI / 2, 0, 0]);
+      part(p.armR, new THREE.TorusGeometry(0.11, 0.03, 6, 14), m(0x3a8a3a), 0, -0.2, 0, [Math.PI / 2, 0, 0]);
+      part(p.armR, new THREE.SphereGeometry(0.05, 8, 6), m(0x3a8a3a), 0.1, -0.3, 0.05);
+      part(p.hatAt, new THREE.TorusGeometry(0.17, 0.035, 6, 14), m(accent), 0, -0.1, 0, [Math.PI / 2, 0, 0]);
+      root = p.g;
+      break;
+    }
+    case 'headtraitor': {
+      const g = new THREE.Group();
+      const cloak = m(0x12121a, { roughness: 0.9 });
+      part(g, new THREE.ConeGeometry(0.85, 1.9, 20, 1, true), m(0x12121a, { roughness: 0.9, side: THREE.DoubleSide }), 0, 0.95, 0);
+      part(g, new THREE.SphereGeometry(0.4, 18, 14), cloak, 0, 1.95, 0); // a deep hood
+      part(g, new THREE.SphereGeometry(0.28, 14, 12), m(0x05050a), 0, 1.92, 0.12); // the dark inside it
+      for (const s2 of [-1, 1]) part(g, new THREE.SphereGeometry(0.06, 10, 8), glow(0xff2d4a, 2.4), s2 * 0.12, 1.98, 0.34);
+      part(g, new THREE.CylinderGeometry(0.1, 0.1, 0.03, 14), m(0xc9a24a, { metalness: 0.9, roughness: 0.25 }), 0, 1.55, 0.38, [Math.PI / 2, 0, 0]); // a golden brooch
+      part(g, new THREE.SphereGeometry(0.04, 8, 6), glow(0xd7263d, 1.4), 0, 1.55, 0.4);
+      // bat wings, flapping slowly
+      const wings = [];
+      for (const s2 of [-1, 1]) {
+        const w = new THREE.Group();
+        w.position.set(s2 * 0.4, 1.5, -0.3);
+        part(w, new THREE.BoxGeometry(0.9, 0.04, 0.5), cloak, s2 * 0.45, 0, 0, [0, 0, s2 * 0.4], [1, 1, 1]);
+        part(w, new THREE.BoxGeometry(0.5, 0.04, 0.34), cloak, s2 * 0.85, -0.1, 0.1, [0, 0, s2 * 0.1]);
+        g.add(w);
+        wings.push(w);
+      }
+      anim.flap = wings;
+      part(g, new THREE.TorusGeometry(0.9, 0.05, 6, 24), m(accent, { emissive: accent, emissiveIntensity: 0.5 }), 0, 0.12, 0, [Math.PI / 2, 0, 0]);
+      g.scale.setScalar(1.15);
+      root = g;
+      break;
+    }
     // ---------------- Outbreak ----------------
     case 'vaccinator': {
       const p = person({ outfit: 0xf4f7fb, pants: 0x3a6a8a, skin: SKINS[1] });
@@ -678,6 +824,7 @@ export function animateRoleModel(model, t) {
   if (a.tentacles) a.tentacles.forEach((ten, i) => (ten.rotation.z = Math.sin(t * 3 + i) * 0.35));
   if (a.body) a.body.scale.set(1 + Math.sin(t * 2) * 0.04, 1.15 + Math.sin(t * 2 + 1) * 0.05, 1 + Math.sin(t * 2) * 0.04);
   if (a.orbit) a.orbit.rotation.y = t * 1.6;
+  if (a.flap) a.flap.forEach((w, i) => (w.rotation.z = (i ? 1 : -1) * (0.15 + Math.sin(t * 2.2) * 0.3)));
   if (a.blob) a.blob.scale.set(1 + Math.sin(t * 4) * 0.08, 1 - Math.sin(t * 4) * 0.06, 1);
   if (a.pulse) model.children.forEach((c, i) => c.material?.emissiveIntensity != null && c.material.emissive?.getHex() && (c.material.emissiveIntensity = 0.6 + Math.sin(t * 3 + i) * 0.4));
 }

@@ -3,7 +3,7 @@
 // change your mind until the count). Then the clock hand sweeps round the
 // table revealing each vote, like Blood on the Clocktower's hands.
 import { $, el, clear, formatTime, problem } from '../util.js';
-import { store, send, serverNow, player } from '../store.js';
+import { store, send, serverNow, player, themeInfo } from '../store.js';
 import { sfx } from '../audio.js';
 
 let pickOpen = false;
@@ -88,7 +88,7 @@ export function renderVote(state) {
   if (pickOpen) {
     const options = state.players.filter((p) => p.alive && !p.nominated);
     clear(picker,
-      el('div', { className: 'rooms-head' }, el('b', {}, '☝️ Who should go out the airlock?'), el('button', { className: 'small ghost', onclick: () => { pickOpen = false; renderVote(store.state); } }, '✕')),
+      el('div', { className: 'rooms-head' }, el('b', {}, themeInfo().banishQuestion), el('button', { className: 'small ghost', onclick: () => { pickOpen = false; renderVote(store.state); } }, '✕')),
       el('div', { className: 'hint' }, `You can nominate once per day, and each player can only be nominated once. They need ${needed(state)} YES votes to go on the block.`),
       el('div', { className: 'room-list' }, ...options.map((p) =>
         el('button', { className: `room-row ${picked === p.id ? 'here' : ''}`, onclick: () => { picked = p.id; renderVote(store.state); } },
@@ -141,7 +141,7 @@ export function renderVote(state) {
     el('div', { className: 'vote-stage' }, stageText, ' ', el('span', { id: 'vote-timer', className: 'vote-timer' }, '')),
     el('div', { className: 'vote-title' }, el('b', {}, name(nom.nominator)), ' nominates ', el('b', { className: 'nominee' }, name(nom.nominee))),
     voter ? el('div', { className: 'vote-buttons' },
-      el('button', { className: `vote-btn yes ${mine === true ? 'on' : ''}`, disabled: counting, onclick: () => vote(true) }, '✋ YES', el('small', {}, 'airlock them'), el('kbd', {}, 'Y')),
+      el('button', { className: `vote-btn yes ${mine === true ? 'on' : ''}`, disabled: counting, onclick: () => vote(true) }, '✋ YES', el('small', {}, themeInfo().banishYes), el('kbd', {}, 'Y')),
       el('button', { className: `vote-btn no ${cast && !mine ? 'on' : ''}`, disabled: counting, onclick: () => vote(false) }, '🙅 NO', el('small', {}, 'spare them'), el('kbd', {}, 'N')),
     ) : null,
     el('div', { className: 'hint' },

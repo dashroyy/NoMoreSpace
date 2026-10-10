@@ -13,6 +13,8 @@ import { CarnivalRooms } from './carnival-rooms.js';
 import { CarnivalExterior } from './carnival-exterior.js';
 import { OutbreakRooms } from './outbreak-rooms.js';
 import { OutbreakExterior } from './outbreak-exterior.js';
+import { TraitorsRooms } from './traitors-rooms.js';
+import { TraitorsExterior } from './traitors-exterior.js';
 import { DoomFx } from './doomfx.js';
 import { moveWithCollision, roomAt, roomById, walkable, seatPosition, TASK_STATIONS, SPAWN, DRAWING_SLOTS } from './layout.js';
 
@@ -96,6 +98,8 @@ export class World {
     this.carnivalExterior = new CarnivalExterior(this.ship.group, { lowFx: this.lowFx }); // the fairground outside (same)
     this.outbreakRooms = new OutbreakRooms(this.ship.group, { lowFx: this.lowFx }); // the lab gone wrong: dressing for every room (Outbreak script only)
     this.outbreakExterior = new OutbreakExterior(this.ship.group, { lowFx: this.lowFx }); // the research complex outside (same)
+    this.traitorsRooms = new TraitorsRooms(this.ship.group, { lowFx: this.lowFx }); // the castle: dressing for every room (Citadel of Traitors only)
+    this.traitorsExterior = new TraitorsExterior(this.ship.group, { lowFx: this.lowFx }); // the crag, towers and drawbridge outside (same)
     this.doomFx = new DoomFx(this); // the disaster outside: underglow, vignette, lightning, laughs and shudders
     this.soundscape = new Soundscape();
     this.ambience.onVent = (x, z) => this.soundscape.oneShot('vent', { x, z }, this.listener());
@@ -424,6 +428,8 @@ export class World {
     this.carnivalExterior.update(t, dt);
     this.outbreakRooms.update(t, dt);
     this.outbreakExterior.update(t, dt);
+    this.traitorsRooms.update(t, dt);
+    this.traitorsExterior.update(t, dt);
     if (this.ambience.root.visible) this.ambience.update(dt, t, { night: this.night, progress: this.progress, alarm: t < this.alarmUntil });
     this.soundscape.update({ ...this.listener(), phase: this.phase, night: this.phase === 'night', progress: this.progress });
     this.ship.exterior.update(t);
@@ -695,7 +701,9 @@ export class World {
     this.carnivalExterior.setActive(id === 'carnival');
     this.outbreakRooms.setActive(id === 'outbreak');
     this.outbreakExterior.setActive(id === 'outbreak');
-    this.ambience.root.visible = !['carnival', 'outbreak'].includes(id); // steam, sparks and robots belong to the space station
+    this.traitorsRooms.setActive(id === 'traitors');
+    this.traitorsExterior.setActive(id === 'traitors');
+    this.ambience.root.visible = !['carnival', 'outbreak', 'traitors'].includes(id); // steam, sparks and robots belong to the space station
     this.space.last = -1; // repaint the windows now
   }
 

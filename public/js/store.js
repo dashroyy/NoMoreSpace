@@ -46,7 +46,7 @@ export function scriptInfo(id = store.state?.script) {
 
 // The disaster the story is about (black hole, Great Grin...) and the words for it.
 export function themeInfo(id = store.state?.script) {
-  return scriptInfo(id).theme || FALLBACK_THEME;
+  return { ...FALLBACK_THEME, ...(scriptInfo(id).theme || {}) };
 }
 
 const FALLBACK_THEME = {
@@ -57,6 +57,7 @@ const FALLBACK_THEME = {
   crewWinTitle: '🛡️ The crew escapes the black hole!', evilWinTitle: '🦑 The infiltrators win. No more space.',
   shareTitle: 'NO MORE SPACE', shareCrew: 'THE CREW ESCAPES!', shareEvil: 'NO MORE SPACE…',
   demonName: 'The Parasite', demonDoes: 'Every night it kills.',
+  banishQuestion: '☝️ Who should go out the airlock?', banishYes: 'airlock them', banishVotes: 'votes to airlock', banishNominate: 'put someone up for the airlock.',
   plants: 'Water the 6 wilting moon plants before the black hole dries them out.', jokes: [], rooms: {},
 };
 

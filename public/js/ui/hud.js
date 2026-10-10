@@ -125,7 +125,9 @@ export function renderHud(state) {
   const alive = state.aliveCount;
   const hole = Math.round(blackHoleProgress(state) * 100);
   const theme = themeInfo(state.script);
-  $('hud-horizon').replaceChildren(el('span', { title: theme.doomTip }, `${theme.doomIcon} ${hole}% · `), el('b', {}, `${alive} alive`), ` · ${state.threshold} votes to airlock`);
+  $('hud-horizon').replaceChildren(el('span', { title: theme.doomTip }, `${theme.doomIcon} ${hole}% · `), el('b', {}, `${alive} alive`), ` · ${state.threshold} ${theme.banishVotes}`);
+  // the Citadel's Prize Pot
+  if (state.pot != null) $('hud-horizon').append(el('span', { title: 'The Prize Pot: every mission you complete adds star-gold. The winners split it.' }, ` · 💰 ${state.pot.toLocaleString('en-US')}`));
   // the Outbreak: you can see that you are infected, and when you burst
   const sick = state.you?.infected;
   if (sick) {
@@ -172,7 +174,7 @@ function seatHint(state) {
   if (selectMode?.kind === 'puppet') return '🎭 Click a player to puppet.';
   if (state.phase === 'nominations' && !state.nomination && you.alive && !you.isCaptain) {
     const me = player(you.id);
-    if (me && !me.nominatedSomeone) return '☝️ Press Nominate (or click a player here) to put someone up for the airlock.';
+    if (me && !me.nominatedSomeone) return `☝️ Press Nominate (or click a player here) to ${themeInfo().banishNominate}`;
     return 'You have already nominated today.';
   }
   if (state.phase === 'nominations' && !state.nomination) return 'Waiting for nominations…';

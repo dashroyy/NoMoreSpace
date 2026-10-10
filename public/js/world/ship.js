@@ -7,6 +7,7 @@ import { buildDecor } from './decor.js';
 import { makeTextSprite } from './avatar.js';
 import { CARNIVAL_LIGHTS } from './carnival-rooms.js';
 import { OUTBREAK_LIGHTS } from './outbreak-rooms.js';
+import { TRAITORS_LIGHTS } from './traitors-rooms.js';
 
 const WALL_H = 2.4;
 const LOW_WALL_H = 0.9; // south-facing walls are low so they don't hide players from the camera
@@ -266,6 +267,7 @@ export function buildShip(scene, space) {
   const themes = {
     carnival: { holo: [0xe8203a, 0xffd23f, 0xff4fa3, 0xff4fa3], lights: CARNIVAL_LIGHTS },
     outbreak: { holo: [0x7dff3a, 0xb8ff3a, 0x6bffd8, 0x9a5bff], lights: OUTBREAK_LIGHTS }, // a glowing spore
+    traitors: { holo: [0x1a0508, 0xd9a441, 0xffe9b0, 0xd7263d], lights: TRAITORS_LIGHTS }, // a blood-red orb in a gold ring
   };
   // A themed script (the Cosmic Carnival, the Outbreak): no space-station props, its own room lights and hologram.
   const setTheme = (id) => {
