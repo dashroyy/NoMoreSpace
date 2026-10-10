@@ -207,6 +207,119 @@ const SOUNDS = {
   },
 };
 
+// ---------- the Cosmic Carnival's rooms: a fairground instead of a space station ----------
+const SCALE = [523, 587, 659, 784, 880, 1047, 1319]; // a bright major pentatonic
+const CARNIVAL_SOUNDS = {
+  bridge: {
+    gain: 0.5,
+    bed: (k, o) => [...drone(k, o, 65, 'sine', 0.03), ...hiss(k, o, 'bandpass', 700, 0.5, 0.008, { swell: [0.2, 0.6] })], // the murmur of a big top
+    events: [{ every: [9, 16], play: (k, o, t) => { // a quick drum roll and a cymbal
+      for (let i = 0; i < 14; i++) burst(k, o, t + i * 0.055, { type: 'lowpass', freq: 380, q: 0.6, dur: 0.05, vol: 0.012 + i * 0.0013 });
+      burst(k, o, t + 0.85, { type: 'highpass', freq: 6000, q: 0.5, dur: 0.9, vol: 0.02, attack: 0.01 });
+    } }],
+  },
+  observation: {
+    gain: 1.6,
+    bed: (k, o) => [...drone(k, o, 70, 'sine', 0.012, { swell: [0.3, 0.6] }), ...hiss(k, o, 'bandpass', 500, 2, 0.006, { swell: [0.12, 0.7] })], // the wheel creaking round
+    events: [
+      { every: [7, 12], play: (k, o, t) => [0, 1, 2, 3, 2, 4].forEach((n, i) => blip(k, o, t + i * 0.3, { freq: SCALE[n], dur: 0.5, vol: 0.016, type: 'triangle', attack: 0.01 })) }, // a music-box tune
+      { every: [1.1, 1.3], play: (k, o, t) => burst(k, o, t, { freq: 2200, q: 3, dur: 0.02, vol: 0.012 }) }, // ratchet clicks
+    ],
+  },
+  navigation: {
+    gain: 1.4,
+    bed: (k, o) => [...drone(k, o, 110, 'triangle', 0.008, { lp: 400 }), ...hiss(k, o, 'lowpass', 300, 0.5, 0.01)],
+    events: [{ every: [2.8, 2.8], play: (k, o, t) => { // oom-pah-pah, with a waltz tune on top
+      blip(k, o, t, { freq: 131, dur: 0.3, vol: 0.03, type: 'triangle' });
+      [0.45, 0.9].forEach((d) => [262, 330, 392].forEach((f) => blip(k, o, t + d, { freq: f, dur: 0.18, vol: 0.008, type: 'square' })));
+      [0, 0.45, 0.9].forEach((d, i) => blip(k, o, t + d, { freq: pick(SCALE), dur: 0.35 - i * 0.05, vol: 0.016, type: 'triangle' }));
+    } }],
+  },
+  comms: {
+    gain: 2.2,
+    bed: (k, o) => [...drone(k, o, 220, 'sawtooth', 0.006, { lp: 800, swell: [5, 0.5] }), ...hiss(k, o, 'highpass', 4500, 0.5, 0.008, { swell: [0.4, 0.6] })], // wheezing steam
+    events: [
+      { every: [3, 6], play: (k, o, t) => { // the calliope plays a jaunty run
+        const run = [0, 2, 4, 3, 5, 4, 2, 0].slice(0, 5 + Math.floor(Math.random() * 4));
+        run.forEach((n, i) => { blip(k, o, t + i * 0.17, { freq: SCALE[n] / 2, dur: 0.2, vol: 0.016, type: 'sawtooth' }); blip(k, o, t + i * 0.17, { freq: SCALE[n], dur: 0.2, vol: 0.006, type: 'square' }); });
+      } },
+      { every: [5, 9], play: (k, o, t) => burst(k, o, t, { type: 'highpass', freq: 3500, q: 0.5, dur: 0.9, vol: 0.02, attack: 0.1 }) }, // a puff of steam
+    ],
+  },
+  medbay: {
+    gain: 3.2,
+    bed: (k, o) => hiss(k, o, 'lowpass', 700, 0.5, 0.012),
+    events: [
+      { every: [3, 7], play: (k, o, t) => blip(k, o, t, { freq: 600, to: 1700, dur: 0.14, vol: 0.026 }) }, // a squeaky toy
+      { every: [5, 11], play: (k, o, t) => { blip(k, o, t, { freq: 240, to: 190, dur: 0.22, vol: 0.026, type: 'sawtooth' }); blip(k, o, t + 0.3, { freq: 240, to: 190, dur: 0.3, vol: 0.026, type: 'sawtooth' }); } }, // honk, honk
+      { every: [8, 14], play: (k, o, t) => blip(k, o, t, { freq: 180, to: 520, dur: 0.35, vol: 0.022, type: 'triangle' }) }, // boing
+    ],
+  },
+  galley: {
+    gain: 1.5,
+    bed: (k, o) => hiss(k, o, 'highpass', 5000, 0.5, 0.01, { swell: [0.5, 0.4] }), // the sizzle of the popcorn machine
+    events: [
+      { every: [0.12, 0.55], play: (k, o, t) => burst(k, o, t, { freq: rand(1200, 2400), q: 1.5, dur: 0.03, vol: 0.03 }) }, // pop!
+      { every: [10, 17], play: (k, o, t) => [2400, 3000].forEach((f, i) => blip(k, o, t + i * 0.05, { freq: f, dur: 0.7, vol: 0.012 })) }, // the till dings
+    ],
+  },
+  reactor: {
+    bed: (k, o) => [...drone(k, o, 60, 'sawtooth', 0.025, { lp: 220, swell: [0.8, 0.4] }), ...hiss(k, o, 'bandpass', 4000, 3, 0.008)], // the Tesla coils hum
+    events: [
+      { every: [1, 3], play: (k, o, t) => { // zap!
+        let at = t;
+        for (let i = 0, n = 5 + Math.floor(Math.random() * 6); i < n; i++) { burst(k, o, at, { freq: 3800, q: 0.5, dur: rand(0.02, 0.05), vol: 0.045 }); at += rand(0.02, 0.07); }
+      } },
+      { every: [7, 7], play: (k, o, t) => { blip(k, o, t, { freq: 1568, dur: 1.4, vol: 0.02, type: 'triangle', attack: 0.005 }); blip(k, o, t, { freq: 2349, dur: 1, vol: 0.01, type: 'sine' }); } }, // ding! the high striker's bell
+    ],
+  },
+  engine: {
+    gain: 1.2,
+    bed: (k, o) => [...hiss(k, o, 'lowpass', 180, 0.7, 0.04), ...drone(k, o, 48, 'sine', 0.025)],
+    events: [{ every: [7.5, 7.5], play: (k, o, t) => { // a cannon: whistle, then fwump
+      blip(k, o, t, { freq: 400, to: 1300, dur: 0.45, vol: 0.012, type: 'triangle' });
+      blip(k, o, t + 0.5, { freq: 110, to: 38, dur: 0.4, vol: 0.07 });
+      burst(k, o, t + 0.5, { type: 'lowpass', freq: 500, q: 0.5, dur: 0.5, vol: 0.07 });
+      for (let i = 0; i < 6; i++) burst(k, o, t + 0.62 + i * 0.05, { freq: rand(2500, 4500), q: 1, dur: 0.03, vol: 0.02 }); // confetti
+    } }],
+  },
+  hydroponics: {
+    gain: 3.2,
+    bed: SOUNDS.hydroponics.bed, // the fountain
+    events: [
+      SOUNDS.hydroponics.events[0],
+      { every: [1.2, 3.5], play: (k, o, t) => [0, 1].forEach((i) => blip(k, o, t + i * 0.13, { freq: rand(3200, 4200), to: rand(4200, 5000), dur: 0.07, vol: 0.014 })) }, // a bird tweets
+    ],
+  },
+  airlock: {
+    gain: 1.8,
+    bed: (k, o) => hiss(k, o, 'bandpass', 600, 0.5, 0.012, { swell: [0.25, 0.5] }), // the crowd, waiting
+    events: [{ every: [10, 10], play: (k, o, t) => { // drum roll, then BOOM
+      for (let i = 0; i < 18; i++) burst(k, o, t + i * 0.05, { type: 'lowpass', freq: 320, q: 0.6, dur: 0.05, vol: 0.012 + i * 0.0015 });
+      blip(k, o, t + 1, { freq: 100, to: 36, dur: 0.5, vol: 0.08 });
+      burst(k, o, t + 1, { type: 'lowpass', freq: 450, q: 0.5, dur: 0.6, vol: 0.08 });
+      burst(k, o, t + 1.1, { type: 'highpass', freq: 5000, q: 0.5, dur: 0.7, vol: 0.025 });
+    } }],
+  },
+  quarters: {
+    gain: 2.2,
+    bed: (k, o) => hiss(k, o, 'lowpass', 300, 0.7, 0.03, { swell: [0.2, 0.5] }),
+    events: [
+      { every: [0.2, 0.9], play: (k, o, t) => burst(k, o, t, { type: 'highpass', freq: 3000, q: 0.5, dur: 0.02, vol: 0.02 }) }, // a campfire crackles
+      { every: [12, 20], play: (k, o, t) => [0, 0.22].forEach((d) => blip(k, o, t + d, { freq: 330, dur: 0.14, vol: 0.026, type: 'sawtooth' })) }, // the clown car horn
+    ],
+  },
+  cargo: {
+    gain: 1.5,
+    bed: (k, o) => [...hiss(k, o, 'lowpass', 240, 0.7, 0.03), ...drone(k, o, 52, 'sine', 0.012)],
+    events: [
+      { every: [8, 16], play: (k, o, t) => { blip(k, o, t, { freq: 760, to: 300, dur: 0.3, vol: 0.022, type: 'sawtooth' }); blip(k, o, t + 0.12, { freq: 760, to: 300, dur: 0.25, vol: 0.016, type: 'sawtooth' }); } }, // a rubber chicken squawks
+      { every: [6, 12], play: (k, o, t) => { blip(k, o, t, { freq: 150, to: 600, dur: 0.3, vol: 0.02 }); blip(k, o, t + 0.3, { freq: 600, to: 200, dur: 0.3, vol: 0.016 }); } }, // boing
+      { every: [5, 9], play: (k, o, t) => [0, 0.2, 0.4].forEach((d) => burst(k, o, t + d, { type: 'lowpass', freq: 500, q: 1, dur: 0.07, vol: 0.03 })) }, // juggling pins thump
+    ],
+  },
+};
+
 // how loud the ship is in each phase (seated phases listen from the bridge)
 const PHASE_LEVEL = { home: 0, lobby: 1, roam: 1, meeting: 0.6, nominations: 0.5, lastwords: 0.5, dusk: 0.6, dawn: 0.6, ended: 0.45 };
 
@@ -214,15 +327,41 @@ export class Soundscape {
   constructor() {
     this.rooms = null;
     this.last = 0;
+    this.script = 'classic';
+  }
+
+  // which set of room sounds this ship plays (the Cosmic Carnival has its own)
+  defs() {
+    return this.script === 'carnival' ? CARNIVAL_SOUNDS : SOUNDS;
+  }
+
+  setScript(id) {
+    id = id || 'classic';
+    if (id === this.script) return;
+    this.script = id;
+    if (!this.rooms) return; // not started yet: start() will use it
+    const defs = this.defs();
+    const now = this.kit.ctx.currentTime;
+    for (const room of this.rooms) {
+      for (const n of room.nodes) {
+        try { n.stop(); } catch {}
+      }
+      const def = defs[room.id];
+      room.nodes = def.bed(this.kit, room.out);
+      room.gain = ROOM_GAIN * (def.gain || 1);
+      room.level = -1; // force the volume to be set again
+      room.events = (def.events || []).map((e) => ({ ...e, next: now + rand(0.2, e.every[1]) }));
+    }
   }
 
   start(kit) {
     this.kit = kit;
-    this.rooms = ROOMS.filter((r) => SOUNDS[r.id]).map((r) => {
+    const defs = this.defs();
+    this.rooms = ROOMS.filter((r) => defs[r.id]).map((r) => {
       const out = kit.ctx.createGain();
       out.gain.value = 0;
       out.connect(kit.bus);
-      const def = SOUNDS[r.id];
+      const def = defs[r.id];
       const nodes = def.bed(kit, out);
       const now = kit.ctx.currentTime;
       return { id: r.id, rect: r.rect, out, nodes, level: 0, gain: ROOM_GAIN * (def.gain || 1), events: (def.events || []).map((e) => ({ ...e, next: now + rand(0.2, e.every[1]) })) };

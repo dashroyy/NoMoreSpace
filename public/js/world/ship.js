@@ -267,6 +267,7 @@ export function buildShip(scene, space) {
   const setTheme = (carnival) => {
     holo.children.forEach((m, i) => m.material.color.setHex((carnival ? carnivalColors : holoColors)[i]));
     sciProps.visible = !carnival;
+    exterior.group.visible = !carnival; // the solar wings, mast and shuttle make way for the fairground
     decor.setTheme(carnival);
     lights.forEach((light, i) => {
       light.color.setHex(carnival ? CARNIVAL_LIGHTS[ROOMS[i].id] : ROOMS[i].light);
@@ -329,7 +330,7 @@ export function buildShip(scene, space) {
   const exterior = buildExterior(ship);
   const decor = buildDecor(ship);
   // the props and the "spaceship details" are merged on their own, so they can be hidden as a set
-  for (const set of [sciProps, decor.tech]) {
+  for (const set of [sciProps, decor.tech, exterior.group]) {
     mergeStatic(set);
     set.userData.dynamic = true; // the whole-ship merge below leaves them alone
   }

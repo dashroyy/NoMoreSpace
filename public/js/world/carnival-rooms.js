@@ -784,3 +784,6 @@ export class CarnivalRooms {
     this.burst.update(dt);
   }
 }
+
+// shared with the Carnival's exterior
+export { M, T, add, cyl, box, ball, tor, mergeStatic, PALETTE, RED, GOLD, CREAM, PINK, TEAL, PURPLE, BLUE };
