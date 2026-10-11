@@ -4,6 +4,11 @@
 // a theremin singing over it, choir pads, pizzicato and ticking clocks. Think
 // a gothic lullaby drifting through space. Each mood has its own arrangement
 // and the melodies are composed on the fly, so no two games sound the same.
+//
+// Each script has its own score and its own sound effects: Black Hole Blues keeps the haunted
+// music-box waltz, the Cosmic Carnival is a wheezing, slightly out-of-tune fairground calliope and
+// a drum roll, the Outbreak is clinical (heart monitors, sonar pings, pulsing synths, klaxons) and
+// the Citadel of Traitors is gothic (organ, lute and harpsichord, low strings, timpani, tolling bells).
 
 let ctx = null;
 let master = null;
@@ -358,6 +363,179 @@ function heartbeat(t, { vol = 0.3, bus } = {}) {
   tone({ freq: 50, dur: 0.2, vol: vol * 0.7, bus, at: t + 0.22 });
 }
 
+// ----- the Carnival's instruments -----
+
+// A steam calliope / fairground organ: bright, reedy pipes with a touch of tremolo, never quite in tune.
+function calliope(midi, t, { vol = 0.07, dur = 0.3, bus = sfxBus, wobble = 0 } = {}) {
+  const f = hz(midi);
+  const a = ctx.createOscillator();
+  a.type = 'square';
+  a.frequency.value = f;
+  a.detune.value = (Math.random() - 0.5) * 2 * wobble;
+  const b = ctx.createOscillator();
+  b.type = 'sawtooth';
+  b.frequency.value = f * 2;
+  b.detune.value = 7 + (Math.random() - 0.5) * wobble;
+  const bGain = ctx.createGain();
+  bGain.gain.value = 0.3;
+  const lp = ctx.createBiquadFilter();
+  lp.type = 'lowpass';
+  lp.frequency.value = 2400;
+  lp.Q.value = 0.8;
+  const g = ctx.createGain();
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(vol, t + 0.02);
+  g.gain.setValueAtTime(vol, t + Math.max(0.03, dur - 0.06));
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  a.connect(lp);
+  b.connect(bGain).connect(lp);
+  lp.connect(g).connect(bus);
+  for (const o of [a, b]) {
+    o.start(t);
+    o.stop(t + dur + 0.05);
+  }
+}
+
+// The oom of the oom-pah: a short, round tuba note.
+function tuba(midi, t, { vol = 0.18, dur = 0.28, bus = sfxBus } = {}) {
+  tone({ freq: hz(midi), type: 'sawtooth', dur, vol, attack: 0.012, filter: { freq: 520 }, bus, at: t });
+}
+
+function snare(t, { vol = 0.08, bus = sfxBus } = {}) {
+  noise({ dur: 0.11, vol, freq: 1900, q: 0.9, bus, at: t });
+  tone({ freq: 190, dur: 0.07, vol: vol * 0.6, type: 'triangle', bus, at: t });
+}
+
+function kick(t, { vol = 0.3, bus = sfxBus } = {}) {
+  tone({ freq: 120, slide: 42, dur: 0.24, vol, bus, at: t });
+}
+
+function cymbal(t, { vol = 0.07, dur = 1.1, bus = sfxBus } = {}) {
+  noise({ dur, vol, freq: 7000, q: 0.4, type: 'highpass', bus, at: t });
+}
+
+// ----- the Citadel's instruments -----
+
+// A church organ: the first four harmonics of each note, with a breath of wind on the way in.
+function organ(midis, t, dur, { vol = 0.07, bus = sfxBus, detune = 0 } = {}) {
+  const out = ctx.createGain();
+  out.gain.setValueAtTime(0.0001, t);
+  out.gain.exponentialRampToValueAtTime(vol, t + Math.min(0.5, dur / 3));
+  out.gain.setValueAtTime(vol, t + Math.max(0.05, dur - 0.7));
+  out.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  const lp = ctx.createBiquadFilter();
+  lp.type = 'lowpass';
+  lp.frequency.value = 2200;
+  lp.connect(out);
+  out.connect(bus);
+  for (const m of midis) {
+    [[1, 1], [2, 0.5], [3, 0.26], [4, 0.14]].forEach(([k, level]) => {
+      const o = ctx.createOscillator();
+      o.type = 'sine';
+      o.frequency.value = hz(m) * k;
+      o.detune.value = (Math.random() - 0.5) * 2 * detune;
+      const lv = ctx.createGain();
+      lv.gain.value = level / midis.length;
+      o.connect(lv).connect(lp);
+      o.start(t);
+      o.stop(t + dur + 0.05);
+    });
+  }
+}
+
+// A bowed string section: three detuned saws per note, a slow swell and a little vibrato.
+function strings(midis, t, dur, { vol = 0.07, bus = sfxBus, bright = 1800 } = {}) {
+  const attack = Math.min(1.1, dur / 3);
+  const out = ctx.createGain();
+  out.gain.setValueAtTime(0.0001, t);
+  out.gain.exponentialRampToValueAtTime(vol, t + attack);
+  out.gain.setValueAtTime(vol, t + Math.max(attack, dur - 0.6));
+  out.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  const lp = ctx.createBiquadFilter();
+  lp.type = 'lowpass';
+  lp.frequency.value = bright;
+  lp.connect(out);
+  out.connect(bus);
+  const vib = ctx.createOscillator();
+  vib.frequency.value = 5.2;
+  const vibDepth = ctx.createGain();
+  vibDepth.gain.value = 9;
+  vib.connect(vibDepth);
+  vib.start(t);
+  vib.stop(t + dur + 0.05);
+  const mix = ctx.createGain();
+  mix.gain.value = 0.9 / (midis.length * 3);
+  mix.connect(lp);
+  for (const m of midis) {
+    for (const cents of [-8, 0, 8]) {
+      const o = ctx.createOscillator();
+      o.type = 'sawtooth';
+      o.frequency.value = hz(m);
+      o.detune.value = cents;
+      vibDepth.connect(o.detune);
+      o.connect(mix);
+      o.start(t);
+      o.stop(t + dur + 0.05);
+    }
+  }
+}
+
+// A harpsichord: a bright, quick pluck with a ghost of the octave above.
+function harpsichord(midi, t, { vol = 0.1, bus = sfxBus } = {}) {
+  pluck(midi, t, { vol, decay: 0.34, bright: 5200, bus });
+  pluck(midi + 12, t, { vol: vol * 0.4, decay: 0.2, bright: 6000, bus });
+}
+
+// A timpani: a skin that thumps and drops a little in pitch.
+function timpani(midi, t, { vol = 0.3, bus = sfxBus } = {}) {
+  tone({ freq: hz(midi) * 1.25, slide: hz(midi), dur: 1.0, vol, attack: 0.008, bus, at: t });
+  noise({ dur: 0.12, vol: vol * 0.55, freq: 220, q: 0.8, type: 'lowpass', bus, at: t });
+}
+
+// ----- the Outbreak's instruments -----
+
+// A heart-monitor beep.
+function beep(t, { freq = 1000, dur = 0.1, vol = 0.05, bus = sfxBus } = {}) {
+  tone({ freq, dur, vol, attack: 0.004, bus, at: t });
+}
+
+// A sonar ping: a pure tone that rings out and fades.
+function sonar(midi, t, { vol = 0.045, decay = 2.4, bus = sfxBus } = {}) {
+  tone({ freq: hz(midi), dur: decay, vol, attack: 0.006, bus, at: t });
+  tone({ freq: hz(midi) * 2.01, dur: decay * 0.5, vol: vol * 0.25, attack: 0.006, bus, at: t });
+}
+
+// A clipped, filtered square-wave synth note, for the pulsing arpeggios.
+function pulse(midi, t, { vol = 0.06, dur = 0.14, bright = 1500, bus = sfxBus } = {}) {
+  tone({ freq: hz(midi), type: 'square', dur, vol, attack: 0.004, filter: { freq: bright }, bus, at: t });
+}
+
+// A single geiger-counter click.
+function geiger(t, { vol = 0.04, bus = sfxBus } = {}) {
+  noise({ dur: 0.02, vol, freq: 3600, q: 0.8, type: 'highpass', bus, at: t });
+}
+
+// An alarm siren: one slow swoop up and down.
+function klaxon(t, dur, { vol = 0.04, bus = sfxBus } = {}) {
+  if (!ctx) return;
+  const o = ctx.createOscillator();
+  o.type = 'sawtooth';
+  o.frequency.setValueAtTime(420, t);
+  o.frequency.linearRampToValueAtTime(640, t + dur / 2);
+  o.frequency.linearRampToValueAtTime(420, t + dur);
+  const f = ctx.createBiquadFilter();
+  f.type = 'lowpass';
+  f.frequency.value = 1500;
+  const g = ctx.createGain();
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(vol, t + 0.08);
+  g.gain.setValueAtTime(vol, t + dur - 0.1);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  o.connect(f).connect(g).connect(bus);
+  o.start(t);
+  o.stop(t + dur + 0.05);
+}
+
 // ---------------------------------------------------------------------------
 // Harmony
 // ---------------------------------------------------------------------------
@@ -367,9 +545,14 @@ const CH = {
   Dm: [50, 53, 57], Dm9: [50, 53, 57, 64], Gm: [43, 46, 50], Gm6: [43, 46, 50, 52], Bb: [46, 50, 53], Bbmaj7: [46, 50, 53, 57],
   C: [48, 52, 55], F: [41, 45, 48], A: [45, 49, 52], A7: [45, 49, 52, 55], Asus: [45, 50, 52], Eb: [39, 43, 46], Cdim: [49, 52, 55],
   Bbm: [46, 49, 53], D: [50, 54, 57], G: [43, 47, 50], Bm: [47, 50, 54], Em: [52, 55, 59],
+  Am: [45, 48, 52], E: [40, 44, 47], D7: [50, 54, 57, 60], Cm: [48, 51, 55], Db: [49, 53, 56], Fm: [41, 44, 48], Ab: [44, 48, 51], Bdim: [47, 50, 53],
 };
 const MINOR = [2, 4, 5, 7, 9, 10, 0]; // D natural minor (pitch classes)
 const MAJOR = [2, 4, 6, 7, 9, 11, 1]; // D major
+const MAJOR_C = [0, 2, 4, 5, 7, 9, 11]; // C major (the Carnival)
+const MINOR_A = [9, 11, 0, 2, 4, 5, 7]; // A natural minor
+const C_MINOR = [0, 2, 3, 5, 7, 8, 10]; // C minor (the Outbreak)
+const DORIAN = [2, 4, 5, 7, 9, 11, 0]; // D dorian: a minor key with a medieval, hopeful ache (the Citadel)
 
 // Pitch classes for melodies over a chord: borrow the chord's own notes (so A gets its C#).
 function scaleFor(chord, base) {
@@ -519,6 +702,273 @@ const MOODS = {
   },
 };
 
+
+// ---------------------------------------------------------------------------
+// The other scripts' scores. Same moods, different music: Black Hole Blues (above) is the haunted
+// music-box waltz; each of these replaces it with an arrangement that suits its universe.
+// ---------------------------------------------------------------------------
+const CARNIVAL_MOODS = {
+  // Lobby: a carousel waltz on a calliope that has seen better days.
+  calm: {
+    bpm: 92, meter: 3, chords: ['C', 'F', 'G', 'C', 'Am', 'F', 'G', 'C'], verb: 0.3,
+    step({ s, t, chord, bar, bus }) {
+      if (s === 0) tuba(chord[0] - 12, t, { vol: 0.15, dur: 0.4, bus });
+      if (s === 2 || s === 4) chord.slice(0, 3).forEach((m) => calliope(m + 12, t, { vol: 0.026, dur: 0.24, bus, wobble: 14 }));
+      if (s === 5 && bar % 2 === 1) bell(chord[2] + 36, t, { vol: 0.03, decay: 0.7, bus });
+    },
+    melody: { every: 1, chance: 0.8, instrument: 'calliope', lo: 67, hi: 88, base: MAJOR_C, vol: 0.05 },
+  },
+  // Day: a galloping oom-pah polka: tuba, chord stabs, a snare on the off-beat.
+  day: {
+    bpm: 128, meter: 2, chords: ['C', 'C', 'F', 'C', 'G', 'C', 'F', 'G'], verb: 0.25,
+    step({ s, t, chord, bar, bus }) {
+      if (s === 0) tuba(chord[0] - 12, t, { vol: 0.17, bus });
+      if (s === 2) tuba(chord[0] - 5, t, { vol: 0.14, bus });
+      if (s === 1 || s === 3) {
+        chord.slice(0, 3).forEach((m) => calliope(m + 12, t, { vol: 0.024, dur: 0.16, bus, wobble: 10 }));
+        snare(t, { vol: 0.04, bus });
+      }
+      if (s === 0 && bar % 4 === 0) cymbal(t, { vol: 0.03, dur: 0.6, bus });
+    },
+    melody: { every: 1, chance: 0.85, bars: 2, instrument: 'calliope', lo: 69, hi: 91, base: MAJOR_C, vol: 0.05, holdChance: 0.2 },
+  },
+  // Night: the lullaby has gone wrong: slow, detuned, a music box playing to an empty tent.
+  night: {
+    bpm: 58, meter: 3, chords: ['Am', 'F', 'Dm', 'E', 'Am', 'F', 'G', 'E'], verb: 0.75,
+    step({ s, t, chord, bus }) {
+      if (s === 0) organ(chord, t, this.barDur + 0.5, { vol: 0.045, bus, detune: 22 });
+      if (s % 2 === 0 && Math.random() < 0.4) bell(rnd(notesIn(scaleFor(chord, MINOR_A), 76, 96)), t, { vol: 0.04, decay: 2.8, bus });
+    },
+    melody: { every: 3, chance: 0.6, instrument: 'bell', lo: 72, hi: 93, base: MINOR_A, vol: 0.045, holdChance: 0.5 },
+  },
+  // Nominations & dusk: the drum roll before the big trick.
+  tense: {
+    bpm: 108, meter: 4, chords: ['Am', 'E', 'Am', 'Dm', 'Am', 'E', 'F', 'E'], verb: 0.3,
+    step({ s, t, chord, bar, bus }) {
+      snare(t, { vol: 0.02 + (s / 8) * 0.025, bus });
+      if (s % 4 === 0) tuba(chord[0] - 12, t, { vol: 0.13, dur: 0.22, bus });
+      if (s === 0) heartbeat(t, { vol: 0.2, bus });
+      if (s === 2 || s === 6) calliope(chord[1] + 12, t, { vol: 0.03, dur: 0.12, bus, wobble: 18 });
+      if (s === 6 && bar % 4 === 3) cymbal(t, { vol: 0.05, dur: 1.4, bus });
+    },
+    melody: null,
+  },
+  // The crew escapes: the big finish, fanfare and cymbals.
+  victory: {
+    bpm: 120, meter: 4, chords: ['C', 'F', 'G', 'C', 'Am', 'F', 'G', 'C'], verb: 0.3,
+    step({ s, t, chord, bar, bus }) {
+      if (s === 0) {
+        tuba(chord[0] - 12, t, { vol: 0.18, bus });
+        kick(t, { vol: 0.2, bus });
+        if (bar % 4 === 0) cymbal(t, { vol: 0.05, dur: 1.2, bus });
+      }
+      if (s === 4) tuba(chord[0] - 5, t, { vol: 0.15, bus });
+      if (s % 2 === 0) bell(chord[(s / 2) % 3] + 36, t, { vol: 0.045, decay: 0.8, bus });
+      if (s === 2 || s === 6) chord.slice(0, 3).forEach((m) => calliope(m + 12, t, { vol: 0.03, dur: 0.2, bus, wobble: 8 }));
+    },
+    melody: { every: 1, instrument: 'calliope', lo: 69, hi: 91, base: MAJOR_C, vol: 0.06 },
+  },
+  // No more show: the calliope dragging itself through the dark, with a heartbeat for a drum.
+  doom: {
+    bpm: 40, meter: 4, chords: ['Am', 'E', 'Dm', 'E'], barsPerChord: 1, verb: 0.8,
+    step({ s, t, chord, bus }) {
+      if (s === 0) {
+        organ(chord.map((m) => m - 12), t, this.barDur + 1, { vol: 0.06, bus, detune: 30 });
+        bell(chord[0] - 12, t, { vol: 0.1, decay: 5, ratio: 1.4, index: 3, bus });
+        heartbeat(t, { vol: 0.24, bus });
+      }
+      if (s === 4) heartbeat(t, { vol: 0.18, bus });
+    },
+    melody: { every: 2, instrument: 'calliope', lo: 55, hi: 76, base: MINOR_A, vol: 0.05, holdChance: 0.55 },
+  },
+};
+
+const OUTBREAK_MOODS = {
+  // Lobby: a quiet ward at night. A pad, a heart monitor, a ping now and then.
+  calm: {
+    bpm: 66, meter: 4, chords: ['Cm', 'Ab', 'Fm', 'G'], verb: 0.5,
+    step({ s, t, chord, bus }) {
+      if (s === 0) {
+        strings(chord.map((m) => m + 12), t, this.barDur + 0.6, { vol: 0.06, bus, bright: 1300 });
+        sonar(chord[0] + 36, t, { vol: 0.05, bus });
+      }
+      if (s % 4 === 0) beep(t, { freq: 880, dur: 0.08, vol: 0.016, bus });
+    },
+    melody: { every: 2, chance: 0.5, bars: 2, instrument: 'sonar', lo: 72, hi: 91, base: C_MINOR, vol: 0.04, holdChance: 0.5 },
+  },
+  // Day: a pulsing synth ostinato, a sub bass, geiger clicks. Something is spreading.
+  day: {
+    bpm: 118, meter: 4, chords: ['Cm', 'Cm', 'Db', 'Cm', 'Bdim', 'Cm', 'Ab', 'G'], verb: 0.3,
+    step({ s, t, chord, bus }) {
+      const ost = [0, 7, 12, 7, 0, 7, 12, 15];
+      pulse(chord[0] + ost[s % 8], t, { vol: 0.045, dur: 0.12, bright: 1200 + (s % 2) * 500, bus });
+      if (s === 0) bass(chord[0] - 12, t, { vol: 0.17, dur: 0.9, bus });
+      if (Math.random() < 0.3) geiger(t + Math.random() * 0.2, { vol: 0.03, bus });
+    },
+    melody: { every: 2, chance: 0.4, bars: 2, instrument: 'sonar', lo: 72, hi: 91, base: C_MINOR, vol: 0.04, holdChance: 0.5 },
+  },
+  // Night: a slow heartbeat, a low pad and a ping from far down a corridor.
+  night: {
+    bpm: 48, meter: 4, chords: ['Cm', 'Db', 'Cm', 'Bdim'], barsPerChord: 2, verb: 0.7,
+    step({ s, t, chord, bar, bus }) {
+      if (s === 0 && bar % 2 === 0) strings(chord.map((m) => m - 12), t, this.barDur * 2 + 1, { vol: 0.06, bus, bright: 900 });
+      if (s === 0 || s === 4) heartbeat(t, { vol: 0.14, bus });
+      if (s % 2 === 0 && Math.random() < 0.22) sonar(rnd(notesIn(scaleFor(chord, C_MINOR), 76, 96)), t, { vol: 0.03, decay: 3, bus });
+    },
+    melody: null,
+  },
+  // Nominations & dusk: the monitor speeds up. Beeps, bass pulses, a siren on every fourth bar.
+  tense: {
+    bpm: 144, meter: 4, chords: ['Cm', 'Db', 'Cm', 'Bdim'], verb: 0.25,
+    step({ s, t, chord, bar, bus }) {
+      pulse(chord[0] + (s % 2 ? 12 : 0), t, { vol: 0.05, dur: 0.1, bright: 1000, bus });
+      if (s % 2 === 0) beep(t, { freq: 1250, dur: 0.07, vol: 0.03, bus });
+      if (s === 0 || s === 4) kick(t, { vol: 0.2, bus });
+      if (s === 0 && bar % 4 === 3) klaxon(t, this.barDur, { vol: 0.025, bus });
+    },
+    melody: null,
+  },
+  // The crew escapes: the all-clear, a clean pad and bells.
+  victory: {
+    bpm: 90, meter: 4, chords: ['C', 'G', 'Am', 'F'], verb: 0.4,
+    step({ s, t, chord, bus }) {
+      if (s === 0) strings(chord.map((m) => m + 12), t, this.barDur + 0.4, { vol: 0.05, bus, bright: 2400 });
+      if (s % 2 === 0) bell(chord[(s / 2) % 3] + 36, t, { vol: 0.05, decay: 1.3, bus });
+    },
+    melody: { every: 1, instrument: 'bell', lo: 66, hi: 88, base: MAJOR_C, vol: 0.06 },
+  },
+  // Quarantine failed: a siren, a double heartbeat and a flatline.
+  doom: {
+    bpm: 52, meter: 4, chords: ['Cm', 'Db', 'Cm', 'Bdim'], barsPerChord: 1, verb: 0.6,
+    step({ s, t, chord, bar, bus }) {
+      if (s === 0) {
+        klaxon(t, this.barDur, { vol: 0.03, bus });
+        organ(chord.map((m) => m - 12), t, this.barDur + 0.8, { vol: 0.05, bus });
+        if (bar % 4 === 3) beep(t + 0.4, { freq: 1000, dur: 1.5, vol: 0.025, bus }); // flatline
+      }
+      if (s === 0 || s === 4) heartbeat(t, { vol: 0.26, bus });
+    },
+    melody: null,
+  },
+};
+
+const TRAITORS_MOODS = {
+  // Lobby: guests arriving at the castle. Organ, a lute, a bell, a lone string melody.
+  calm: {
+    bpm: 70, meter: 4, chords: ['Dm', 'C', 'G', 'Dm', 'Bb', 'C', 'Am', 'Dm'], verb: 0.6,
+    step({ s, t, chord, bar, bus }) {
+      if (s === 0) {
+        organ(chord.map((m) => m + 12), t, this.barDur + 0.5, { vol: 0.038, bus });
+        if (bar % 4 === 0) bell(chord[0] - 12, t, { vol: 0.09, decay: 4, ratio: 1.4, index: 3, bus });
+      }
+      const arp = [0, 1, 2, 1, 2, 1, 0, 1];
+      pluck(chord[arp[s % 8] % chord.length] + 12, t, { vol: 0.085, decay: 0.8, bright: 2600, bus });
+    },
+    melody: { every: 2, chance: 0.7, instrument: 'strings', lo: 57, hi: 78, base: DORIAN, vol: 0.05, holdChance: 0.5 },
+  },
+  // Day: the Round Table. A harpsichord ostinato over low strings, a timpani on the bar.
+  day: {
+    bpm: 96, meter: 4, chords: ['Dm', 'Dm', 'Bb', 'C', 'Dm', 'Gm', 'A', 'Dm'], verb: 0.45,
+    step({ s, t, chord, bus }) {
+      if (s === 0) {
+        timpani(38, t, { vol: 0.2, bus });
+        strings(chord.map((m) => m - 12), t, this.barDur + 0.5, { vol: 0.045, bus, bright: 1200 });
+      }
+      const arp = [0, 1, 2, 1, 0, 2, 1, 2];
+      harpsichord(chord[arp[s % 8] % chord.length] + 12, t, { vol: 0.07, bus });
+    },
+    melody: { every: 1, chance: 0.55, instrument: 'strings', lo: 57, hi: 78, base: DORIAN, vol: 0.05, holdChance: 0.4 },
+  },
+  // Night: the Traitors' hour. A deep organ, a distant choir, a bell tolling far off.
+  night: {
+    bpm: 46, meter: 4, chords: ['Dm', 'Bb', 'Gm', 'A'], barsPerChord: 2, verb: 0.8,
+    step({ s, t, chord, bar, bus }) {
+      if (s === 0 && bar % 2 === 0) {
+        organ(chord.map((m) => m - 12), t, this.barDur * 2 + 1.2, { vol: 0.07, bus });
+        choir(chord, t, this.barDur * 2 + 1.2, { vol: 0.04, bus, vowel: [450, 800] });
+      }
+      if (s === 0 && bar % 4 === 0) bell(chord[0] - 12, t, { vol: 0.11, decay: 5.5, ratio: 1.4, index: 3, bus });
+    },
+    melody: { every: 4, chance: 0.5, bars: 2, instrument: 'bell', lo: 69, hi: 88, base: DORIAN, vol: 0.04, holdChance: 0.6 },
+  },
+  // Nominations & dusk: the vote. Timpani heartbeat, tremolo strings, a clock.
+  tense: {
+    bpm: 84, meter: 4, chords: ['Dm', 'Eb', 'Dm', 'Cdim'], verb: 0.45,
+    step({ s, t, chord, bus }) {
+      if (s === 0) timpani(38, t, { vol: 0.26, bus });
+      if (s === 3) timpani(38, t, { vol: 0.18, bus });
+      if (s % 2 === 0) {
+        strings([chord[0] - 12 + (s % 4 === 2 ? 12 : 0)], t, 0.5, { vol: 0.035, bus, bright: 1500 });
+        tick(t, { tock: s % 4 === 2, vol: 0.04, bus });
+      }
+      if (s === 0) choir(chord.map((m) => m - 12), t, this.barDur + 0.3, { vol: 0.04, bus, vowel: [450, 800] });
+    },
+    melody: null,
+  },
+  // The Faithful win: bells and a major chord at last.
+  victory: {
+    bpm: 88, meter: 4, chords: ['D', 'G', 'A', 'D', 'Bm', 'G', 'A', 'D'], verb: 0.5,
+    step({ s, t, chord, bus }) {
+      if (s === 0) {
+        choir(chord.map((m) => m + 12), t, this.barDur + 0.4, { vol: 0.05, bus, vowel: [800, 1300] });
+        organ(chord, t, this.barDur + 0.3, { vol: 0.045, bus });
+        timpani(38, t, { vol: 0.16, bus });
+      }
+      if (s % 2 === 0) bell(chord[(s / 2) % 3] + 36, t, { vol: 0.05, decay: 1.4, bus });
+    },
+    melody: { every: 1, instrument: 'bell', lo: 66, hi: 86, base: MAJOR, vol: 0.07 },
+  },
+  // The Traitors win: a tolling bell, a low choir and the timpani.
+  doom: {
+    bpm: 42, meter: 4, chords: ['Dm', 'Eb', 'Bbm', 'A'], barsPerChord: 1, verb: 0.85,
+    step({ s, t, chord, bus }) {
+      if (s === 0) {
+        choir(chord.map((m) => m - 12), t, this.barDur + 1, { vol: 0.08, bus, vowel: [400, 750] });
+        bell(chord[0] - 12, t, { vol: 0.14, decay: 6, ratio: 1.4, index: 3, bus });
+        timpani(34, t, { vol: 0.26, bus });
+      }
+      if (s === 4) timpani(34, t, { vol: 0.16, bus });
+    },
+    melody: { every: 2, instrument: 'strings', lo: 45, hi: 64, base: MINOR, vol: 0.05, holdChance: 0.6 },
+  },
+};
+
+// which score each script plays (a mood a script does not list falls back to Black Hole Blues')
+const MOOD_SETS = { classic: MOODS, carnival: CARNIVAL_MOODS, outbreak: OUTBREAK_MOODS, traitors: TRAITORS_MOODS };
+let scriptId = 'classic';
+
+// how one composed phrase is played, by instrument
+function playMelody(kind, notes, mel, bus, state) {
+  const vol = mel.vol;
+  if (kind === 'alternate') kind = state.phrases % 2 === 1 ? 'bell' : 'theremin';
+  switch (kind) {
+    case 'bell':
+      for (const n of notes) bell(n.midi, n.t, { vol, decay: Math.min(2.2, n.dur + 0.8), bus });
+      break;
+    case 'calliope':
+      for (const n of notes) calliope(n.midi, n.t, { vol, dur: Math.max(0.12, n.dur * 0.9), bus, wobble: 16 });
+      break;
+    case 'strings':
+      for (const n of notes) strings([n.midi], n.t, n.dur + 0.2, { vol: vol * 0.9, bus, bright: 2200 });
+      break;
+    case 'sonar':
+      for (const n of notes) sonar(n.midi, n.t, { vol, decay: Math.min(3, n.dur + 1), bus });
+      break;
+    case 'harpsichord':
+      for (const n of notes) harpsichord(n.midi, n.t, { vol: vol * 1.6, bus });
+      break;
+    default:
+      theremin(notes, { vol, bus });
+  }
+}
+
+export function setMusicScript(id) {
+  id = MOOD_SETS[id] ? id : 'classic';
+  if (id === scriptId) return;
+  scriptId = id;
+  if (ctx && ambient) setAmbient(ambient.mood, true); // the same part of the game, in the new script's music
+}
+
 let music = null;
 
 function stopMusic(fade = 1.5) {
@@ -531,7 +981,7 @@ function stopMusic(fade = 1.5) {
 }
 
 function startMusic(name) {
-  const def = MOODS[name];
+  const def = (MOOD_SETS[scriptId] || MOODS)[name] || MOODS[name];
   stopMusic();
   if (!def) return;
   const beat = 60 / def.bpm;
@@ -566,9 +1016,7 @@ function startMusic(name) {
               const bars = Array.from({ length: len }, (_, i) => ({ chord: chordAt(bar + i), t: t + i * mood.barDur }));
               const notes = composePhrase(bars, { base: mel.base, lo: mel.lo, hi: mel.hi, start: Math.max(mel.lo, Math.min(mel.hi, state.lastNote)), meter: def.meter, beat, holdChance: mel.holdChance ?? 0.35 });
               state.lastNote = notes.at(-1)?.midi ?? state.lastNote;
-              const useBell = mel.instrument === 'bell' || (mel.instrument === 'alternate' && state.phrases % 2 === 1);
-              if (useBell) for (const n of notes) bell(n.midi, n.t, { vol: mel.vol, decay: Math.min(2.2, n.dur + 0.8), bus: gain });
-              else theremin(notes, { vol: mel.vol, bus: gain });
+              playMelody(mel.instrument, notes, mel, gain, state);
               state.phrases += 1;
             }
           }
@@ -721,14 +1169,144 @@ const SOUNDS = {
   huh: () => tone({ freq: 300, slide: 420, dur: 0.22, vol: 0.08, type: 'triangle' }),
 };
 
+
+// Sound effects that change with the script. A name listed here replaces the one above while that script is played.
+const SCRIPT_SOUNDS = {
+  // 🎪 the Carnival: calliope toots, cymbals, a cannon and a slide whistle
+  carnival: {
+    death: () => {
+      [[311, 0], [294, 0.4], [277, 0.8]].forEach(([f, d]) => tone({ freq: f, slide: f * 0.97, type: 'sawtooth', dur: 0.4, vol: 0.1, delay: d, filter: { freq: 1400 } }));
+      tone({ freq: 900, slide: 120, type: 'sine', dur: 1.2, vol: 0.1, delay: 1.2 }); // a slide whistle down
+      cymbal(now() + 2.2, { vol: 0.08, dur: 1.4 });
+    },
+    airlock: () => {
+      // the human cannon: a boom, then a long whistle as they fly away
+      tone({ freq: 90, slide: 28, dur: 0.7, vol: 0.4 });
+      noise({ dur: 0.5, vol: 0.4, freq: 500, slide: 90, q: 0.7 });
+      tone({ freq: 1500, slide: 260, type: 'sine', dur: 1.5, vol: 0.09, delay: 0.35 });
+      cymbal(now() + 1.9, { vol: 0.05, dur: 0.9 });
+    },
+    dawn: () => [60, 64, 67, 72, 76].forEach((m, i) => calliope(m + 12, now() + i * 0.13, { vol: 0.06, dur: i === 4 ? 0.7 : 0.18, bus: sfxBus, wobble: 10 })),
+    night: () => {
+      [81, 77, 74, 69, 65].forEach((m, i) => bell(m, now() + i * 0.26, { vol: 0.06, decay: 2.6 })); // the music box winding down
+      organ([45, 52], now() + 0.9, 2.4, { vol: 0.05, detune: 30 });
+    },
+    alarm: () => {
+      [0, 0.38, 0.76].forEach((d) => bell(69, now() + d, { vol: 0.17, decay: 1.2, ratio: 1.41, index: 4 }));
+      cymbal(now(), { vol: 0.08, dur: 1.5 });
+      [48, 55, 60].forEach((m) => calliope(m, now() + 1.2, { vol: 0.06, dur: 0.6, bus: sfxBus, wobble: 18 }));
+    },
+    task: () => [72, 76, 79, 84, 88].forEach((m, i) => bell(m, now() + i * 0.06, { vol: 0.08, decay: 0.55, ratio: 3, index: 1 })), // a xylophone run
+    chime: () => [76, 79, 84, 88].forEach((m, i) => bell(m, now() + i * 0.08, { vol: 0.07, decay: 0.7, ratio: 3, index: 1 })),
+    fanfare: () => {
+      [60, 64, 67, 72, 67, 72, 76].forEach((m, i) => calliope(m + 12, now() + i * 0.14, { vol: 0.07, dur: i === 6 ? 1.2 : 0.2, bus: sfxBus, wobble: 8 }));
+      cymbal(now() + 0.9, { vol: 0.09, dur: 2 });
+    },
+    doom: () => {
+      organ([33, 40, 45], now(), 4, { vol: 0.1, detune: 28 });
+      for (let i = 0; i < 5; i++) tone({ freq: 150 - i * 8, slide: 100 - i * 6, type: 'sawtooth', dur: 0.2, vol: 0.07, delay: 0.5 + i * 0.26, filter: { freq: 1500 } }); // ha ha ha
+      bell(28, now(), { vol: 0.18, decay: 5, ratio: 1.4, index: 3 });
+    },
+    reveal: () => {
+      for (let i = 0; i < 10; i++) snare(now() + i * 0.05, { vol: 0.03 + i * 0.004 });
+      cymbal(now() + 0.55, { vol: 0.07, dur: 1 });
+    },
+  },
+  // 🦠 the Outbreak: monitors, alarms, seals and hisses
+  outbreak: {
+    death: () => {
+      tone({ freq: 1000, dur: 1.8, vol: 0.07, attack: 0.01 }); // a flatline
+      heartbeat(now(), { vol: 0.22, bus: sfxBus });
+    },
+    airlock: () => {
+      noise({ dur: 1.6, vol: 0.3, freq: 4200, slide: 1200, q: 0.6, type: 'highpass' }); // a seal hissing shut
+      tone({ freq: 80, type: 'square', dur: 0.2, vol: 0.18, delay: 1.3, filter: { freq: 400 } });
+      noise({ dur: 0.12, vol: 0.2, freq: 500, delay: 1.3 });
+    },
+    dawn: () => {
+      [0, 0.25].forEach((d) => beep(now() + d, { freq: 1320, dur: 0.1, vol: 0.06 }));
+      [74, 81, 86].forEach((m, i) => bell(m, now() + 0.6 + i * 0.12, { vol: 0.06, decay: 1.4 }));
+    },
+    night: () => {
+      heartbeat(now(), { vol: 0.2, bus: sfxBus });
+      heartbeat(now() + 1.2, { vol: 0.12, bus: sfxBus });
+      tone({ freq: 440, slide: 110, dur: 2, vol: 0.05, delay: 0.3 });
+    },
+    alarm: () => {
+      klaxon(now(), 0.9, { vol: 0.07 });
+      klaxon(now() + 1, 0.9, { vol: 0.07 });
+    },
+    task: () => [1000, 1250, 1500].forEach((f, i) => beep(now() + i * 0.08, { freq: f, dur: 0.07, vol: 0.05 })),
+    chime: () => [78, 83, 90].forEach((m, i) => sonar(m, now() + i * 0.1, { vol: 0.05, decay: 1.2 })),
+    fanfare: () => [67, 71, 74, 79].forEach((m, i) => bell(m + 12, now() + i * 0.14, { vol: 0.08, decay: i === 3 ? 2.4 : 0.9 })),
+    doom: () => {
+      klaxon(now(), 1.5, { vol: 0.08 });
+      klaxon(now() + 1.6, 1.5, { vol: 0.08 });
+      heartbeat(now() + 0.3, { vol: 0.35, bus: sfxBus });
+      heartbeat(now() + 1.9, { vol: 0.3, bus: sfxBus });
+    },
+    reveal: () => {
+      for (let i = 0; i < 12; i++) geiger(now() + i * 0.04 + Math.random() * 0.03, { vol: 0.06 });
+      sonar(88, now() + 0.3, { vol: 0.06, decay: 1.2 });
+    },
+  },
+  // 🗡️ the Citadel: bells, ravens, organs, great doors and chains
+  traitors: {
+    death: () => {
+      bell(38, now(), { vol: 0.2, decay: 4, ratio: 1.4, index: 3 }); // a funeral toll
+      organ([38, 45, 50], now(), 2.6, { vol: 0.06 });
+      [0.7, 1.0].forEach((d) => { tone({ freq: 480, slide: 290, type: 'sawtooth', dur: 0.22, vol: 0.05, delay: d, filter: { freq: 1400 } }); }); // a raven caws
+    },
+    airlock: () => {
+      // banished: the great doors boom shut and a portcullis chain rattles
+      tone({ freq: 62, slide: 32, dur: 1.4, vol: 0.4 });
+      noise({ dur: 1.2, vol: 0.3, freq: 260, slide: 70, q: 1.2, type: 'lowpass', delay: 0.05 });
+      for (let i = 0; i < 9; i++) noise({ dur: 0.05, vol: 0.09, freq: 3200 + Math.random() * 1200, q: 3, delay: 0.5 + i * 0.07 });
+      bell(33, now() + 0.2, { vol: 0.14, decay: 4, ratio: 1.4, index: 3 });
+    },
+    dawn: () => {
+      [0, 0.55, 1.1].forEach((d, i) => bell([62, 69, 66][i], now() + d, { vol: 0.12, decay: 3, ratio: 1.41, index: 3 })); // the bells peal over the castle
+      tone({ freq: 520, slide: 300, type: 'sawtooth', dur: 0.2, vol: 0.04, delay: 1.7, filter: { freq: 1400 } }); // a raven
+    },
+    night: () => {
+      organ([38, 45, 50], now(), 3.2, { vol: 0.06 });
+      tone({ freq: 430, dur: 0.4, vol: 0.05, delay: 0.5, type: 'triangle' }); // an owl
+      tone({ freq: 360, dur: 0.6, vol: 0.05, delay: 1.1, type: 'triangle' });
+    },
+    alarm: () => {
+      [0, 0.65, 1.3].forEach((d) => bell(50, now() + d, { vol: 0.2, decay: 2.2, ratio: 1.41, index: 4 }));
+      organ([50, 57, 62], now(), 2, { vol: 0.07 });
+    },
+    task: () => [84, 88, 91, 96].forEach((m, i) => bell(m, now() + i * 0.05, { vol: 0.06, decay: 0.5, ratio: 5, index: 1 })), // coins
+    chime: () => [62, 66, 69, 74].forEach((m, i) => pluck(m + 12, now() + i * 0.09, { vol: 0.1, decay: 0.9, bright: 3000, bus: sfxBus })),
+    fanfare: () => {
+      [50, 57, 62, 66, 69].forEach((m, i) => tone({ freq: hz(m), type: 'sawtooth', dur: i === 4 ? 1.6 : 0.3, vol: 0.07, delay: i * 0.18, filter: { freq: 1500 } })); // horns
+      [74, 78, 81, 86].forEach((m, i) => bell(m, now() + 0.7 + i * 0.1, { vol: 0.07, decay: 1.8 }));
+      timpani(38, now(), { vol: 0.25 });
+    },
+    doom: () => {
+      organ([26, 33, 38], now(), 4.5, { vol: 0.1 });
+      bell(26, now(), { vol: 0.22, decay: 6, ratio: 1.4, index: 4 });
+      timpani(34, now() + 0.3, { vol: 0.3 });
+      timpani(34, now() + 1.3, { vol: 0.22 });
+    },
+    reveal: () => {
+      noise({ dur: 0.7, vol: 0.15, freq: 3000, slide: 300, q: 1 });
+      bell(74, now() + 0.12, { vol: 0.09, decay: 2.2, ratio: 2.76, index: 1.5 });
+    },
+  },
+};
+
 export function sfx(name) {
   try {
     sfxListener?.(name);
   } catch {}
   if (!ctx || !enabled) return;
   try {
-    SOUNDS[name]?.();
-  } catch {}
+    (SCRIPT_SOUNDS[scriptId]?.[name] || SOUNDS[name])?.();
+  } catch (err) {
+    console.warn(`[sound] ${name}:`, err);
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -736,9 +1314,58 @@ export function sfx(name) {
 // (ventilation hiss, hull creaks and, at night, whispers).
 // ---------------------------------------------------------------------------
 
-export function setAmbient(mood) {
+
+// ---------------------------------------------------------------------------
+// The ship's (or the tent's, the ward's, the castle's) own noises, drifting in now and then
+// ---------------------------------------------------------------------------
+const AIR = {
+  classic: { type: 'lowpass', freq: 380, q: 0.7, rate: 0.08, depth: 160, level: 0.12 }, // ventilation
+  carnival: { type: 'bandpass', freq: 900, q: 0.5, rate: 0.14, depth: 380, level: 0.1 }, // a crowd and a generator, far away
+  outbreak: { type: 'lowpass', freq: 520, q: 1.1, rate: 0.2, depth: 260, level: 0.14 }, // slow, wet breathing
+  traitors: { type: 'bandpass', freq: 520, q: 0.7, rate: 0.06, depth: 300, level: 0.15 }, // wind round the towers
+};
+const AMBIENT_NOISES = {
+  classic: { day: [() => SOUNDS.creak()], night: [() => SOUNDS.whisper(), () => SOUNDS.whisper(), () => SOUNDS.creak()] },
+  carnival: {
+    day: [
+      () => tone({ freq: 220, slide: 330, type: 'sawtooth', dur: 0.2, vol: 0.02, filter: { freq: 900 }, bus: ambientBus }), // a distant honk
+      () => [60, 64, 67].forEach((m, i) => calliope(m + 12, now() + i * 0.14, { vol: 0.012, dur: 0.15, bus: ambientBus, wobble: 20 })), // a scrap of calliope
+    ],
+    night: [
+      () => [0, 0.11, 0.22].forEach((d) => tone({ freq: 640 + d * 900, slide: 520, dur: 0.07, vol: 0.02, delay: d, type: 'triangle', bus: ambientBus })), // a giggle in the dark
+      () => bell(rnd([81, 84, 88]), now(), { vol: 0.02, decay: 2.4, bus: ambientBus }), // a stray music-box note
+      () => SOUNDS.creak(),
+    ],
+  },
+  outbreak: {
+    day: [
+      () => [0, 0.16, 0.3].forEach((d) => noise({ dur: 0.1, vol: 0.03, freq: 420, q: 1.1, delay: d, bus: ambientBus })), // a cough through a wall
+      () => beep(now(), { freq: 988, dur: 0.07, vol: 0.012, bus: ambientBus }), // a monitor, down the hall
+    ],
+    night: [
+      () => [0, 0.16, 0.3].forEach((d) => noise({ dur: 0.1, vol: 0.03, freq: 380, q: 1.1, delay: d, bus: ambientBus })),
+      () => sonar(rnd([76, 79, 83]), now(), { vol: 0.018, decay: 2.6, bus: ambientBus }),
+      () => { for (let i = 0; i < 6; i++) geiger(now() + i * 0.07 + Math.random() * 0.05, { vol: 0.025, bus: ambientBus }); },
+    ],
+  },
+  traitors: {
+    day: [
+      () => tone({ freq: 470, slide: 290, type: 'sawtooth', dur: 0.22, vol: 0.02, filter: { freq: 1300 }, bus: ambientBus }), // a raven
+      () => bell(rnd([50, 53, 57]), now(), { vol: 0.03, decay: 4, ratio: 1.41, index: 3, bus: ambientBus }), // a far-off bell
+      () => SOUNDS.creak(),
+    ],
+    night: [
+      () => [0, 0.5].forEach((d, i) => tone({ freq: i ? 360 : 430, dur: 0.45, vol: 0.02, delay: d, type: 'triangle', bus: ambientBus })), // an owl
+      () => SOUNDS.whisper(),
+      () => bell(rnd([38, 45]), now(), { vol: 0.05, decay: 5, ratio: 1.4, index: 3, bus: ambientBus }),
+      () => SOUNDS.creak(),
+    ],
+  },
+};
+
+export function setAmbient(mood, force = false) {
   if (!ctx) return;
-  if (ambient?.mood === mood) return;
+  if (ambient?.mood === mood && !force) return;
   if (ambient) {
     const old = ambient;
     old.gain.gain.setTargetAtTime(0.0001, ctx.currentTime, 0.8);
@@ -747,7 +1374,9 @@ export function setAmbient(mood) {
   }
   startMusic(mood === 'silent' ? null : mood);
 
-  // the ship breathing: a soft, filtered air hiss (quieter by day)
+  // the place breathing: a soft, filtered air hiss (quieter by day). Each script has its own: the station's
+  // ventilation, a fairground crowd far away, a ward's slow ventilators, wind round the castle's towers.
+  const air_ = AIR[scriptId] || AIR.classic;
   const gain = ctx.createGain();
   gain.gain.value = 0.0001;
   gain.gain.setTargetAtTime(mood === 'night' || mood === 'doom' ? 0.5 : mood === 'silent' ? 0.0001 : 0.25, ctx.currentTime, 1.5);
@@ -756,23 +1385,29 @@ export function setAmbient(mood) {
   air.buffer = noiseBuffer;
   air.loop = true;
   const f = ctx.createBiquadFilter();
-  f.type = 'lowpass';
-  f.frequency.value = 380;
+  f.type = air_.type;
+  f.frequency.value = air_.freq;
+  f.Q.value = air_.q;
   const lfo = ctx.createOscillator();
   const lfoGain = ctx.createGain();
-  lfo.frequency.value = 0.08;
-  lfoGain.gain.value = 160;
+  lfo.frequency.value = air_.rate;
+  lfoGain.gain.value = air_.depth;
   lfo.connect(lfoGain).connect(f.frequency);
   const level = ctx.createGain();
-  level.gain.value = 0.12;
+  level.gain.value = air_.level;
   air.connect(f).connect(level).connect(gain);
   air.start();
   lfo.start();
 
-  // occasional creaks and whispers
+  // occasional noises: creaks and whispers on the station, honks and giggles at the fairground, coughs and pings
+  // in the ward, ravens, owls and far-off bells at the castle
   const timer = setInterval(() => {
     if (!enabled || mood === 'silent') return;
-    if (Math.random() < (mood === 'night' ? 0.25 : 0.12)) SOUNDS[mood === 'night' && Math.random() < 0.6 ? 'whisper' : 'creak']();
+    const night = mood === 'night';
+    if (Math.random() < (night ? 0.25 : 0.12)) {
+      const list = (AMBIENT_NOISES[scriptId] || AMBIENT_NOISES.classic)[night ? 'night' : 'day'];
+      list[Math.floor(Math.random() * list.length)]();
+    }
   }, 2500);
   ambient = { mood, gain, nodes: [air, lfo], timer };
 }

@@ -324,3 +324,7 @@ input[type='range'] { flex: 1; padding: 0; height: 22px; accent-color: var(--amb
 .wiki-scenarios { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 8px; }
 .wiki-scenario { display: flex; gap: 10px; padding: 10px 12px; border: 1px solid var(--line); background: rgba(255, 255, 255, 0.03); }
 .wiki-scenario p { margin: 2px 0 0; font-size: 0.95rem; line-height: 1.25; color: var(--ink); }
+
+/* After the game: a bar with the way back to the docking bay, whenever the reveal is not showing */
+.postgame { position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%); z-index: 14; display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 12px 18px; text-align: center; max-width: min(92vw, 520px); }
+.postgame .row { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }

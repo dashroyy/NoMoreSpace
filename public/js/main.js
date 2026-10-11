@@ -1,9 +1,10 @@
 // Entry point: connects the server, the 3D world and all the UI pieces.
 import { $, el, clear, problem, toast, typeText, isTouch } from './util.js';
 import { socket, store, onState, send, role, player, isCaptain, serverNow, themeInfo, scriptInfo } from './store.js';
-import { unlockAudio, sfx, setAmbient, setSound, soundEnabled, setMusic, musicEnabled } from './audio.js';
+import { unlockAudio, sfx, setAmbient, setMusicScript, setSound, soundEnabled, setMusic, musicEnabled } from './audio.js';
 import { World, blackHoleProgress } from './world/world.js';
 import { initChat, addChat, updateChatVisibility, clearChat, systemLine } from './ui/chat.js';
+import { openShareCard } from './ui/sharecard.js';
 import { initModal, openRoleCard, refreshRoleCard } from './ui/rolecard.js';
 import { initHud, renderHud, setUsePrompt, phaseBanner } from './ui/hud.js';
 import { initLobby, renderLobby, resetLobbyPicks } from './ui/lobby.js';
@@ -87,6 +88,15 @@ async function boot() {
     toast(`🔭 ${clue.caption}`, 'info', 12000);
   }, 500);
   const reveal = new Reveal(world);
+
+  // After the game, whenever the reveal is not on screen (it was closed, or never opened), the way back to
+  // the docking bay. (The reveal's own summary has the same buttons, but it can be closed.)
+  $('pg-rematch').addEventListener('click', () => send('rematch').catch((e) => problem(e.message)));
+  $('pg-reveal').addEventListener('click', () => store.state && reveal.start(store.state));
+  $('pg-share').addEventListener('click', () => store.state && openShareCard(store.state));
+  setInterval(() => {
+    $('postgame').hidden = !(store.state?.phase === 'ended' && !store.state.isReplay && $('reveal').hidden);
+  }, 400);
 
   initModal();
   initChat();
@@ -204,6 +214,7 @@ async function boot() {
     route(state);
     world.syncPlayers(state);
     world.setScript(state.script);
+    setMusicScript(state.script);
     setRoomNames(themeInfo(state.script).rooms);
     $('night-sub').textContent = themeInfo(state.script).nightSub;
     if (!prev || prev.phase !== state.phase || prev.code !== state.code) onPhaseChange(state, prev, world, reveal);
@@ -252,6 +263,7 @@ async function startReplay(id, reveal, world) {
     $('screen-home').hidden = true;
     // the stage behind the "watch" card wears the right script (Great Grin, circus room names...)
     world.setScript(state.script);
+    setMusicScript(state.script);
     setRoomNames(themeInfo(state.script).rooms);
     const gameName = themeInfo(state.script).shareTitle.toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
     const go = () => {
