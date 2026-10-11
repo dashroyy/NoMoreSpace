@@ -38,7 +38,7 @@ const MODEL_NAMES = [
   'table_long_tablecloth_decorated_A', 'table_long_tablecloth', 'chair', 'candle_triple', 'plate_food_A', 'plate_food_B',
   'chest_mimic', 'keyring_hanging', 'barrel_small', 'bucket', 'rubble_half',
   'barrel_large', 'crates_stacked', 'crate_large', 'keg_decorated',
-  'bed_decorated', 'banner_shield_red', 'sword_shield_gold',
+  'bed_decorated',
 ].map(D).concat(['halloween/skull_candle', 'halloween/ribcage', 'halloween/coffin_decorated', 'characters/skeleton_warrior', 'characters/skeleton_minion', 'characters/anims']);
 
 // the point light in each room takes on a candle, moon or potion colour

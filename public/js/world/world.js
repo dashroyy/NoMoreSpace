@@ -14,6 +14,7 @@ import { CarnivalExterior } from './carnival-exterior.js';
 import { OutbreakRooms } from './outbreak-rooms.js';
 import { OutbreakExterior } from './outbreak-exterior.js';
 import { TraitorsRooms } from './traitors-rooms.js';
+import { ClassicRooms } from './classic-rooms.js';
 import { preloadCharacters } from './models.js';
 import { TraitorsExterior } from './traitors-exterior.js';
 import { DoomFx } from './doomfx.js';
@@ -99,6 +100,8 @@ export class World {
     this.carnivalExterior = new CarnivalExterior(this.ship.group, { lowFx: this.lowFx }); // the fairground outside (same)
     this.outbreakRooms = new OutbreakRooms(this.ship.group, { lowFx: this.lowFx }); // the lab gone wrong: dressing for every room (Outbreak script only)
     this.outbreakExterior = new OutbreakExterior(this.ship.group, { lowFx: this.lowFx }); // the research complex outside (same)
+    this.classicRooms = new ClassicRooms(this.ship.group); // real models in the station's rooms (Black Hole Blues only)
+    this.classicRooms.setActive(true); // the station is the default: fetch its models right away
     this.traitorsRooms = new TraitorsRooms(this.ship.group, { lowFx: this.lowFx }); // the castle: dressing for every room (Citadel of Traitors only)
     this.traitorsExterior = new TraitorsExterior(this.ship.group, { lowFx: this.lowFx }); // the crag, towers and drawbridge outside (same)
     this.doomFx = new DoomFx(this); // the disaster outside: underglow, vignette, lightning, laughs and shudders
@@ -693,6 +696,7 @@ export class World {
   // The script this ship is playing (the Cosmic Carnival gets a circus ring on the bridge).
   setScript(id) {
     this.carnival.setActive(id === 'carnival');
+    this.classicRooms.setActive(!id || id === 'classic');
     if (this.space.script === (id || 'classic')) return;
     this.space.script = id || 'classic';
     this.backdrop.setScript(id);

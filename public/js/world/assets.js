@@ -17,7 +17,7 @@ const templates = new Map(); // 'pack/name' -> THREE.Group (or null if it could 
 const pending = new Map();
 const clips = new Map(); // 'pack/name' -> the animation clips in that file
 const packMaterials = new Map(); // 'pack' -> the one MeshStandardMaterial all of its models share
-const SHARED = new Set(['dungeon', 'halloween']); // packs whose models all use one painted texture (characters each bring their own)
+const SHARED = new Set(['dungeon', 'halloween', 'restaurant', 'furniture', 'spacebase']); // packs whose models all use one painted texture (characters each bring their own)
 let loader = null;
 let skeletonUtils = null;
 

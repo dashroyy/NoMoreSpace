@@ -1,0 +1,33 @@
+# 3D models and credits
+
+Nearly everything in the game is built from code (shapes, canvas textures, synthesised sounds). A few rooms and characters also use **real 3D models**, from the KayKit packs by Kay Lousberg ([kaylousberg.com](https://www.kaylousberg.com)), released under **CC0** (public domain: free for any use, credit is optional but appreciated).
+
+| Pack | Used for |
+|---|---|
+| KayKit Dungeon Pack | The Citadel of Traitors: wall torches, pillars, the Prize Pot chest and coins, bookcases, the banquet table and chairs, beds, barrels and crates, a mimic chest, keys |
+| KayKit Halloween Bits | The Citadel: the burial ground by the Banishment Gate (gravestones, crypt, fences, dead trees, lantern posts), skull and ribcage in the Dungeon |
+| KayKit Adventurers and Skeletons | The Citadel's end-game reveal: animated characters for the 9 Traitors roles (Mage = Seer, Rogue = Dagger Bearer, Knight = Guardian, Barbarian = Loyalist, hooded Rogue = Recruiter, Ranger = Mole, Engineer = Blackmailer, Skeleton Minion = Recruit, Necromancer = Head Traitor), and two skeleton prisoners in the Dungeon |
+| KayKit Restaurant Bits | Black Hole Blues: a kitchen and dining tables in the Galley |
+| KayKit Furniture Bits | Black Hole Blues: a lounge in the Crew Quarters |
+| KayKit Space Base Bits | Black Hole Blues: cargo stacks in the Cargo Bay, space farms in Hydroponics |
+
+## How it works
+
+- `public/assets/models/<pack>/<name>.glb` are the models. Every model of a pack shares one painted texture next to them.
+- `public/js/world/assets.js` loads them: `await loadModels([...])` then `model('dungeon/chair')` gives a copy (or `null` if it could not be loaded, and the room simply goes without). `cloneSkinned()` copies an animated character. The loader (`GLTFLoader`) is only downloaded when a script needs models.
+- The server serves `three`'s loaders from `/vendor/three-addons/` and the models from `/assets/` (cached for a day).
+- The Citadel's rooms (`traitors-rooms.js`) and exterior (`traitors-exterior.js`) fetch their models the first time the castle is shown. The station's rooms (`classic-rooms.js`) do the same; until its models arrive, the plain boxes that used to stand in those rooms stay (ship.js keeps them in a "fallback" group per room).
+- Static models are merged into a few meshes per pack, so a whole castle costs a handful of draw calls. Animated characters and the Prize Pot's coins stay separate.
+
+## Adding more
+
+The source packs are not in this repository (only the models the game uses). To add a model:
+
+```bash
+node tools/pack-models.mjs "<pack>/Assets/gltf" "<pack>/textures/<texture>.png" public/assets/models/<pack-name> model_a model_b
+node tools/pack-animations.mjs "<pack>/Animations/gltf/Rig_Medium/Rig_Medium_General.glb" public/assets/models/characters/anims.glb Idle_A Idle_B
+```
+
+`pack-models.mjs` turns each `.gltf` plus its `.bin` into one `.glb` (one request per model). `pack-animations.mjs` cuts a few clips out of an animation file, so the game only downloads what it plays (two idle loops are about 70 KB; the whole file is 800 KB). Then add the model's id to a `MODEL_NAMES` list and place it with `put(...)`.
+
+Many more packs are free to use the same way (KayKit Prototype, Block, Board Game, City Builder, Forest Nature, Fantasy Weapons...), and the Kenney asset packs are CC0 as well.

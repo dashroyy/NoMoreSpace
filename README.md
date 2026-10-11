@@ -52,13 +52,15 @@ public/
 test/                   engine tests (npm test)
 deploy/                 one-time server setup script + config
 .github/workflows/      ci.yml tests every push; deploy.yml publishes main
-docs/                   GAME_DESIGN.md (rules & balance) and HOSTING_GUIDE.md
+docs/                   GAME_DESIGN.md (rules & balance), SCRIPTS.md, ASSETS.md and HOSTING_GUIDE.md
+tools/                  pack-models.mjs and pack-animations.mjs: turn KayKit packs into game-ready .glb files
 ```
 
 ## Guides
 
 - 🎲 **[Game design](docs/GAME_DESIGN.md)**: every role, balance tables, phases, the Command Station, clues and the reveal
 - 📖 **[Hosting guide](docs/HOSTING_GUIDE.md)**: GitHub → Namecheap → droplet → Cloudflare, step by step
+- 🧱 **[3D models and credits](docs/ASSETS.md)**: the real 3D models some rooms and characters use (KayKit, CC0), how they are packed and loaded
 
 ## Voice chat behind strict networks (optional)
 

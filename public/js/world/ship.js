@@ -364,6 +364,11 @@ function buildProps(ship, room, cx, cz, parent = ship) {
   g.position.set(cx, 0, cz);
   parent.add(g);
   const metal = m(0x4a5272, { metalness: 0.7, roughness: 0.35 });
+  // the plain stand-ins that real models replace (see classic-rooms.js); a dynamic group is left out of the merge
+  const fb = new THREE.Group();
+  fb.userData.dynamic = true;
+  g.add(fb);
+  (ship.userData.fallbacks ||= {})[room.id] = fb;
   switch (room.id) {
     case 'observation': {
       add(g, new THREE.CylinderGeometry(0.25, 0.35, 2.2, 12), metal, -4, 1.4, -3, [0.6, 0, 0]);
@@ -395,8 +400,8 @@ function buildProps(ship, room, cx, cz, parent = ship) {
     }
     case 'galley': {
       for (const [x, z] of [[-3.5, 2], [1, 2]]) {
-        add(g, new THREE.BoxGeometry(3, 0.12, 1.4), m(0x6b4a2b), x, 0.8, z);
-        add(g, new THREE.CylinderGeometry(0.1, 0.1, 0.8, 6), metal, x, 0.4, z);
+        add(fb, new THREE.BoxGeometry(3, 0.12, 1.4), m(0x6b4a2b), x, 0.8, z);
+        add(fb, new THREE.CylinderGeometry(0.1, 0.1, 0.8, 6), metal, x, 0.4, z);
       }
       const pot = add(g, new THREE.CylinderGeometry(0.7, 0.6, 1.0, 20), m(0x9aa4b8, { metalness: 0.8 }), 5, 0.5, -3);
       add(pot, new THREE.CircleGeometry(0.66, 20), glowMat(0xffcf7a, 0.9), 0, 0.51, 0, [-Math.PI / 2, 0, 0]);
@@ -422,11 +427,11 @@ function buildProps(ship, room, cx, cz, parent = ship) {
     case 'hydroponics': {
       for (let i = 0; i < 4; i++) {
         const x = -5 + i * 3.2;
-        add(g, new THREE.BoxGeometry(2.4, 0.5, 1.2), m(0x4a3423), x, 0.25, -2.5);
+        add(fb, new THREE.BoxGeometry(2.4, 0.5, 1.2), m(0x4a3423), x, 0.25, -2.5);
         for (let k = 0; k < 3; k++) {
           const h = 0.6 + Math.random() * 0.8;
-          add(g, new THREE.ConeGeometry(0.18, h, 6), glowMat([0x9bff6b, 0x6bffd8, 0xd27bff][(i + k) % 3], 0.5), x - 0.7 + k * 0.7, 0.5 + h / 2, -2.5);
-          add(g, new THREE.SphereGeometry(0.12, 8, 6), glowMat(0xffe14f, 1.5), x - 0.7 + k * 0.7, 0.55 + h, -2.5);
+          add(fb, new THREE.ConeGeometry(0.18, h, 6), glowMat([0x9bff6b, 0x6bffd8, 0xd27bff][(i + k) % 3], 0.5), x - 0.7 + k * 0.7, 0.5 + h / 2, -2.5);
+          add(fb, new THREE.SphereGeometry(0.12, 8, 6), glowMat(0xffe14f, 1.5), x - 0.7 + k * 0.7, 0.55 + h, -2.5);
         }
       }
       break;
@@ -458,7 +463,7 @@ function buildProps(ship, room, cx, cz, parent = ship) {
     case 'cargo': {
       for (let i = 0; i < 9; i++) {
         const s = 0.8 + Math.random() * 0.8;
-        const crate = add(g, new THREE.BoxGeometry(s, s, s), m([0x8a6a3b, 0x5a6b3b, 0x6b3b3b][i % 3]), -7 + (i % 5) * 2.5 + Math.random(), s / 2, -2 + Math.floor(i / 5) * 4 + Math.random());
+        const crate = add(fb, new THREE.BoxGeometry(s, s, s), m([0x8a6a3b, 0x5a6b3b, 0x6b3b3b][i % 3]), -7 + (i % 5) * 2.5 + Math.random(), s / 2, -2 + Math.floor(i / 5) * 4 + Math.random());
         crate.rotation.y = Math.random();
       }
       break;
