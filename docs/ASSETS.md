@@ -34,3 +34,36 @@ node tools/pack-animations.mjs "<pack>/Animations/gltf/Rig_Medium/Rig_Medium_Gen
 `pack-models.mjs` turns each `.gltf` plus its `.bin` into one `.glb` (one request per model). `pack-animations.mjs` cuts a few clips out of an animation file, so the game only downloads what it plays (two idle loops are about 70 KB; the whole file is 800 KB). Then add the model's id to a `MODEL_NAMES` list and place it with `put(...)`.
 
 Many more packs are free to use the same way (KayKit Prototype, Block, Board Game, City Builder, Forest Nature, Fantasy Weapons...), and the Kenney asset packs are CC0 as well.
+
+# Icons, fonts and card art (the whole arcade)
+
+Neither game uses emoji for its pictures. Text and data still *write* emoji in places (a role's `icon`, a log line, a caption), and `public/js/icons.js` swaps each one for a small illustration as the page is drawn (and in canvas text such as name tags and the share card). Emoji that are not in the map are left alone, so players can still type their own in chat.
+
+All of it is made from CC0 packs by Kenney ([kenney.nl](https://kenney.nl)) and KayKit:
+
+| What | From | Where it lands |
+|---|---|---|
+| **Icon atlas**, 256 icons | 3D models (Kenney Cube Pets, Food Kit, Space Kit, Platformer Kit, Graveyard Kit, Furniture Kit, Weapon Pack, Blaster Kit..., KayKit Adventurers, Mystery Monthly, Skeletons, Halloween Bits, RPG Tools, Mixed Bag), Kenney Smilies, Game Icons, Board Game Icons, Generic Items, Medals, Alien UFO Pack, Planets, a few hand-made SVGs, and the game's own Parasite model | `public/assets/icons/atlas.webp` (one image, 16 icons wide) |
+| **Card portraits**, 92 | The same models, drawn bigger: Cube Pets for the animal crew, KayKit characters for Captains and Crew, monsters for Void Beasts, and the object icons for Gear, Protocols and Boosts | `public/assets/phase/art/<card id>.webp` |
+| **Fonts** | Kenney Future and Future Narrow, Kenney Mini Square, Rocket, Space, Pixel (CC0), plus Sixtyfour, Chakra Petch and Doto from Google Fonts | `public/assets/fonts/`, `public/css/fonts.css` and `typography.css` |
+| **Effects** | Kenney Explosion Pack and Particle Pack | `public/assets/phase/fx/` |
+
+The type system lives in `public/css/typography.css`: Sixtyfour for logos, **Kenney Future** for headings, buttons and labels, **Kenney Future Narrow** for card names, **Kenney Mini Square** for tiny capitals, and **Chakra Petch** for everything you read. It only swaps the font variables the stylesheets already use.
+
+## Making the pictures
+
+The source packs are not in this repository. `tools/art` has everything to rebuild the pictures from them:
+
+```bash
+node tools/art/serve.mjs                 # a local server for the tool pages (KENNEY_DIR and KAYKIT_DIR say where your packs are)
+
+# icons: edit tools/art/icon-table.mjs (a name, the emoji it replaces, and its source), then
+node tools/art/build-icons.mjs           # writes tools/art/icons.json, public/js/icon-map.js and public/css/icon-index.css
+# open http://localhost:3055/art/icons.html?cols=16&size=48&save=1   (draws and saves public/assets/icons/atlas.*)
+
+# card portraits: edit tools/art/portrait-table.mjs, then
+node tools/art/build-portraits.mjs
+# open http://localhost:3055/art/icons.html?spec=/art/portraits.json&sep=1&size=192&save=1
+```
+
+`tools/art/sheet.html` and `contact.html` are for browsing tile sheets and folders of images, and `fonts.html` shows fonts side by side. The model list the tool uses (`tools/art/models.json`) is generated from your packs and is not committed. If you change the icon table you must redraw the atlas: a test fails when `icon-map.js` and `atlas.json` disagree.

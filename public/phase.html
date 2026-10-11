@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+    <title>Phase to Space</title>
+    <meta name="description" content="A space card battler to play online with friends: recruit a crew, slay Void Beasts and Signal Jam your rivals." />
+    <meta name="theme-color" content="#05060f" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Sixtyfour&family=Doto:wght@700;900&family=Chakra+Petch:wght@400;500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="/css/icon-index.css" />
+    <link rel="stylesheet" href="/css/icons.css" />
+    <link rel="stylesheet" href="/css/fonts.css" />
+    <link rel="stylesheet" href="/css/phase.css" />
+    <link rel="stylesheet" href="/css/phase-cards.css" />
+    <link rel="stylesheet" href="/css/typography.css" />
+  </head>
+  <body class="on-home">
+    <canvas id="bg" aria-hidden="true"></canvas>
+    <div id="app">
+      <section id="screen-home" class="screen"></section>
+      <section id="screen-lobby" class="screen" hidden></section>
+      <section id="screen-game" class="screen" hidden></section>
+    </div>
+    <div id="layer-roll" class="layer-roll" aria-live="polite"></div>
+    <div id="layer-prompt" class="layer-prompt"></div>
+    <div id="layer-fx" class="layer-fx" aria-hidden="true"></div>
+    <div id="layer-modal" class="layer-modal" hidden></div>
+    <div id="toasts" class="toasts" aria-live="polite"></div>
+    <div id="problem" class="problem" role="alert"></div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script type="module" src="/js/phase/main.js"></script>
+  </body>
+</html>

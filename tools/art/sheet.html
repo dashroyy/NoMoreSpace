@@ -1,0 +1,44 @@
+<!doctype html>
+<meta charset="utf-8" />
+<title>Tilesheet viewer</title>
+<style>
+  body { margin: 0; background: #12141f; color: #9fe8ff; font: 10px monospace; }
+  #bar { padding: 4px 8px; background: #000; position: sticky; top: 0; z-index: 2; }
+  canvas { display: block; image-rendering: pixelated; }
+</style>
+<div id="bar"></div>
+<canvas id="c"></canvas>
+<script>
+  // /art/sheet.html?src=/kenney/...png&cols=49&rows=22&tile=16&gap=0&c0=0&r0=0&nc=16&nr=14&zoom=3
+  const q = new URLSearchParams(location.search);
+  const num = (k, d) => (q.has(k) ? Number(q.get(k)) : d);
+  const tile = num('tile', 16), gap = num('gap', 0), cols = num('cols', 49), rows = num('rows', 22);
+  const c0 = num('c0', 0), r0 = num('r0', 0), nc = num('nc', 16), nr = num('nr', 14), zoom = num('zoom', 3);
+  const tint = q.get('tint') || '#ffffff';
+  const img = new Image();
+  img.onload = () => {
+    const cell = tile * zoom + 2;
+    const cv = document.getElementById('c');
+    cv.width = nc * cell;
+    cv.height = nr * (cell + 10);
+    const ctx = cv.getContext('2d');
+    ctx.imageSmoothingEnabled = false;
+    ctx.fillStyle = '#1b1f33';
+    for (let r = 0; r < nr; r++) {
+      for (let c = 0; c < nc; c++) {
+        const col = c0 + c, row = r0 + r;
+        if (col >= cols || row >= rows) continue;
+        const x = c * cell, y = r * (cell + 10);
+        ctx.fillStyle = (r + c) % 2 ? '#1b1f33' : '#222741';
+        ctx.fillRect(x, y + 10, cell, cell);
+        ctx.drawImage(img, col * (tile + gap), row * (tile + gap), tile, tile, x + 1, y + 11, tile * zoom, tile * zoom);
+        ctx.fillStyle = '#ffd24d';
+        ctx.font = '9px monospace';
+        ctx.fillText(String(row * cols + col), x + 1, y + 8);
+      }
+    }
+    document.getElementById('bar').textContent = `${q.get('src')}  cols ${c0}-${c0 + nc - 1}  rows ${r0}-${r0 + nr - 1}  (index = row*${cols}+col)`;
+    document.title = 'ready';
+  };
+  img.src = q.get('src');
+</script>

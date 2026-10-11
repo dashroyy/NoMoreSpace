@@ -111,7 +111,7 @@ const ROLES = {
     flavor: 'Retrieves what is left after the airlock. Paperwork in triplicate.',
   },
   medic: {
-    name: 'Medic', type: 'crew', tb: 'Monk', icon: '💉', minPlayers: 3, tags: ['protect'],
+    name: 'Medic', type: 'crew', tb: 'Monk', icon: '🩺', minPlayers: 3, tags: ['protect'],
     ability: 'Each night*, choose a player (not yourself): they are safe from the Parasite tonight.',
     system: { id: 'medscan', name: 'Med-scan', icon: '🩺', target: 'player', phases: ['roam', 'meeting'], text: 'Once per game, by day: scan a player to learn if their systems are glitched (hacked) right now.' },
     night: { first: false, other: true, choose: 1, notSelf: true, order: 40 },

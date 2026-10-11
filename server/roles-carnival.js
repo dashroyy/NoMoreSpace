@@ -111,7 +111,7 @@ const CARNIVAL_ROLES = {
 
   // ---------------- SABOTEURS ----------------
   knifethrower: {
-    name: 'Knife Thrower', type: 'saboteur', tb: 'Assassin', icon: '🗡️', minPlayers: 5, tags: ['action'],
+    name: 'Knife Thrower', type: 'saboteur', tb: 'Assassin', icon: '🔪', minPlayers: 5, tags: ['action'],
     ability: 'Once per game, at night*, choose a player: they die, even if something should have saved them.',
     night: { first: false, other: true, choose: 1, once: true, order: 46 },
     tips: [

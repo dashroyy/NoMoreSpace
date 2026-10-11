@@ -32,7 +32,7 @@ const OUTBREAK_ROLES = {
     flavor: 'Carries a very large syringe and a very small sense of humour.',
   },
   tracer: {
-    name: 'Contact Tracer', type: 'crew', tb: 'Fortune Teller', icon: '🧭', minPlayers: 5, tags: ['info'],
+    name: 'Contact Tracer', type: 'crew', tb: 'Fortune Teller', icon: '🔎', minPlayers: 5, tags: ['info'],
     ability: 'Each night, choose 2 players (not yourself): you learn how many of them are infected.',
     night: { first: true, other: true, choose: 2, notSelf: true, order: 61 },
     tips: [
@@ -117,7 +117,7 @@ const OUTBREAK_ROLES = {
     flavor: 'Brought a second sample, "just in case". It was always going to be that kind of day.',
   },
   quack: {
-    name: 'Quack Doctor', type: 'saboteur', tb: 'Pit-Hag', icon: '🎭', minPlayers: 6, tags: ['action'],
+    name: 'Quack Doctor', type: 'saboteur', tb: 'Pit-Hag', icon: '💊', minPlayers: 6, tags: ['action'],
     ability: 'Each night, choose a player: they are told they feel feverish, but they are NOT infected.',
     night: { first: true, other: true, choose: 1, order: 15 },
     tips: [

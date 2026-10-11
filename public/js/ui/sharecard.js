@@ -4,11 +4,12 @@ import { el, problem, toast } from '../util.js';
 import { store, themeInfo } from '../store.js';
 import { openModal } from './rolecard.js';
 import { sfx } from '../audio.js';
+import { fillTextIcons } from '../icons.js';
 
 const W = 1080;
 const H = 1350;
-const TITLE = "Silkscreen, 'VT323', monospace";
-const BODY = "VT323, ui-monospace, monospace";
+const TITLE = "'Kenney Future', Silkscreen, monospace";
+const BODY = "'Chakra Petch', VT323, ui-monospace, monospace";
 
 function wrap(g, text, x, y, maxWidth, lineHeight, maxLines = 3) {
   const words = String(text).split(' ');
@@ -18,16 +19,16 @@ function wrap(g, text, x, y, maxWidth, lineHeight, maxLines = 3) {
     const test = line ? `${line} ${words[i]}` : words[i];
     if (g.measureText(test).width > maxWidth && line) {
       if (lines === maxLines - 1) {
-        g.fillText(`${line}…`, x, y);
+        fillTextIcons(g, `${line}…`, x, y);
         return y + lineHeight;
       }
-      g.fillText(line, x, y);
+      fillTextIcons(g, line, x, y);
       y += lineHeight;
       lines += 1;
       line = words[i];
     } else line = test;
   }
-  if (line) g.fillText(line, x, y);
+  if (line) fillTextIcons(g, line, x, y);
   return y + lineHeight;
 }
 
@@ -60,16 +61,16 @@ export function drawShareCard(state) {
   g.textAlign = 'center';
   g.fillStyle = '#dff9ff';
   g.font = `56px ${TITLE}`;
-  g.fillText(themeInfo(state.script).shareTitle, W / 2, 96);
+  fillTextIcons(g, themeInfo(state.script).shareTitle, W / 2, 96);
   g.fillStyle = '#8a92b8';
   g.font = `40px ${BODY}`;
-  g.fillText(`${state.shipName || 'The ship'} · ${state.code}${state.season?.games > 1 ? ` · round ${state.season.games}` : ''}`, W / 2, 148);
+  fillTextIcons(g, `${state.shipName || 'The ship'} · ${state.code}${state.season?.games > 1 ? ` · round ${state.season.games}` : ''}`, W / 2, 148);
 
   g.fillStyle = accent;
   g.font = `64px ${TITLE}`;
   g.shadowColor = accent;
   g.shadowBlur = 30;
-  g.fillText(crewWon ? themeInfo(state.script).shareCrew : themeInfo(state.script).shareEvil, W / 2, 250);
+  fillTextIcons(g, crewWon ? themeInfo(state.script).shareCrew : themeInfo(state.script).shareEvil, W / 2, 250);
   g.shadowBlur = 0;
   g.fillStyle = '#c9d2f2';
   g.font = `38px ${BODY}`;
@@ -95,10 +96,10 @@ export function drawShareCard(state) {
     g.fill();
     g.font = `34px ${BODY}`;
     g.fillStyle = p.alive ? '#ffffff' : '#8a92b8';
-    g.fillText(`${r?.icon || '?'} ${p.name}${p.alive ? '' : ' 💀'}`, x + 50, y + 30);
+    fillTextIcons(g, `${r?.icon || '?'} ${p.name}${p.alive ? '' : ' 💀'}`, x + 50, y + 30);
     g.font = `26px ${BODY}`;
     g.fillStyle = evil ? '#ff9fb3' : '#9fe9ff';
-    g.fillText(r?.name || '', x + 50, y + (cellH - 10) - 10);
+    fillTextIcons(g, r?.name || '', x + 50, y + (cellH - 10) - 10);
   });
   let y = top + Math.ceil(players.length / cols) * cellH + 30;
 
@@ -109,12 +110,12 @@ export function drawShareCard(state) {
     g.textAlign = 'center';
     g.fillStyle = '#ffd27a';
     g.font = `34px ${TITLE}`;
-    g.fillText('AWARDS', W / 2, y);
+    fillTextIcons(g, 'AWARDS', W / 2, y);
     y += 50;
     g.font = `38px ${BODY}`;
     for (const a of awards) {
       g.fillStyle = '#ffe9b8';
-      g.fillText(`${a.icon} ${a.title}: ${name(a.id)}`, W / 2, y);
+      fillTextIcons(g, `${a.icon} ${a.title}: ${name(a.id)}`, W / 2, y);
       y += 46;
     }
     y += 10;
@@ -126,14 +127,14 @@ export function drawShareCard(state) {
     g.textAlign = 'center';
     g.fillStyle = '#b9a4ff';
     g.font = `34px ${TITLE}`;
-    g.fillText('FAMOUS LAST WORDS', W / 2, y);
+    fillTextIcons(g, 'FAMOUS LAST WORDS', W / 2, y);
     y += 54;
     g.fillStyle = '#ffffff';
     g.font = `44px ${BODY}`;
     y = wrap(g, `“${lw.text}”`, W / 2, y, W - 180, 46, 3);
     g.fillStyle = '#8a92b8';
     g.font = `34px ${BODY}`;
-    g.fillText(`— ${name(lw.id)}${lw.laughs ? `  (🤣 ×${lw.laughs})` : ''}`, W / 2, y + 4);
+    fillTextIcons(g, `— ${name(lw.id)}${lw.laughs ? `  (🤣 ×${lw.laughs})` : ''}`, W / 2, y + 4);
   }
 
   // the evening's leaders, if there is room left
@@ -143,16 +144,16 @@ export function drawShareCard(state) {
     g.textAlign = 'center';
     g.fillStyle = '#ffd27a';
     g.font = `30px ${TITLE}`;
-    g.fillText(`TONIGHT'S SEASON · ${state.season.games} GAME${state.season.games === 1 ? '' : 'S'}`, W / 2, y);
+    fillTextIcons(g, `TONIGHT'S SEASON · ${state.season.games} GAME${state.season.games === 1 ? '' : 'S'}`, W / 2, y);
     g.font = `36px ${BODY}`;
     g.fillStyle = '#ffe9b8';
-    g.fillText(leaders.map((r, i) => `${['🥇', '🥈', '🥉'][i]} ${r.name} ${r.points}`).join('    '), W / 2, y + 48);
+    fillTextIcons(g, leaders.map((r, i) => `${['🥇', '🥈', '🥉'][i]} ${r.name} ${r.points}`).join('    '), W / 2, y + 48);
   }
 
   g.textAlign = 'center';
   g.fillStyle = '#5c6488';
   g.font = `30px ${BODY}`;
-  g.fillText(location.host || 'No More Space', W / 2, H - 40);
+  fillTextIcons(g, location.host || 'No More Space', W / 2, H - 40);
   return c;
 }
 

@@ -1,6 +1,7 @@
 // Builds the ship: floors, walls with doorways, windows, room props, task
 // consoles, the bridge table and the easels where night drawings appear.
 import * as THREE from 'three';
+import { fillTextIcons } from '../icons.js';
 import { ROOMS, CORRIDORS, TASK_STATIONS, DRAWING_SLOTS, TABLE_RADIUS, seatPosition, wallSegments, chamferOf, roomOutline, cornerWalls } from './layout.js';
 import { buildExterior } from './station.js';
 import { buildDecor } from './decor.js';
@@ -84,7 +85,7 @@ function floorLabel(text, color) {
   g.textBaseline = 'middle';
   g.fillStyle = color;
   g.globalAlpha = 0.5;
-  g.fillText(text.toUpperCase(), 512, 64);
+  fillTextIcons(g, text.toUpperCase(), 512, 64);
   const tex = new THREE.CanvasTexture(c);
   tex.colorSpace = THREE.SRGBColorSpace;
   const mesh = new THREE.Mesh(new THREE.PlaneGeometry(8, 1), new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthWrite: false }));

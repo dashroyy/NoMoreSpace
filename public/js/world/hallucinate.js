@@ -3,6 +3,7 @@
 // trustworthy names), impossible things drifting under the ship, and
 // whispers from nobody. Everyone else sees an ordinary day.
 import * as THREE from 'three';
+import { drawIcon, iconName } from '../icons.js';
 import { Avatar } from './avatar.js';
 import { ROOMS, walkable } from './layout.js';
 
@@ -59,10 +60,8 @@ function emojiSprite(emoji, size) {
   const canvas = document.createElement('canvas');
   canvas.width = canvas.height = 256;
   const ctx = canvas.getContext('2d');
-  ctx.font = '200px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif';
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.fillText(emoji, 128, 140);
+  const name = iconName(emoji);
+  if (name) drawIcon(ctx, name, 8, 14, 240);
   const tex = new THREE.CanvasTexture(canvas);
   tex.colorSpace = THREE.SRGBColorSpace;
   const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false, fog: false }));

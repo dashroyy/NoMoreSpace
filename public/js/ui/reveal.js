@@ -488,7 +488,7 @@ export class Reveal {
       seasonTable(s.season),
       el('div', { className: 'row' },
         s.isReplay
-          ? el('button', { className: 'primary', onclick: () => (location.href = '/') }, '🚀 Play No More Space')
+          ? el('button', { className: 'primary', onclick: () => (location.href = '/nms') }, '🚀 Play No More Space')
           : el('button', { className: 'primary', onclick: () => send('rematch').catch(() => {}) }, '🔁 Rematch (same crew)'),
         el('button', { onclick: () => openShareCard(s) }, '📸 Share card'),
         s.replayId ? el('button', { onclick: () => copyReplayLink(s.replayId) }, '🔗 Copy replay link') : null,

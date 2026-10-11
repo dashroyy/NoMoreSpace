@@ -1,6 +1,7 @@
 // Astronaut avatars, built from simple shapes. Everyone wears the same suit
 // shape (so nobody can tell roles apart); colours, hats and pets are cosmetic.
 import * as THREE from 'three';
+import { fillTextIcons, strokeTextIcons } from '../icons.js';
 
 // Shared shapes for the spacesuit (a chunky astronaut with a glass bubble helmet).
 const geo = {
@@ -73,7 +74,7 @@ export function makeTextSprite(text, { color = '#ffffff', size = 34, bg = null, 
   padding *= k;
   size = Math.round(size * k);
   maxWidth *= k;
-  ctx.font = `${size}px VT323, ui-monospace, monospace`;
+  ctx.font = `600 ${size}px 'Chakra Petch', VT323, ui-monospace, monospace`;
   // a little air between letters: VT323 is narrow and gets hard to read when small
   const spacing = `${Math.round(size * 0.05)}px`;
   if ('letterSpacing' in ctx) ctx.letterSpacing = spacing;
@@ -115,11 +116,11 @@ export function makeTextSprite(text, { color = '#ffffff', size = 34, bg = null, 
     ctx.strokeStyle = 'rgba(2, 4, 12, 0.92)';
     ctx.lineWidth = Math.max(3, size * 0.14);
     ctx.lineJoin = 'round';
-    lines.forEach((l, i) => ctx.strokeText(l, width / 2, padding + i * size * 1.25));
+    lines.forEach((l, i) => strokeTextIcons(ctx, l, width / 2, padding + i * size * 1.25));
     ctx.shadowColor = 'rgba(0,0,0,0.9)';
     ctx.shadowBlur = 6;
   }
-  lines.forEach((l, i) => ctx.fillText(l, width / 2, padding + i * size * 1.25));
+  lines.forEach((l, i) => fillTextIcons(ctx, l, width / 2, padding + i * size * 1.25));
   const tex = new THREE.CanvasTexture(canvas);
   tex.colorSpace = THREE.SRGBColorSpace;
   const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, depthWrite: false, transparent: true }));

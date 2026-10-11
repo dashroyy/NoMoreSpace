@@ -18,6 +18,7 @@ const records = require('./records');
 const persist = require('./persist');
 const { runBots, ROOM_RECTS } = require('./bots');
 const crypto = require('crypto');
+const phase = require('./phase');
 
 const PORT = process.env.PORT != null ? Number(process.env.PORT) : 3000;
 const ROOT = path.join(__dirname, '..');
@@ -147,6 +148,7 @@ const server = http.createServer((req, res) => {
     }
     const seconds = Math.max(5, Math.min(60, Number(url.searchParams.get('seconds')) || 20));
     io.emit('server-restart', { in: seconds });
+    io.of('/phase').emit('server-restart', { in: seconds });
     res.writeHead(200).end('warned');
     return;
   }
@@ -160,10 +162,31 @@ const server = http.createServer((req, res) => {
     const proto = String(req.headers['x-forwarded-proto'] || 'http').split(',')[0].trim();
     const host = String(req.headers.host || 'localhost').replace(/[^\w.:\-\[\]]/g, '');
     const qr = qrcode(0, 'M');
-    qr.addData(`${proto}://${host}/?join=${code}`);
+    qr.addData(`${proto}://${host}${url.searchParams.get('game') === 'phase' ? '/phase' : '/'}?join=${code}`);
     qr.make();
     res.writeHead(200, { 'Content-Type': 'image/svg+xml', 'Cache-Control': 'no-cache' });
     res.end(qr.createSvgTag({ cellSize: 6, margin: 3, scalable: true }));
+    return;
+  }
+  // The picker page: how busy each game is, and which game a join code belongs to.
+  if (url.pathname === '/hub-stats') {
+    const live = [...rooms.values()];
+    res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' });
+    res.end(JSON.stringify({
+      nms: { ships: live.length, people: live.reduce((n, r) => n + r.game.players.filter((p) => p.connected && !p.isBot).length, 0) },
+      phase: phaseGame.stats(),
+    }));
+    return;
+  }
+  if (url.pathname === '/api/code') {
+    const code = String(url.searchParams.get('code') || '').toUpperCase().trim();
+    res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' });
+    res.end(JSON.stringify({ game: rooms.has(code) ? 'nms' : phase.rooms.has(code) ? 'phase' : null }));
+    return;
+  }
+  if (url.pathname === '/phase-data.json') {
+    res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' });
+    res.end(phase.CLIENT_DATA_JSON);
     return;
   }
   if (url.pathname === '/game-data.json') {
@@ -183,7 +206,14 @@ const server = http.createServer((req, res) => {
     sendFile(res, THREE_DIR, url.pathname.slice('/vendor/three/'.length), 'public, max-age=604800');
     return;
   }
-  sendFile(res, PUBLIC_DIR, url.pathname === '/' ? 'index.html' : url.pathname, 'no-cache');
+  // The front page is the game picker. Links from before it existed (a friend's invite, a replay) were for
+  // No More Space, so they still go there.
+  if (url.pathname === '/' && (url.searchParams.has('join') || url.searchParams.has('replay'))) {
+    res.writeHead(302, { Location: `/nms${url.search}` }).end();
+    return;
+  }
+  const PAGES = { '/': 'index.html', '/nms': 'nms.html', '/phase': 'phase.html' };
+  sendFile(res, PUBLIC_DIR, PAGES[url.pathname] || url.pathname, 'no-cache');
 });
 
 // ---------------------------------------------------------------------------
@@ -191,6 +221,7 @@ const server = http.createServer((req, res) => {
 // ---------------------------------------------------------------------------
 
 const io = new Server(server, { maxHttpBufferSize: 300_000 });
+const phaseGame = phase.attach(io, { isCodeTaken: (code) => rooms.has(code) }); // Phase to Space, on its own namespace
 const rooms = new Map(); // code -> { game, sockets: Map(socketId -> personId), positions, captainLeftAt, emptySince }
 
 function newRoomCode() {
@@ -198,7 +229,7 @@ function newRoomCode() {
   let code;
   do {
     code = Array.from({ length: 4 }, () => letters[Math.floor(Math.random() * letters.length)]).join('');
-  } while (rooms.has(code));
+  } while (rooms.has(code) || phase.rooms.has(code));
   return code;
 }
 
@@ -914,6 +945,7 @@ function restoreGames() {
 function shutDown(signal) {
   console.log(`${signal}: saving ${rooms.size} game(s) before stopping.`);
   io.emit('server-restart', { in: 0 });
+  io.of('/phase').emit('server-restart', { in: 0 });
   persist.save(rooms, { sync: true });
   setTimeout(() => process.exit(0), 300).unref();
 }

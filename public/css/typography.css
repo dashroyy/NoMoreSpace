@@ -1,0 +1,49 @@
+/* The arcade's type: sci-fi pixel capitals for headings and buttons, a crisp techno face for reading.
+   Load this after the other stylesheets: it only swaps the font variables they already use.
+
+     Sixtyfour           the logos (an 8-bit home computer)
+     Kenney Future       headings, buttons, labels, numbers (CC0, public/assets/fonts)
+     Kenney Future Narrow  card names and tags
+     Kenney Mini Square  tiny capitals: card effect text, badges
+     Chakra Petch        everything you read (rules, chat, descriptions): squared like a HUD, but it has lowercase
+     Doto                dot-matrix timers and codes
+*/
+:root {
+  --font-display: 'Sixtyfour', 'Kenney Future', ui-monospace, monospace;
+  --font-title: 'Kenney Future', 'Silkscreen', ui-monospace, monospace;
+  --font-card: 'Kenney Future Narrow', 'Kenney Future', ui-monospace, monospace;
+  --font-small: 'Kenney Mini Square', 'Kenney Future Narrow', ui-monospace, monospace;
+  --font-body: 'Chakra Petch', 'Rajdhani', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'Share Tech Mono', ui-monospace, 'Cascadia Mono', monospace;
+}
+
+/* Reading text: Chakra Petch sits a little wider than the old terminal font, so give it normal spacing */
+body {
+  font-family: var(--font-body);
+  letter-spacing: 0.01em;
+  word-spacing: 0;
+  font-size-adjust: none;
+  -webkit-font-smoothing: antialiased;
+}
+p, li, .hint, label, .muted, .chat-log, input, textarea, select, .toast, .problem { letter-spacing: 0.01em; word-spacing: 0; }
+.hint, label, .muted { font-size: 15px; }
+input, textarea, select { font-family: var(--font-body); font-size: 16px; }
+
+/* Headings, buttons and labels: Kenney Future is fairly wide and bold already, so keep tracking modest */
+h1, h2, h3, button, .eyebrow, .action, .chip, .badge, .phase-pill, .tabs button, .ring-title, .ship-name {
+  font-family: var(--font-title);
+  letter-spacing: 0.05em;
+}
+button { font-size: 12.5px; }
+button.small { font-size: 11.5px; }
+button.big { font-size: 14px; }
+h2 { font-size: 17px; }
+h3 { font-size: 13px; }
+.eyebrow { font-size: 12px; letter-spacing: 0.12em; }
+.badge, .chip { font-size: 11.5px; }
+kbd { font-family: var(--font-small); }
+
+/* the way back to the game picker, on No More Space's title screen */
+.hub-link { position: fixed; top: 14px; left: 16px; z-index: 12; color: var(--phosphor, #6cf0ff); text-decoration: none; font: 12px var(--font-title); letter-spacing: 0.08em; text-transform: uppercase; text-shadow: 0 0 8px rgba(108, 240, 255, 0.5); }
+.hub-link:hover { color: #fff; }
+body:not(.screen-home) .hub-link { display: none; }

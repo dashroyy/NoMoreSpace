@@ -1,0 +1,31 @@
+<!doctype html>
+<meta charset="utf-8" />
+<title>Font specimen</title>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Share+Tech+Mono&family=Orbitron:wght@500;700;900&family=Rajdhani:wght@500;600;700&family=Oxanium:wght@400;600;700&family=Exo+2:wght@500;700&family=Silkscreen&family=VT323&family=Sixtyfour&family=Doto:wght@700;900&family=Press+Start+2P&family=Tomorrow:wght@500;600&family=Audiowide&display=swap" rel="stylesheet" />
+<style>
+  @font-face { font-family: 'Kenney Future'; src: url('/repo/public/assets/fonts/kenney-future.ttf'); }
+  @font-face { font-family: 'Kenney Future Narrow'; src: url('/repo/public/assets/fonts/kenney-future-narrow.ttf'); }
+  @font-face { font-family: 'Kenney Pixel'; src: url('/repo/public/assets/fonts/kenney-pixel.ttf'); }
+  @font-face { font-family: 'Kenney Mini Square'; src: url('/repo/public/assets/fonts/kenney-mini-square.ttf'); }
+  @font-face { font-family: 'Kenney Rocket'; src: url('/repo/public/assets/fonts/kenney-rocket.ttf'); }
+  @font-face { font-family: 'Kenney Space'; src: url('/repo/public/assets/fonts/kenney-space.ttf'); }
+  body { background: #070a18; color: #dfe6ff; margin: 0; padding: 8px 12px; }
+  .row { display: grid; grid-template-columns: 150px 1fr 1fr; gap: 10px; align-items: baseline; border-bottom: 1px solid #1c2442; padding: 5px 0; }
+  .n { font: 11px monospace; color: #6cf0ff; }
+  .h { font-size: 20px; color: #ff6b8a; letter-spacing: .04em; text-transform: uppercase; }
+  .b { font-size: 16px; line-height: 1.25; }
+  .card { font-size: 13px; line-height: 1.2; color: #c8d0f0; }
+</style>
+<div id="rows"></div>
+<script>
+  const fonts = ['VT323', 'Silkscreen', 'Kenney Future', 'Kenney Future Narrow', 'Kenney Pixel', 'Kenney Mini Square', 'Kenney Rocket', 'Kenney Space', 'Chakra Petch', 'Share Tech Mono', 'Orbitron', 'Rajdhani', 'Oxanium', 'Exo 2', 'Tomorrow', 'Audiowide', 'Sixtyfour', 'Doto'];
+  const rows = document.getElementById('rows');
+  for (const f of fonts) {
+    const d = document.createElement('div');
+    d.className = 'row';
+    d.innerHTML = `<div class="n">${f}</div>
+      <div><div class="h" style="font-family:'${f}'">Sgt. Slab · Phase to Space 9+</div><div class="b" style="font-family:'${f}'">Your ship is falling into a black hole. Do tasks, lie, vote and find the Parasite.</div></div>
+      <div class="card" style="font-family:'${f}'">DESTROY a Crew card. Roll 9 or more to slay it, DRAW 2 cards, then DISCARD 1. Energy 3/3 · Turn 12 · 0123456789</div>`;
+    rows.append(d);
+  }
+</script>

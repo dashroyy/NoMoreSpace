@@ -1,0 +1,159 @@
+import { initIcons } from './icons.js';
+
+initIcons();
+
+// The game picker: a drifting starfield, live player counts, a way back into a game you were in,
+// and "join with a code" that works out which game the code is for.
+
+// ---------------------------------------------------------------------------
+// Stars
+// ---------------------------------------------------------------------------
+const canvas = document.getElementById('stars');
+const ctx = canvas.getContext('2d');
+let W = 0;
+let H = 0;
+let stars = [];
+let comets = [];
+const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+function resize() {
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  W = canvas.width = Math.floor(innerWidth * dpr);
+  H = canvas.height = Math.floor(innerHeight * dpr);
+  const n = Math.floor((innerWidth * innerHeight) / 5200);
+  stars = Array.from({ length: n }, () => ({ x: Math.random() * W, y: Math.random() * H, z: 0.2 + Math.random() * 0.8, t: Math.random() * 6.28, tint: Math.random() }));
+}
+resize();
+addEventListener('resize', resize);
+
+let last = performance.now();
+function frame(now) {
+  const dt = Math.min(0.05, (now - last) / 1000);
+  last = now;
+  ctx.clearRect(0, 0, W, H);
+  for (const s of stars) {
+    s.t += dt * (0.6 + s.z);
+    s.y += dt * 6 * s.z * (H / 800);
+    if (s.y > H) { s.y = 0; s.x = Math.random() * W; }
+    const a = 0.35 + 0.65 * Math.abs(Math.sin(s.t));
+    ctx.globalAlpha = a * s.z;
+    ctx.fillStyle = s.tint > 0.85 ? '#ffb3d1' : s.tint > 0.7 ? '#9fe8ff' : '#ffffff';
+    const r = s.z * 1.7 * (W / 1400 + 0.6);
+    ctx.fillRect(s.x, s.y, r, r);
+  }
+  // now and then a comet streaks by
+  if (!reduce && Math.random() < dt * 0.25) comets.push({ x: Math.random() * W, y: -10, vx: (Math.random() - 0.3) * 260, vy: 380 + Math.random() * 240, life: 1 });
+  comets = comets.filter((c) => c.life > 0);
+  for (const c of comets) {
+    c.x += c.vx * dt;
+    c.y += c.vy * dt;
+    c.life -= dt * 0.55;
+    const g = ctx.createLinearGradient(c.x, c.y, c.x - c.vx * 0.18, c.y - c.vy * 0.18);
+    g.addColorStop(0, `rgba(180,240,255,${Math.max(0, c.life)})`);
+    g.addColorStop(1, 'rgba(180,240,255,0)');
+    ctx.globalAlpha = 1;
+    ctx.strokeStyle = g;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(c.x, c.y);
+    ctx.lineTo(c.x - c.vx * 0.18, c.y - c.vy * 0.18);
+    ctx.stroke();
+  }
+  if (!reduce) requestAnimationFrame(frame);
+}
+if (reduce) frame(performance.now());
+else requestAnimationFrame(frame);
+
+// ---------------------------------------------------------------------------
+// Cards tilt towards the pointer
+// ---------------------------------------------------------------------------
+for (const card of document.querySelectorAll('a.game')) {
+  card.addEventListener('pointermove', (e) => {
+    if (e.pointerType !== 'mouse') return;
+    const r = card.getBoundingClientRect();
+    const x = (e.clientX - r.left) / r.width - 0.5;
+    const y = (e.clientY - r.top) / r.height - 0.5;
+    card.style.transform = `rotateY(${x * 7}deg) rotateX(${-y * 6}deg) translateZ(8px)`;
+  });
+  card.addEventListener('pointerleave', () => (card.style.transform = ''));
+}
+
+// ---------------------------------------------------------------------------
+// Live counts
+// ---------------------------------------------------------------------------
+async function counts() {
+  try {
+    const stats = await fetch('/hub-stats', { cache: 'no-store' }).then((r) => r.json());
+    const set = (game, n, noun, plural) => {
+      const node = document.querySelector(`[data-live="${game}"]`);
+      if (!node) return;
+      node.classList.toggle('on', n.people > 0);
+      node.textContent = n.people > 0 ? `${n.people} playing now` : n[noun] > 0 ? `${n[noun]} ${n[noun] === 1 ? noun.replace(/s$/, '') : plural} open` : 'be the first aboard';
+    };
+    set('nms', stats.nms, 'ships', 'ships');
+    set('phase', stats.phase, 'tables', 'tables');
+  } catch {}
+}
+counts();
+setInterval(counts, 15000);
+
+// ---------------------------------------------------------------------------
+// Back into a game you left
+// ---------------------------------------------------------------------------
+async function resume() {
+  const box = document.getElementById('resume');
+  const seats = [
+    { key: 'nms-seat', game: 'nms', href: (c) => `/nms`, label: (c) => `🚀 Back to your ship ${c} (No More Space)` },
+    { key: 'pts-seat', game: 'phase', href: (c) => `/phase`, label: (c) => `🃏 Back to table ${c} (Phase to Space)` },
+  ];
+  for (const s of seats) {
+    let seat = null;
+    try {
+      seat = JSON.parse(localStorage.getItem(s.key) || 'null');
+    } catch {}
+    if (!seat?.code) continue;
+    try {
+      const r = await fetch(`/api/code?code=${encodeURIComponent(seat.code)}`, { cache: 'no-store' }).then((x) => x.json());
+      if (r.game !== s.game) continue;
+    } catch {
+      continue;
+    }
+    const a = document.createElement('a');
+    a.href = s.href(seat.code);
+    a.textContent = s.label(seat.code);
+    box.append(a);
+    box.hidden = false;
+  }
+}
+resume();
+
+// ---------------------------------------------------------------------------
+// Join with a code
+// ---------------------------------------------------------------------------
+const input = document.getElementById('hub-code');
+const msg = document.getElementById('hub-msg');
+async function join() {
+  const code = input.value.toUpperCase().trim();
+  msg.className = 'msg';
+  if (code.length !== 4) {
+    msg.textContent = 'Codes are 4 letters.';
+    return;
+  }
+  msg.textContent = 'Looking…';
+  try {
+    const r = await fetch(`/api/code?code=${encodeURIComponent(code)}`, { cache: 'no-store' }).then((x) => x.json());
+    if (!r.game) {
+      msg.textContent = 'No game with that code right now. Check the letters?';
+      return;
+    }
+    msg.className = 'msg ok';
+    msg.textContent = r.game === 'phase' ? 'Boarding Phase to Space…' : 'Boarding No More Space…';
+    location.href = `${r.game === 'phase' ? '/phase' : '/nms'}?join=${code}`;
+  } catch {
+    msg.textContent = 'Could not reach the server. Try again.';
+  }
+}
+document.getElementById('hub-join').addEventListener('click', join);
+input.addEventListener('keydown', (e) => e.key === 'Enter' && join());
+const params = new URLSearchParams(location.search);
+if (params.get('code')) input.value = params.get('code').toUpperCase().slice(0, 4);

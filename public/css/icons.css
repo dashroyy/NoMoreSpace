@@ -1,0 +1,26 @@
+/* Icons: little pictures from one sprite atlas, drawn instead of emoji (see public/js/icons.js).
+   An icon is as tall as the text beside it; set --is on it (or a parent) to change that. */
+.ico {
+  --is: 1.45em;
+  display: inline-block;
+  flex: none;
+  width: var(--is);
+  height: var(--is);
+  margin: 0 0.05em;
+  vertical-align: -0.4em;
+  background-image: url('/assets/icons/atlas.webp');
+  background-repeat: no-repeat;
+  background-size: calc(var(--icon-cols, 16) * 100%) calc(var(--icon-rows, 16) * 100%);
+  background-position: calc(var(--ix, 0) * 100% / (var(--icon-cols, 16) - 1)) calc(var(--iy, 0) * 100% / (var(--icon-rows, 16) - 1));
+  filter: drop-shadow(0 1px 0 rgba(0, 0, 0, 0.35));
+  user-select: none;
+  -webkit-user-drag: none;
+}
+/* an icon on its own (a big button face, a title) */
+.ico.big { --is: 2em; }
+.ico.huge { --is: 3.2em; }
+/* inside a flex row the icon centres itself */
+button > .ico:only-child, .btn-ico > .ico { vertical-align: middle; margin: 0; }
+button .ico { --is: 1.6em; vertical-align: -0.38em; }
+/* a muted icon, for things that are off or locked */
+.ico.dim { opacity: 0.45; filter: grayscale(0.7); }

@@ -35,6 +35,9 @@ import { openProfile } from './ui/profile.js';
 import { openPublicShips } from './ui/publicships.js';
 import { recordKick } from './progress.js';
 import { initVoice, toggleVoice, voiceEnabled } from './voice.js';
+import { initIcons, loadAtlas } from './icons.js';
+
+initIcons(); // emoji in the text become the arcade's own icons (see icons.js)
 
 const SEAT_KEY = 'nms-seat';
 const MOODS = { lobby: 'calm', night: 'night', dawn: 'day', roam: 'day', meeting: 'day', nominations: 'tense', lastwords: 'tense', dusk: 'tense', ended: 'calm' };
@@ -56,12 +59,12 @@ function saveSeat(seat) {
 // Canvas text (name tags, room labels) can only use fonts that have finished loading.
 function loadFonts() {
   if (!document.fonts?.load) return Promise.resolve();
-  const fonts = ['40px VT323', '40px Silkscreen', '40px Sixtyfour', '900 40px Doto', '40px "Rubik Glitch"'];
+  const fonts = ['40px VT323', '40px Silkscreen', '40px Sixtyfour', '900 40px Doto', '40px "Rubik Glitch"', '40px "Kenney Future"', '600 40px "Chakra Petch"'];
   return Promise.race([Promise.all(fonts.map((f) => document.fonts.load(f))), new Promise((r) => setTimeout(r, 2500))]).catch(() => {});
 }
 
 async function boot() {
-  [store.data] = await Promise.all([fetch('/game-data.json').then((r) => r.json()), loadFonts()]);
+  [store.data] = await Promise.all([fetch('/game-data.json').then((r) => r.json()), loadFonts(), loadAtlas()]); // the icon atlas too: canvas text (name tags, signs) draws with it
   const world = new World($('world'), store.data, {
     onSendPos: (p) => socket.emit('pos', p),
     onNearTask: (taskId) => setUsePrompt(taskId ? store.data.tasks[taskId].name : null),
@@ -170,7 +173,7 @@ async function boot() {
     store.me = id;
     const name = $('home-name').value || loadSeat()?.name || '';
     saveSeat({ code, token, name });
-    history.replaceState(null, '', '/');
+    history.replaceState(null, '', '/nms');
   });
   socket.on('problem', (message) => {
     if (message === 'No ship with that code.' && loadSeat()) saveSeat(null);

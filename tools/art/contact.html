@@ -1,0 +1,36 @@
+<!doctype html>
+<meta charset="utf-8" />
+<title>Contact sheet</title>
+<style>
+  body { margin: 0; background: #12141f; color: #9fe8ff; font: 9px monospace; }
+  #bar { padding: 4px 8px; background: #000; position: sticky; top: 0; z-index: 2; font-size: 11px; }
+  #g { display: grid; gap: 2px; padding: 4px; }
+  .c { background: #1b1f33; padding: 2px; text-align: center; overflow: hidden; }
+  .c img { display: block; margin: 0 auto 1px; object-fit: contain; }
+  .c b { color: #ffd24d; font-weight: normal; }
+</style>
+<div id="bar"></div>
+<div id="g"></div>
+<script>
+  // /art/contact.html?dir=kenney/2D%20assets/Generic%20Items/PNG/Colored&size=44&cols=14&from=0&n=200&label=num
+  const q = new URLSearchParams(location.search);
+  const dir = q.get('dir'), size = Number(q.get('size') || 44), cols = Number(q.get('cols') || 14);
+  const from = Number(q.get('from') || 0), n = Number(q.get('n') || 1000);
+  fetch('/list?dir=' + encodeURIComponent(dir)).then((r) => r.json()).then((files) => {
+    files = files.filter((f) => /\.(png|webp|svg)$/i.test(f)).slice(from, from + n);
+    document.getElementById('bar').textContent = `${dir}  ${from}..${from + files.length - 1}`;
+    const g = document.getElementById('g');
+    g.style.gridTemplateColumns = `repeat(${cols}, ${size + 6}px)`;
+    files.forEach((f, i) => {
+      const d = document.createElement('div');
+      d.className = 'c';
+      const im = document.createElement('img');
+      im.src = '/' + dir.split('/').map(encodeURIComponent).join('/') + '/' + encodeURIComponent(f);
+      im.width = im.height = size;
+      const label = q.get('label') === 'name' ? f.replace(/\.(png|webp|svg)$/i, '').slice(-9) : f.match(/(\d+)\.\w+$/)?.[1] ?? f.slice(0, 9);
+      d.append(im, Object.assign(document.createElement('b'), { textContent: label }));
+      g.append(d);
+    });
+    document.title = 'ready';
+  });
+</script>

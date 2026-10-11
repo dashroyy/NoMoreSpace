@@ -1,0 +1,8 @@
+/* Fonts for the arcade: Kenney's CC0 sci-fi pixel fonts (public/assets/fonts), plus the pixel/terminal faces
+   from Google Fonts that No More Space already uses. */
+@font-face { font-family: 'Kenney Future'; src: url('/assets/fonts/kenney-future.ttf') format('truetype'); font-display: swap; }
+@font-face { font-family: 'Kenney Future Narrow'; src: url('/assets/fonts/kenney-future-narrow.ttf') format('truetype'); font-display: swap; }
+@font-face { font-family: 'Kenney Pixel'; src: url('/assets/fonts/kenney-pixel.ttf') format('truetype'); font-display: swap; }
+@font-face { font-family: 'Kenney Rocket'; src: url('/assets/fonts/kenney-rocket.ttf') format('truetype'); font-display: swap; }
+@font-face { font-family: 'Kenney Space'; src: url('/assets/fonts/kenney-space.ttf') format('truetype'); font-display: swap; }
+@font-face { font-family: 'Kenney Mini Square'; src: url('/assets/fonts/kenney-mini-square.ttf') format('truetype'); font-display: swap; }

@@ -252,7 +252,7 @@ body.screen-home .toasts { display: none; }
 .seat.me .nm { color: var(--accent); }
 .seat.offline { opacity: 0.55; }
 .seat.nominee .token { box-shadow: 0 0 0 3px var(--danger), 0 0 16px var(--danger); }
-.seat.block .token::after { content: '☠'; position: absolute; bottom: -10px; font-size: 0.8rem; }
+.seat.block .token::after { content: ''; position: absolute; bottom: -10px; width: 18px; height: 18px; --ix: var(--ix-skull); --iy: var(--iy-skull); background: url('/assets/icons/atlas.webp') no-repeat; background-size: calc(var(--icon-cols, 16) * 100%) calc(var(--icon-rows, 16) * 100%); background-position: calc(var(--ix) * 100% / (var(--icon-cols, 16) - 1)) calc(var(--iy) * 100% / (var(--icon-rows, 16) - 1)); }
 .seat .hand { position: absolute; left: -8px; top: -8px; font-size: 0.85rem; }
 .seat.locked-yes .token { box-shadow: 0 0 0 3px var(--warn); }
 .seat.current { border-color: var(--warn); }

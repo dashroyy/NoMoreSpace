@@ -1,0 +1,319 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+    <title>No More Space</title>
+    <meta name="description" content="A spooky space social-deduction game inspired by Blood on the Clocktower, Among Us and The Traitors." />
+    <meta name="theme-color" content="#05060f" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Sixtyfour&family=Silkscreen&family=VT323&family=Doto:wght@700;900&family=Chakra+Petch:wght@400;500;600;700&family=Share+Tech+Mono&family=Rubik+Glitch&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="/css/style.css" />
+    <link rel="stylesheet" href="/css/retro.css" />
+    <link rel="stylesheet" href="/css/party.css" />
+    <link rel="stylesheet" href="/css/readable.css" />
+    <link rel="stylesheet" href="/css/icon-index.css" />
+    <link rel="stylesheet" href="/css/icons.css" />
+    <link rel="stylesheet" href="/css/fonts.css" />
+    <link rel="stylesheet" href="/css/typography.css" />
+    <script type="importmap">
+      { "imports": { "three": "/vendor/three/three.module.min.js" } }
+    </script>
+  </head>
+  <body>
+    <!-- The 3D ship renders here, behind everything else -->
+    <div id="world"></div>
+    <div id="vignette" aria-hidden="true"></div>
+    <div id="doom-glow" aria-hidden="true"></div>
+    <div id="doom-flash" aria-hidden="true"></div>
+
+    <!-- ===================== Title screen ===================== -->
+    <section id="screen-home" class="screen">
+      <a class="hub-link" href="/">&larr; All games</a>
+      <div class="title-wrap">
+        <h1 class="logo">NO&nbsp;MORE<br /><span>SPACE</span></h1>
+        <p class="tagline">The ship is falling into a black hole. Something aboard is not human.<br />Find it before there is no more space.</p>
+
+        <div class="card home-card">
+          <label>Your name <input id="home-name" maxlength="18" autocomplete="nickname" placeholder="Commander Biscuit" /></label>
+
+          <div class="mode-pick" role="radiogroup" aria-label="Who runs the game?">
+            <label class="mode">
+              <input type="radio" name="mode" value="autopilot" checked />
+              <span><b>🤖 Autopilot</b><small>Everyone plays. ARIA, the ship's AI, runs the game.</small></span>
+            </label>
+            <label class="mode">
+              <input type="radio" name="mode" value="captain" />
+              <span><b>👨‍✈️ I'll be the Captain</b><small>You run the game from the Command Station (you don't play), like a Blood on the Clocktower Storyteller.</small></span>
+            </label>
+          </div>
+          <button id="home-create" class="primary big">Launch a new ship</button>
+
+          <div class="divider"><span>or join friends</span></div>
+          <div class="row">
+            <input id="home-code" maxlength="4" placeholder="CODE" autocapitalize="characters" class="code-input" />
+            <button id="home-join" class="big">Board</button>
+          </div>
+        </div>
+        <p class="footnote">3–15 players · best with 7+ · voice chat optional · <a href="#" id="home-bug">🐞 Report a bug</a></p>
+        <button id="home-wiki" class="wiki-cta">📖 New here? Read the Ship's Wiki</button>
+        <div class="home-buttons">
+          <button id="home-practice" class="small">🎓 Practice with robots</button>
+          <button id="home-practice-carnival" class="small">🎪 Practice: Cosmic Carnival</button>
+          <button id="home-practice-outbreak" class="small">🦠 Practice: Outbreak</button>
+          <button id="home-practice-traitors" class="small">🗡️ Practice: Traitors</button>
+          <button id="home-public" class="small">🌐 Public ships</button>
+          <button id="home-profile" class="small ghost">👤 Profile</button>
+          <button id="home-settings" class="small ghost">⚙️ Settings</button>
+        </div>
+        <div class="home-audio">
+          <button id="home-music" class="small ghost" title="Music on/off">🎵 Music on</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== Lobby ===================== -->
+    <section id="screen-lobby" class="screen" hidden>
+      <div class="lobby-left card">
+        <div class="lobby-head">
+          <div>
+            <div class="eyebrow">Docking bay</div>
+            <h2>Ship <span id="lobby-code" class="code"></span></h2>
+            <div class="lobby-ship"><span id="lobby-ship"></span> <span id="lobby-round" class="badge"></span></div>
+          </div>
+          <div class="lobby-invite">
+            <button id="lobby-copy" class="small ghost">Copy invite link</button>
+            <img id="lobby-qr" class="lobby-qr" alt="QR code: scan to join this ship" title="Scan with a phone camera to join (click to enlarge)" />
+          </div>
+        </div>
+        <div id="lobby-wardrobe">
+          <label class="bio-field">Finish the sentence: <b id="lobby-bio-name">You</b> is…
+            <input id="lobby-bio" maxlength="48" placeholder="allergic to zero gravity" autocomplete="off" />
+          </label>
+          <p class="hint">ARIA will work it into the story if you get eaten.</p>
+          <h3>Your spacesuit</h3>
+          <div class="eyebrow">Colour</div>
+          <div id="pick-suit" class="swatches"></div>
+          <div class="eyebrow">Hat</div>
+          <div id="pick-hat" class="chips"></div>
+          <div class="eyebrow">Visor</div>
+          <div id="pick-visor" class="swatches"></div>
+          <div class="eyebrow">Pet</div>
+          <div id="pick-pet" class="chips"></div>
+          <p class="hint">Walk around with <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> to show off your look.</p>
+        </div>
+        <div id="lobby-captain-note" class="hint" hidden>You are the Captain. You don't play: you run the game from the Command Station. Players set up their suits here.</div>
+      </div>
+
+      <div class="lobby-right card">
+        <h3>Crew manifest <span id="lobby-count" class="muted"></span></h3>
+        <p class="hint" id="lobby-seat-hint">Seat order matters: neighbours at the bridge table are used by some roles.</p>
+        <ol id="lobby-players" class="lobby-players"></ol>
+        <div id="lobby-shipname" class="lobby-shipname" hidden></div>
+        <div id="lobby-script" class="lobby-script"></div>
+        <div id="lobby-setup" class="lobby-setup"></div>
+        <div id="lobby-wait" class="hint"></div>
+        <div id="lobby-season" hidden></div>
+        <button id="lobby-wiki" class="small">📖 Ship's Wiki: learn the roles</button>
+        <button id="lobby-profile" class="small ghost">👤 Your profile</button>
+        <button id="lobby-leave" class="small ghost">Leave ship</button>
+      </div>
+    </section>
+
+    <!-- ===================== In-game HUD ===================== -->
+    <section id="hud" hidden>
+      <header class="topbar">
+        <div class="tb-left">
+          <span id="hud-ship" class="ship-name"></span>
+          <span class="code" id="hud-code"></span>
+          <span id="hud-phase" class="phase-pill"></span>
+        </div>
+        <div class="tb-center">
+          <div id="hud-timer" class="timer">--:--</div>
+          <div id="hud-horizon" class="horizon" title="How close the ship is to the black hole"></div>
+          <div id="hud-todo" class="hud-todo"></div>
+        </div>
+        <div class="tb-right">
+          <div id="hud-charge" class="charge" title="Observation Array: do tasks to reveal a clue in the windows tomorrow"><span></span><b>🔭</b></div>
+          <button id="btn-pause" class="icon" title="Pause the game (host)" hidden>⏸️</button>
+          <button id="btn-settings" class="icon" title="Settings">⚙️</button>
+          <button id="btn-wiki" class="icon" title="The Ship's Wiki: rules and every role">📖</button>
+          <button id="btn-tts" class="icon" title="Read aloud">🗣️</button>
+          <button id="btn-music" class="icon" title="Music on/off">🎵</button>
+          <button id="btn-sound" class="icon" title="Sound on/off">🔊</button>
+          <button id="btn-mic" class="icon" title="Proximity voice chat">🎙️</button>
+          <button id="btn-help" class="icon" title="How to play">❔</button>
+        </div>
+      </header>
+
+      <div id="phase-banner" class="phase-banner" hidden></div>
+
+      <aside id="ring-panel" class="ring-panel card">
+        <div class="ring-title"><span>Bridge table</span><button id="ring-toggle" class="small ghost" title="Collapse">–</button></div>
+        <div id="ring" class="ring"></div>
+        <div id="nomination-box" class="nomination-box" hidden></div>
+        <div id="ring-hint" class="hint"></div>
+      </aside>
+
+      <aside id="chat" class="chat card">
+        <div class="chat-tabs">
+          <button data-tab="near" class="tab active">Nearby</button>
+          <button data-tab="evil" class="tab evil" hidden>🦑 Infiltrators</button>
+          <button id="chat-collapse" class="small ghost" title="Collapse">–</button>
+        </div>
+        <div id="chat-log" class="chat-log"></div>
+        <div id="chat-who" class="chat-who" hidden></div>
+        <form id="chat-form" class="chat-form">
+          <input id="chat-input" maxlength="200" placeholder="Say something… (Enter)" autocomplete="off" />
+        </form>
+      </aside>
+
+      <canvas id="minimap" class="minimap" width="180" height="150" title="Click a room to teleport there"></canvas>
+      <button id="map-expand" class="map-expand small" title="Full map (Tab)">⛶</button>
+      <div id="bigmap" class="bigmap card" hidden>
+        <div class="bigmap-head"><h3>🗺️ Station map</h3><span class="hint">Click a room to teleport · Tab or Esc to close</span><button id="bigmap-close" class="small ghost">✕</button></div>
+        <canvas id="bigmap-canvas" width="1040" height="860"></canvas>
+      </div>
+      <div id="captions" class="captions" aria-live="polite"></div>
+
+      <div id="use-prompt" class="use-prompt" hidden></div>
+
+      <nav class="actionbar">
+        <button id="btn-role" class="action"><span>📜</span>Role card <kbd>R</kbd></button>
+        <button id="btn-rooms" class="action rooms" hidden><span>🚀</span>Rooms <kbd>M</kbd></button>
+        <button id="btn-nominate" class="action nominate" hidden><span>☝️</span>Nominate</button>
+        <button id="btn-system" class="action system" hidden><span>⚡</span><b>System</b> <kbd>X</kbd></button>
+        <button id="btn-door" class="action door" hidden><span>🔒</span><b>Lock door</b> <kbd>K</kbd></button>
+        <button id="btn-claim" class="action claim" hidden><span>📣</span>Claim <kbd>C</kbd></button>
+        <button id="btn-emote" class="action"><span>🎭</span>Emote <kbd>Q</kbd></button>
+        <button id="btn-predict" class="action predict" hidden><span>🔮</span><b>Bet on the Parasite</b></button>
+        <button id="btn-haunt" class="action haunt" hidden><span>👻</span><b>Haunt</b></button>
+        <button id="btn-hand" class="action hand" hidden><span>✋</span><b>Raise hand</b></button>
+        <button id="btn-done-speaking" class="action" hidden><span>🎤</span>I'm done</button>
+        <button id="btn-ready" class="action ready" hidden><span>⏭️</span><b>Ready</b></button>
+        <button id="btn-shoot" class="action danger" hidden><span>🔫</span>Shoot</button>
+        <button id="btn-use" class="action" hidden><span>🛠️</span>Use <kbd>E</kbd></button>
+      </nav>
+      <div id="emote-menu" class="emote-menu card" hidden></div>
+      <div id="haunt-menu" class="haunt-menu card" hidden></div>
+      <div id="reactions" class="reactions" hidden></div>
+      <div id="recap" class="recap card" hidden></div>
+      <!-- after the game, whenever the end-of-game reveal is not on screen: the way back to the docking bay -->
+      <div id="postgame" class="postgame card" hidden>
+        <b>🏁 Mission over</b>
+        <span class="hint">Ready for another round with the same crew?</span>
+        <div class="row">
+          <button id="pg-rematch" class="primary">🔁 Rematch (same crew)</button>
+          <button id="pg-reveal" class="small">🎬 Watch the reveal</button>
+          <button id="pg-share" class="small">📸 Share card</button>
+        </div>
+      </div>
+      <div id="countdown" class="countdown" hidden></div>
+      <div id="rooms-menu" class="rooms-menu card" hidden></div>
+      <div id="nominate-menu" class="rooms-menu card" hidden></div>
+      <div id="system-menu" class="rooms-menu card" hidden></div>
+      <div id="vote-panel" class="vote-panel card" hidden></div>
+      <div id="intercept-tag" class="intercept-tag" hidden></div>
+      <div id="claim-menu" class="rooms-menu card" hidden></div>
+      <div id="whisper-card" class="whisper-card card" hidden></div>
+      <div id="door-card" class="door-card card" hidden></div>
+      <div id="restart-banner" class="restart-banner" hidden></div>
+      <div id="reconnect-banner" class="reconnect-banner" hidden>📡 Connection lost. Reconnecting…</div>
+      <div id="joystick" class="joystick" hidden><div class="knob"></div></div>
+    </section>
+
+    <!-- First-game coach: a tip pointing at the right button -->
+    <div id="coach" class="coach" hidden></div>
+
+    <!-- Cloud bubble: the Captain's story -->
+    <div id="story" class="story" hidden>
+      <div class="cloud">
+        <div class="cloud-author" id="story-author"></div>
+        <div class="cloud-text" id="story-text"></div>
+        <div class="cloud-deaths" id="story-deaths"></div>
+      </div>
+    </div>
+
+    <!-- Night: everyone sleeps (and draws) -->
+    <section id="night" class="night" hidden>
+      <div class="night-sky" aria-hidden="true"></div>
+      <h2 class="night-title" id="night-title">Night</h2>
+      <p class="night-sub" id="night-sub">The ship sleeps. Something in the vents does not.</p>
+      <div class="night-grid">
+        <div class="card night-action" id="night-action"></div>
+        <div class="card night-draw">
+          <div class="draw-head">
+            <h3>🎨 Paint the ship walls</h3>
+            <span class="hint">Your drawing appears somewhere on the ship tomorrow. Whatever you've drawn is pinned up for you when the night ends.</span>
+          </div>
+          <canvas id="draw-canvas" width="320" height="240"></canvas>
+          <div class="draw-tools" id="draw-tools"></div>
+          <div class="row draw-actions">
+            <label class="check"><input type="checkbox" id="draw-signed" /> Sign my name</label>
+            <button id="draw-clear" class="small ghost">Clear</button>
+            <button id="draw-send" class="small primary">Pin it to the wall</button>
+          </div>
+        </div>
+        <div class="card night-guess night-action" id="night-guess" hidden></div>
+        <div class="card night-ghost" id="night-ghost" hidden>
+          <h3>👻 Ghost channel</h3>
+          <p class="hint">Only the dead can read this. Gossip away while the living sleep.</p>
+          <div class="row"><span id="ghost-bet" class="hint"></span><button id="ghost-bet-btn" class="small">🔮 Place or change your bet</button></div>
+          <div id="ghost-log" class="chat-log"></div>
+          <form id="ghost-form" class="chat-form"><input id="ghost-input" maxlength="200" placeholder="Gossip with the dead…" autocomplete="off" /></form>
+        </div>
+        <div class="card night-evil" id="night-evil" hidden>
+          <h3>🦑 Infiltrator channel</h3>
+          <div id="evil-log" class="chat-log"></div>
+          <form id="evil-form" class="chat-form"><input id="evil-input" maxlength="200" placeholder="Whisper to your team…" autocomplete="off" /></form>
+        </div>
+      </div>
+      <!-- the night ends when everyone is ready (or when the timer runs out) -->
+      <div class="night-footer" id="night-footer">
+        <button id="night-ready" class="primary">🌙 I'm done: ready for dawn</button>
+        <span class="hint" id="night-ready-note"></span>
+      </div>
+    </section>
+
+    <!-- Captain's Command Station -->
+    <aside id="command" class="command card" hidden>
+      <div class="command-head">
+        <h2>🛰️ Command Station</h2>
+        <button id="command-collapse" class="small ghost">–</button>
+      </div>
+      <div class="command-tabs" id="command-tabs"></div>
+      <div class="command-body" id="command-body"></div>
+    </aside>
+
+    <!-- The Clown's last pie -->
+    <div id="wish" class="wish" hidden></div>
+    <div id="offer" class="wish" hidden></div>
+
+    <!-- Modals -->
+    <div id="modal" class="modal" hidden>
+      <div class="modal-box card">
+        <button class="modal-close" id="modal-close" title="Close (Esc)">✕</button>
+        <div id="modal-body"></div>
+      </div>
+    </div>
+
+    <!-- End-game reveal -->
+    <section id="reveal" class="reveal" hidden>
+      <div class="reveal-caption" id="reveal-caption"></div>
+      <div class="reveal-chapter" id="reveal-chapter"></div>
+      <div class="reveal-bubble cloud" id="reveal-bubble" hidden></div>
+      <div class="reveal-controls">
+        <button id="reveal-speed" class="small ghost">⏩ 1×</button>
+        <button id="reveal-skip" class="small ghost">Skip ▶▶</button>
+      </div>
+      <div id="reveal-summary" class="reveal-summary card" hidden></div>
+    </section>
+
+    <div id="toasts" class="toasts" aria-live="polite"></div>
+    <div id="problem" class="problem" role="alert"></div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script type="module" src="/js/main.js"></script>
+  </body>
+</html>

@@ -1,0 +1,224 @@
+<!doctype html>
+<meta charset="utf-8" />
+<title>Icon atlas builder</title>
+<style>
+  body { margin: 0; background: #12141f; color: #9fe8ff; font: 12px monospace; }
+  #bar { padding: 6px 10px; background: #000; position: sticky; top: 0; z-index: 2; }
+  #out { padding: 8px; }
+  #atlas { image-rendering: auto; background: #1b1f33; display: block; }
+  .sheet { display: grid; gap: 6px; padding: 8px; }
+  button { font: inherit; }
+</style>
+<div id="bar">loading…</div>
+<div id="out"><canvas id="atlas"></canvas></div>
+<script type="importmap">{ "imports": { "three": "/three/three.module.min.js", "three/addons/": "/jsm/" } }</script>
+<script type="module">
+  // Builds the icon atlas: each icon is a 3D model or a 2D image from the asset packs, drawn small with a dark
+  // outline so they all look like one set.
+  //   /art/icons.html?spec=/art/icons.json&save=1        (save=1 writes public/assets/icons/atlas.webp + atlas.json)
+  import * as THREE from 'three';
+  import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+
+  const q = new URLSearchParams(location.search);
+  const SIZE = Number(q.get('size') || 48); // one icon's width in the atlas
+  const COLS = Number(q.get('cols') || 20);
+  const OUTLINE = '#070b18';
+  const bar = document.getElementById('bar');
+
+  let spec = await fetch(q.get('spec') || '/art/icons.json').then((r) => r.json());
+  if (q.get('names')) { const want = q.get('names').split(','); spec = want.map((n) => spec.find((s) => s.name === n)).filter(Boolean); }
+  if (q.get('from')) spec = spec.slice(Number(q.get('from')), Number(q.get('from')) + Number(q.get('count') || 40));
+  const models = await fetch('/art/models.json').then((r) => r.json());
+
+  const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true, preserveDrawingBuffer: true });
+  const R = SIZE * 4; // draw big, then shrink: smooth edges
+  renderer.setSize(R, R);
+  renderer.setPixelRatio(1);
+  renderer.outputColorSpace = THREE.SRGBColorSpace;
+  renderer.setClearColor(0x000000, 0);
+  const loader = new GLTFLoader();
+  const cache = new Map();
+
+  function load(url) {
+    if (!cache.has(url)) cache.set(url, loader.loadAsync(url).then((g) => g.scene).catch((e) => { console.warn('failed', url, e); return null; }));
+    return cache.get(url);
+  }
+
+  function lights(scene, o) {
+    scene.add(new THREE.HemisphereLight(0xdfe9ff, 0x4a4468, o.hemi ?? 1.5));
+    const key = new THREE.DirectionalLight(0xffffff, o.key ?? 2.6);
+    key.position.set(-2, 4, 3);
+    scene.add(key);
+    const rim = new THREE.DirectionalLight(0x7fe9ff, 1.1);
+    rim.position.set(3, 1.5, -3);
+    scene.add(rim);
+  }
+
+  async function render3d(item) {
+    let model;
+    if (item.src === 'parasite') {
+      const { buildParasite } = await import('/repo/public/js/world/parasite.js');
+      model = buildParasite('#6cf0ff');
+      model.userData.anim?.tick?.(1.2, null, model);
+    } else {
+      const url = models[item.src];
+      if (!url) throw new Error('unknown model ' + item.src);
+      const base = await load(url);
+      if (!base) throw new Error('could not load ' + item.src);
+      model = base.clone(true);
+    }
+    const scene = new THREE.Scene();
+    lights(scene, item);
+    const holder = new THREE.Group();
+    holder.add(model);
+    holder.rotation.y = THREE.MathUtils.degToRad(item.yaw ?? -30);
+    scene.add(holder);
+    if (item.tint) {
+      const tint = new THREE.Color(item.tint);
+      model.traverse((o) => {
+        if (!o.isMesh) return;
+        o.material = o.material.clone();
+        o.material.color.multiply(tint);
+        if (item.glow) { o.material.emissive = new THREE.Color(item.tint); o.material.emissiveIntensity = item.glow; }
+      });
+    }
+    // fit: an orthographic camera looking from a pleasant angle, framing the whole model
+    const pitch = THREE.MathUtils.degToRad(item.pitch ?? 22);
+    const box = new THREE.Box3().setFromObject(holder);
+    const center = box.getCenter(new THREE.Vector3());
+    const size = box.getSize(new THREE.Vector3());
+    let crop = item.crop; // [fromTopFraction, toTopFraction] to show a bust
+    const cam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.01, 100);
+    const dir = new THREE.Vector3(0, Math.sin(pitch), Math.cos(pitch)).normalize();
+    cam.position.copy(center).addScaledVector(dir, 20);
+    cam.lookAt(center);
+    cam.updateMatrixWorld();
+    scene.updateMatrixWorld(true);
+    // project all box corners into camera space to get the extents
+    const inv = cam.matrixWorldInverse;
+    let minX = 1e9, maxX = -1e9, minY = 1e9, maxY = -1e9;
+    for (const x of [box.min.x, box.max.x]) for (const y of [box.min.y, box.max.y]) for (const z of [box.min.z, box.max.z]) {
+      const v = new THREE.Vector3(x, y, z).applyMatrix4(inv);
+      minX = Math.min(minX, v.x); maxX = Math.max(maxX, v.x); minY = Math.min(minY, v.y); maxY = Math.max(maxY, v.y);
+    }
+    if (crop) {
+      const h = maxY - minY;
+      const top = maxY - h * crop[0];
+      const bottom = maxY - h * crop[1];
+      maxY = top; minY = bottom;
+      const w = (maxX - minX);
+      const cx = (maxX + minX) / 2;
+      const half = (maxY - minY) * 0.58; // frame the head and shoulders, not the outstretched arms
+      minX = cx - half; maxX = cx + half;
+    }
+    let span = Math.max(maxX - minX, maxY - minY) * (item.margin ?? 1.06);
+    let cx = (minX + maxX) / 2, cy = (minY + maxY) / 2;
+    if (item.span) { // frame a fixed area around a world point instead of the whole bounding box
+      const c = new THREE.Vector3(...(item.center || [0, 0, 0])).applyMatrix4(inv);
+      cx = c.x; cy = c.y; span = item.span;
+    }
+    cam.left = cx - span / 2; cam.right = cx + span / 2; cam.top = cy + span / 2; cam.bottom = cy - span / 2;
+    cam.updateProjectionMatrix();
+    renderer.render(scene, cam);
+    const c = document.createElement('canvas');
+    c.width = c.height = R;
+    c.getContext('2d').drawImage(renderer.domElement, 0, 0);
+    return c;
+  }
+
+  async function render2d(item) {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    await new Promise((res, rej) => { img.onload = res; img.onerror = () => rej(new Error('image ' + item.src)); img.src = item.src.startsWith('svg:') ? 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(item.src.slice(4)) : item.src.replace(/^2d:/, ''); });
+    const c = document.createElement('canvas');
+    c.width = c.height = R;
+    const g = c.getContext('2d');
+    g.imageSmoothingEnabled = item.pixel ? false : true;
+    let sx = 0, sy = 0, sw = img.width, sh = img.height;
+    if (item.tile) { // [col,row,tileSize,gap]
+      const [col, row, ts, gap = 0] = item.tile;
+      sx = col * (ts + gap); sy = row * (ts + gap); sw = sh = ts;
+    }
+    const k = (R * (item.fill ?? 0.9)) / Math.max(sw, sh);
+    const dw = sw * k, dh = sh * k;
+    g.drawImage(img, sx, sy, sw, sh, (R - dw) / 2, (R - dh) / 2, dw, dh);
+    if (item.tintColor) { // recolour a white/grey glyph
+      g.globalCompositeOperation = 'source-in';
+      g.fillStyle = item.tintColor;
+      g.fillRect(0, 0, R, R);
+    }
+    return c;
+  }
+
+  // shrink to the icon size and add the dark outline
+  function finish(big, item) {
+    const body = document.createElement('canvas');
+    body.width = body.height = SIZE;
+    const g = body.getContext('2d');
+    g.imageSmoothingQuality = 'high';
+    const pad = item.outline === 0 ? 0 : 2;
+    g.drawImage(big, pad, pad, SIZE - pad * 2, SIZE - pad * 2);
+    if (item.outline === 0) return body;
+    const out = document.createElement('canvas');
+    out.width = out.height = SIZE;
+    const o = out.getContext('2d');
+    // a silhouette in the outline colour, nudged in 8 directions, then the picture on top
+    const sil = document.createElement('canvas');
+    sil.width = sil.height = SIZE;
+    const s = sil.getContext('2d');
+    s.drawImage(body, 0, 0);
+    s.globalCompositeOperation = 'source-in';
+    s.fillStyle = OUTLINE;
+    s.fillRect(0, 0, SIZE, SIZE);
+    for (const [dx, dy] of [[-1, 0], [1, 0], [0, -1], [0, 1], [-1, -1], [1, -1], [-1, 1], [1, 1], [-1.6, 0], [1.6, 0], [0, -1.6], [0, 1.6]]) o.drawImage(sil, dx, dy);
+    o.drawImage(body, 0, 0);
+    if (item.slash) {
+      o.lineCap = 'round';
+      o.strokeStyle = OUTLINE;
+      o.lineWidth = 7;
+      o.beginPath(); o.moveTo(6, 6); o.lineTo(SIZE - 6, SIZE - 6); o.stroke();
+      o.strokeStyle = '#ff3b5c';
+      o.lineWidth = 4;
+      o.beginPath(); o.moveTo(6, 6); o.lineTo(SIZE - 6, SIZE - 6); o.stroke();
+    }
+    return out;
+  }
+
+  const rows = Math.ceil(spec.length / COLS);
+  const atlas = document.getElementById('atlas');
+  atlas.width = COLS * SIZE;
+  atlas.height = rows * SIZE;
+  const A = atlas.getContext('2d');
+  const index = {};
+  const failed = [];
+  let i = 0;
+  for (const item of spec) {
+    bar.textContent = `rendering ${i + 1}/${spec.length}: ${item.name}`;
+    try {
+      const big = item.src.startsWith('2d:') || item.src.startsWith('svg:') ? await render2d(item) : await render3d(item);
+      const icon = finish(big, item);
+      A.drawImage(icon, (i % COLS) * SIZE, Math.floor(i / COLS) * SIZE);
+      // sep=1: every picture is its own file (the card portraits) instead of one atlas
+      if (q.get('sep') && q.get('save')) {
+        const blob = await new Promise((r) => icon.toBlob(r, 'image/webp', 0.9));
+        await fetch(`/save?to=${q.get('dir') || 'public/assets/phase/art'}/${item.name}.webp`, { method: 'POST', body: blob });
+      }
+    } catch (err) {
+      failed.push(item.name + ': ' + err.message);
+    }
+    index[item.name] = i;
+    i += 1;
+  }
+  window.__atlas = { index, COLS, ROWS: rows, SIZE, failed };
+  bar.textContent = `done: ${spec.length} icons (${COLS}x${rows}, ${SIZE}px). failed: ${failed.length ? failed.join(' | ') : 'none'}`;
+  atlas.style.width = `${Math.min(COLS * SIZE * 2, 1500)}px`;
+
+  if (q.get('save') && !q.get('sep')) {
+    const img = await new Promise((r) => atlas.toBlob(r, 'image/webp', 0.92));
+    await fetch('/save?to=public/assets/icons/atlas.webp', { method: 'POST', body: img });
+    const meta = JSON.stringify({ cols: COLS, rows, size: SIZE, icons: index });
+    await fetch('/save?to=public/assets/icons/atlas.json', { method: 'POST', body: meta });
+    bar.textContent += '  — saved';
+  }
+  document.title = 'done';
+</script>

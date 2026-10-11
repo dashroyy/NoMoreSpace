@@ -1,3 +1,12 @@
+# Space Arcade
+
+Two free multiplayer games that run in the browser, on one site and one server. The front page is a game picker.
+
+- **[No More Space](#no-more-space)** (`/nms`): a spooky social-deduction game on a 3D spaceship, 3 to 15 players.
+- **[Phase to Space](docs/PHASE_TO_SPACE.md)** (`/phase`): a space card battler for 2 to 6 players with robots to fill empty seats: recruit a crew, slay Void Beasts and Signal Jam your friends.
+
+Both use the same icons, fonts and look (see [docs/ASSETS.md](docs/ASSETS.md)); older invite and replay links (`/?join=CODE`) still go to No More Space.
+
 # No More Space
 
 A spooky, slightly silly space spin-off of **Blood on the Clocktower**, played on a 3D ship you walk around like **Among Us**, with the paranoia of **The Traitors**.
@@ -22,7 +31,7 @@ A spooky, slightly silly space spin-off of **Blood on the Clocktower**, played o
 
 ```bash
 npm install
-npm run dev     # http://localhost:3000
+npm run dev     # http://localhost:3000 (the game picker; No More Space is at /nms, Phase to Space at /phase)
 npm test        # rules tests, including robot playtests at every player count
 ```
 
@@ -32,6 +41,7 @@ Open several **private/incognito windows** to play against yourself (3 minimum, 
 
 ```
 server/
+  phase/          Phase to Space: cards.js, engine.js (the rules), bots.js, index.js (its own Socket.IO namespace)
   roles.js        all 23 roles, the setup table, role tips
   engine.js       the rules: nights, days, nominations, voting, winning
   storyteller.js  ARIA: balanced role picks, false info, stories, window clues
@@ -42,8 +52,11 @@ server/
   persist.js      saves running games across restarts
   records.js      play stats, bug reports and replays (in data/)
 public/
-  index.html, css/style.css
-  js/main.js            wires everything together
+  index.html            the game picker; nms.html (No More Space) and phase.html (Phase to Space)
+  css/                  style.css... for No More Space, phase.css and phase-cards.css, plus the shared icons, fonts and typography
+  js/main.js            wires No More Space together
+  js/phase/             the Phase to Space client (board, prompts, dice, effects)
+  js/icons.js           swaps emoji for the arcade's own icons, in the page and in canvas text
   js/world/             the 3D ship (Three.js): layout, ship, avatars, role models (KayKit characters, the procedural Parasite), sky
   js/ui/                HUD, chat, role card, night & drawing, tasks, lobby,
                         Captain's Command Station, end-game reveal
@@ -53,14 +66,15 @@ test/                   engine tests (npm test)
 deploy/                 one-time server setup script + config
 .github/workflows/      ci.yml tests every push; deploy.yml publishes main
 docs/                   GAME_DESIGN.md (rules & balance), SCRIPTS.md, ASSETS.md and HOSTING_GUIDE.md
-tools/                  pack-models.mjs and pack-animations.mjs: turn KayKit packs into game-ready .glb files
+tools/                  pack-models.mjs and pack-animations.mjs (KayKit packs into .glb files); art/ draws the icon atlas and card portraits
 ```
 
 ## Guides
 
 - 🎲 **[Game design](docs/GAME_DESIGN.md)**: every role, balance tables, phases, the Command Station, clues and the reveal
 - 📖 **[Hosting guide](docs/HOSTING_GUIDE.md)**: GitHub → Namecheap → droplet → Cloudflare, step by step
-- 🧱 **[3D models and credits](docs/ASSETS.md)**: the real 3D models some rooms and characters use (KayKit, CC0), how they are packed and loaded
+- 🧱 **[3D models, icons, fonts and credits](docs/ASSETS.md)**: the real 3D models, the icon atlas, card portraits and fonts (KayKit and Kenney, CC0), how they are made and loaded
+- 🃏 **[Phase to Space](docs/PHASE_TO_SPACE.md)**: the rules, every card, how the engine and the robots work
 
 ## Voice chat behind strict networks (optional)
 

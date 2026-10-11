@@ -9,6 +9,7 @@ import { canTeleport, teleportTo } from './rooms.js';
 import { renderVote, openNominate, votesTodayList } from './vote.js';
 import { claimTag, updateClaimButton } from './social.js';
 import { badgeFor } from './notebook.js';
+import { fillTextIcons, strokeTextIcons } from '../icons.js';
 
 const DAY_PHASES = ['roam', 'meeting', 'nominations'];
 const READY_PHASES = ['dawn', ...DAY_PHASES]; // (the night has its own Ready button, in the night panel)
@@ -315,7 +316,7 @@ function drawMap(canvas, big) {
       g.fillStyle = '#e6ecff';
       g.font = "16px 'Silkscreen', monospace";
       g.textAlign = 'center';
-      g.fillText(r.name.toUpperCase(), sx((x0 + x1) / 2), sz(z0) + 22);
+      fillTextIcons(g, r.name.toUpperCase(), sx((x0 + x1) / 2), sz(z0) + 22);
       g.textAlign = 'start';
     } else g.fillRect(sx(x0), sz(z0), sx(x1) - sx(x0), sz(z1) - sz(z0));
     if (r.task && !world.doneTasks.has(r.task) && store.state?.phase === 'roam') {
@@ -363,7 +364,7 @@ function drawMap(canvas, big) {
     const room = ROOMS.find((r) => r.id === world.room);
     g.fillStyle = '#cfd6ff';
     g.font = '9px Silkscreen, monospace';
-    g.fillText(room ? room.name : 'Corridor', 6, H - 6);
+    fillTextIcons(g, room ? room.name : 'Corridor', 6, H - 6);
   }
 }
 
@@ -375,9 +376,9 @@ function outlined(g, text, x, y, font, color) {
   g.textBaseline = 'middle';
   g.lineWidth = 4;
   g.strokeStyle = 'rgba(0,0,0,0.85)';
-  g.strokeText(text, x, y);
+  strokeTextIcons(g, text, x, y);
   g.fillStyle = color;
-  g.fillText(text, x, y);
+  fillTextIcons(g, text, x, y);
   g.restore();
 }
 
