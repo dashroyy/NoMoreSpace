@@ -16,6 +16,7 @@
 import * as THREE from 'three';
 import { ROOMS, CORRIDORS, roomOutline, chamferOf } from './layout.js';
 import { M, T, add, cyl, box, ball, tor, mergeStatic } from './carnival-rooms.js';
+import { loadModels, model } from './assets.js';
 
 const STONE = 0x6a6672;
 const DSTONE = 0x45414d;
@@ -27,6 +28,18 @@ const CRIMSON = 0xa3162b;
 const PARCH = 0xf0e2bd;
 const FIRE = 0xffa43a;
 const BRONZE = 0xb8803a;
+
+// The real models the castle uses (KayKit Dungeon Pack, CC0, see assets.js). They are fetched the first
+// time the castle is shown; until then (or if they cannot be fetched) the hand-built pieces stand alone.
+const D = (n) => `dungeon/${n}`;
+const MODEL_NAMES = [
+  'torch_mounted', 'pillar', 'chest_large_gold', 'coin_stack_small', 'coin_stack_medium', 'coin_stack_large',
+  'bookcase_double_decoratedA', 'bookcase_double_decoratedB', 'bookcase_single',
+  'table_long_tablecloth_decorated_A', 'table_long_tablecloth', 'chair', 'candle_triple', 'plate_food_A', 'plate_food_B',
+  'chest_mimic', 'keyring_hanging', 'barrel_small', 'bucket', 'rubble_half',
+  'barrel_large', 'crates_stacked', 'crate_large', 'keg_decorated',
+  'bed_decorated', 'banner_shield_red', 'sword_shield_gold',
+].map(D);
 
 // the point light in each room takes on a candle, moon or potion colour
 export const TRAITORS_LIGHTS = {
@@ -130,30 +143,6 @@ function bannerMat(i) {
     }
   }, { alphaTest: 0.5, side: THREE.DoubleSide });
 }
-
-// a shelf front: dark wood with rows of book spines
-const shelfMat = () => drawn('shelf', 256, 256, (g, w, h) => {
-  g.fillStyle = '#2e1b0e';
-  g.fillRect(0, 0, w, h);
-  const cols = ['#8a1c2c', '#2c4a7a', '#2f6a3c', '#b8883a', '#5a2a6a', '#7a4a22', '#c9c2a8', '#1c3a3a'];
-  let seed = 7;
-  const rnd = () => ((seed = (seed * 1664525 + 1013904223) >>> 0) / 4294967296);
-  for (let row = 0; row < 4; row++) {
-    const y0 = 10 + row * 61;
-    let x = 8;
-    while (x < w - 14) {
-      const bw = 8 + Math.floor(rnd() * 10);
-      const bh = 36 + Math.floor(rnd() * 16);
-      g.fillStyle = cols[Math.floor(rnd() * cols.length)];
-      g.fillRect(x, y0 + 50 - bh, bw, bh);
-      g.fillStyle = 'rgba(255,225,150,0.5)';
-      g.fillRect(x + 1, y0 + 50 - bh + 6, bw - 2, 2);
-      x += bw + 1;
-    }
-    g.fillStyle = '#4a2c14';
-    g.fillRect(0, y0 + 50, w, 9);
-  }
-});
 
 // the Round Table's floor crest: a ring of gold with crimson and dark wedges and a star
 const crestMat = () => {
@@ -259,16 +248,6 @@ const RUG = new THREE.MeshStandardMaterial({ color: CRIMSON, roughness: 0.95, po
 const RUG_TRIM = new THREE.MeshStandardMaterial({ color: GOLD, roughness: 0.6, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4 });
 const RUG_PURPLE = new THREE.MeshStandardMaterial({ color: 0x3a1a5a, roughness: 0.95, polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -3 });
 
-// a barrel: bulging in the middle
-const BARREL = (() => {
-  const pts = [];
-  for (let i = 0; i <= 8; i++) {
-    const u = i / 8;
-    pts.push(new THREE.Vector2(0.42 + Math.sin(u * Math.PI) * 0.14, (u - 0.5) * 1.0));
-  }
-  return new THREE.LatheGeometry(pts, 14);
-})();
-
 export { bannerMat, glowTex, mistTex };
 
 export class TraitorsRooms {
@@ -284,6 +263,10 @@ export class TraitorsRooms {
     this.group.add(this.flameGroup);
     this.flameMat = M(FIRE, { e: 2.2, o: 0.95 });
     this.flameMat2 = M(0xffe08a, { e: 2.4, o: 0.95 });
+    this.roomRefs = {};
+    this.dressed = false;
+    this.pot = 0;
+    this.potCoins = [];
     const still = new THREE.Group();
     this.floors(still);
     this.walls(still);
@@ -298,6 +281,7 @@ export class TraitorsRooms {
         return g;
       };
       R.s = R.at(0, 0, 0);
+      this.roomRefs[room.id] = R;
       this.torches(R);
       const dress = this[`room_${room.id}`];
       if (dress) dress.call(this, R);
@@ -390,9 +374,7 @@ export class TraitorsRooms {
     const [x0, z0, x1] = R.room.rect;
     const half = (x1 - x0) / 2 - chamferOf(R.room.rect) - 0.5;
     for (const x of [-half, half]) {
-      add(R.s, box(0.14, 0.32, 0.14), M(IRON, { r: 0.5 }), x, 1.55, -(R.room.rect[3] - z0) / 2 + 0.7);
-      add(R.s, cyl(0.04, 0.05, 0.5, 5), M(DWOOD), x, 1.8, -(R.room.rect[3] - z0) / 2 + 0.72);
-      this.flame(R, x, 2.15, -(R.room.rect[3] - z0) / 2 + 0.72, 1.1, true);
+      this.flame(R, x, 2.2, -(R.room.rect[3] - z0) / 2 + 0.92, 1.1, true);
     }
   }
 
@@ -462,17 +444,6 @@ export class TraitorsRooms {
     add(g, box(0.7, 0.1, 0.5), M(DSTONE), 0, 0.05, 0);
   }
 
-  bookshelf(s, x, z, w = 3.4, h = 2.3) {
-    add(s, box(w, h, 0.7), shelfMat(), x, h / 2, z);
-    add(s, box(w + 0.1, 0.1, 0.8), M(DWOOD), x, h + 0.05, z);
-  }
-
-  pillar(s, x, z, h = 2.3) {
-    add(s, cyl(0.34, 0.4, 0.3, 10), M(DSTONE), x, 0.15, z);
-    add(s, cyl(0.26, 0.3, h - 0.5, 10), M(STONE), x, h / 2, z);
-    add(s, cyl(0.38, 0.28, 0.3, 10), M(DSTONE), x, h - 0.15, z);
-  }
-
   // ---------- 🗡️ Bridge → The Round Table ----------
   room_bridge(R) {
     const s = R.s;
@@ -482,11 +453,10 @@ export class TraitorsRooms {
       this.candle(R, Math.cos(a) * 2.7, 0.9, Math.sin(a) * 2.7, 0.22);
     }
     for (const sx of [-1, 1]) {
-      for (const sz of [-1, 1]) this.pillar(s, sx * 8.4, sz * 8.4);
       this.brazier(R, sx * 6.0, 8.8);
     }
     // crests on the north wall: a shield over crossed swords
-    for (const x of [-5.4, 5.4]) {
+    for (const x of [5.4]) {
       add(s, cyl(0.5, 0.5, 0.06, 6), M(CRIMSON), x, 1.7, -9.55, [Math.PI / 2, 0, 0]);
       add(s, box(0.12, 0.7, 0.04), M(GOLD, { r: 0.35 }), x, 1.7, -9.5);
       add(s, box(0.6, 0.12, 0.04), M(GOLD, { r: 0.35 }), x, 1.75, -9.5);
@@ -531,8 +501,6 @@ export class TraitorsRooms {
   // ---------- 📚 Navigation → The Library ----------
   room_navigation(R) {
     const s = R.s;
-    for (const x of [-3.8, -0.4]) this.bookshelf(s, x, -5.3, 3.2);
-    for (const sx of [-1, 1]) add(s, box(0.7, 2.3, 4.2), shelfMat(), sx * 7.5, 1.15, 0.6);
     // a ladder
     for (const dx of [-0.25, 0.25]) add(s, box(0.06, 2.4, 0.06), M(WOOD), -3.6 + dx, 1.15, -4.7, [0.18, 0, 0]);
     for (let i = 0; i < 5; i++) add(s, box(0.5, 0.05, 0.05), M(WOOD), -3.6, 0.35 + i * 0.45, -4.78 + i * 0.07);
@@ -668,34 +636,7 @@ export class TraitorsRooms {
   // ---------- 🍖 Galley → The Banquet Hall ----------
   room_galley(R) {
     const s = R.s;
-    const TZ = -3.6;
-    add(s, box(12.4, 0.1, 1.9), M(CRIMSON, { r: 0.9 }), 0, 0.92, TZ);
-    add(s, box(12.4, 0.02, 0.5), M(GOLD, { r: 0.5 }), 0, 0.975, TZ);
-    for (const dx of [-5.8, -2, 2, 5.8]) for (const dz of [-0.8, 0.8]) add(s, box(0.15, 0.9, 0.15), M(DWOOD), dx, 0.45, TZ + dz);
-    // ten chairs
-    for (let i = 0; i < 5; i++) {
-      for (const side of [-1, 1]) {
-        const x = -4.8 + i * 2.4;
-        const z = TZ + side * 1.55;
-        add(s, box(0.55, 0.08, 0.55), M(WOOD), x, 0.5, z);
-        add(s, box(0.55, 1.1, 0.07), M(DWOOD), x, 1.05, z + side * 0.27);
-        for (const dx of [-0.22, 0.22]) for (const dz of [-0.22, 0.22]) add(s, box(0.06, 0.5, 0.06), M(DWOOD), x + dx, 0.25, z + dz);
-        // a plate and a goblet at each place
-        add(s, cyl(0.2, 0.2, 0.02, 10), M(PARCH), x, 1.0, TZ + side * 0.55);
-        add(s, cyl(0.06, 0.04, 0.2, 7), M(GOLD, { e: 0.2, r: 0.3 }), x + 0.28, 1.1, TZ + side * 0.45);
-      }
-    }
-    // candelabras, a roast boar and bread
-    for (const x of [-4.2, 0, 4.2]) {
-      add(s, cyl(0.04, 0.08, 0.6, 6), M(GOLD, { r: 0.35 }), x, 1.25, TZ);
-      add(s, box(0.6, 0.04, 0.04), M(GOLD, { r: 0.35 }), x, 1.5, TZ);
-      for (const dx of [-0.3, 0, 0.3]) this.candle(R, x + dx, 1.5, TZ, 0.2);
-    }
-    add(s, ball(0.5, 10), M(0x8a4a22, { r: 0.6 }), -1.9, 1.3, TZ, null, [1.5, 0.8, 0.85]);
-    add(s, ball(0.22, 8), M(0x8a4a22), -1.2, 1.35, TZ);
-    add(s, ball(0.08, 6), M(0xd7263d), -1.0, 1.4, TZ);
-    for (let i = 0; i < 3; i++) add(s, ball(0.16, 6), M(0xc99a4a), 2.2 + i * 0.4, 1.1, TZ - 0.3 + (i % 2) * 0.4, null, [1.3, 0.8, 0.9]);
-    for (let i = 0; i < 4; i++) add(s, ball(0.12, 7), M([0xd7263d, 0x7fe33b, 0xffd23f, 0xd7263d][i]), 3.5 + i * 0.2, 1.08 + (i > 1 ? 0.15 : 0), TZ + 0.4 - (i % 2) * 0.2);
+    // (the long table, its chairs and the feast are models: see dressWithModels)
     // shields on the wall, armour in the corners
     for (const x of [-3.0, 3.0]) {
       add(s, cyl(0.5, 0.5, 0.06, 6), M(0x2c4a7a), x, 1.55, -7.55, [Math.PI / 2, 0, 0]);
@@ -894,18 +835,7 @@ export class TraitorsRooms {
     const rug = new THREE.Mesh(new THREE.BoxGeometry(4.4, 0.02, 2.6), RUG_PURPLE);
     rug.position.set(0, 0.016, 0.2);
     s.add(rug);
-    [-2.4, 2.4].forEach((x, i) => {
-      add(s, box(2.0, 0.4, 3.0), M(DWOOD), x, 0.3, -4.2);
-      add(s, box(1.9, 0.25, 2.9), M(PARCH, { r: 0.95 }), x, 0.6, -4.2);
-      add(s, box(1.9, 0.12, 1.9), M(i ? 0x3a1a5a : CRIMSON, { r: 0.95 }), x, 0.75, -3.8);
-      add(s, box(0.8, 0.14, 0.4), M(0xf4f1e8), x, 0.78, -5.4);
-      for (const dx of [-1, 1]) for (const dz of [-1.5, 1.5]) add(s, cyl(0.06, 0.06, 2.3, 6), M(DWOOD), x + dx, 1.15, -4.2 + dz);
-      add(s, box(2.2, 0.08, 3.2), M(i ? 0x3a1a5a : CRIMSON, { r: 0.95 }), x, 2.3, -4.2);
-      add(s, box(0.04, 1.4, 3.0), M(i ? 0x3a1a5a : CRIMSON, { o: 0.75, r: 0.95 }), x - 1.0, 1.5, -4.2);
-      add(s, box(0.04, 1.4, 3.0), M(i ? 0x3a1a5a : CRIMSON, { o: 0.75, r: 0.95 }), x + 1.0, 1.5, -4.2);
-      add(s, box(1.9, 0.4, 0.5), M(WOOD), x, 0.2, -2.3); // a chest at the foot
-      add(s, box(1.92, 0.06, 0.52), M(GOLD, { r: 0.4 }), x, 0.42, -2.3);
-    });
+    // (the two four-poster beds are models: see dressWithModels)
     add(s, box(0.6, 0.7, 0.6), M(WOOD), 0, 0.35, -5.4);
     this.candle(R, 0, 0.7, -5.4, 0.22);
     // a tall mirror and a wardrobe
@@ -919,15 +849,7 @@ export class TraitorsRooms {
   // ---------- 🍷 Cargo → The Wine Cellar ----------
   room_cargo(R) {
     const s = R.s;
-    const hoop = M(IRON, { r: 0.5 });
-    const barrel = (x, y, z) => {
-      add(s, BARREL, M(WOOD, { r: 0.85 }), x, y, z);
-      for (const dy of [-0.27, 0.27]) add(s, tor(0.52, 0.025, 14), hoop, x, y + dy, z, [Math.PI / 2, 0, 0]);
-    };
-    [-7.5, -6.1, -4.7, -3.3, 3.3, 4.7, 6.1, 7.5].forEach((x, i) => {
-      barrel(x, 0.5, -3.8);
-      if (i % 2 === 0 && x !== 3.3) barrel(x + 0.7, 1.5, -3.8);
-    });
+    // (the barrels, kegs and crates are models: see dressWithModels)
     // wine racks down both side walls
     for (const sx of [-1, 1]) {
       add(s, box(0.7, 2.2, 4.4), M(DWOOD), sx * 9.2, 1.1, 0.4);
@@ -942,8 +864,7 @@ export class TraitorsRooms {
     for (let i = 0; i < 3; i++) add(s, cyl(0.06, 0.04, 0.2, 7), M(GOLD, { e: 0.2, r: 0.3 }), -5.4 + i * 0.4, 1.1, 1.6 + (i % 2) * 0.3);
     add(s, cyl(0.28, 0.28, 0.2, 12), M(0xe8c25a), -4.7, 1.1, 2.1);
     this.candle(R, -5, 1.0, 1.8, 0.22);
-    // crates and a spilled puddle
-    for (const [x, z, h] of [[1.6, 3.4, 0.8], [2.8, 3.7, 0.6], [2.0, 2.6, 0.5]]) add(s, box(0.95, h, 0.95), M(WOOD), x, h / 2, z);
+    // a spilled puddle
     add(s, new THREE.CircleGeometry(0.9, 14), M(0x7a0f1e, { o: 0.75, r: 0.05, e: 0.1 }), -1.4, 0.025, 2.6, [-Math.PI / 2, 0, 0]);
     // a lantern swinging on a hook
     add(s, cyl(0.05, 0.05, 2.4, 5), M(DWOOD), 0.2, 1.2, 0.35);
@@ -956,9 +877,100 @@ export class TraitorsRooms {
     this.brazier(R, 8.6, 3.6, 0.8);
   }
 
+  // ---------- real models: the Prize Pot, bookcases, banquet table, beds, barrels ----------
+  async dressWithModels() {
+    this.dressed = true;
+    await loadModels(MODEL_NAMES);
+    const S = new THREE.Group(); // static models, merged at the end into a few meshes
+    const at = (id) => this.roomRefs[id];
+    // a model at a spot in a room. s = scale, ry = turn (0 faces south, towards the camera), y = lift
+    const put = (R, name, x, z, { s = 0.75, ry = 0, y = 0, to = S } = {}) => {
+      const m = model(D(name));
+      if (!m) return null;
+      m.position.set(R.cx + x, y, R.cz + z);
+      m.rotation.y = ry;
+      m.scale.setScalar(s);
+      to.add(m);
+      return m;
+    };
+    const WEST = Math.PI / 2; // faces east, for a piece against the west wall
+    const EAST = -Math.PI / 2;
+
+    // wall torches
+    for (const room of ROOMS) {
+      const [x0, z0, x1, z1] = room.rect;
+      const half = (x1 - x0) / 2 - chamferOf(room.rect) - 0.5;
+      for (const x of [-half, half]) put(at(room.id), 'torch_mounted', x, -(z1 - z0) / 2 + 0.55, { s: 1, y: 1.7 });
+    }
+
+    // the Round Table: pillars in the corners, and the Prize Pot, a chest of star-gold whose heap of coins grows
+    const hub = at('bridge');
+    for (const sx of [-1, 1]) for (const sz of [-1, 1]) put(hub, 'pillar', sx * 8.4, sz * 8.4, { s: 0.58 });
+    put(hub, 'chest_large_gold', -5.6, -8.4, { s: 0.8 });
+    const slots = [['coin_stack_medium', -7.3, -8.0], ['coin_stack_small', -7.1, -6.9], ['coin_stack_large', -6.3, -6.2], ['coin_stack_medium', -5.0, -6.1], ['coin_stack_small', -4.0, -6.7], ['coin_stack_large', -3.9, -7.9], ['coin_stack_large', -7.6, -5.9], ['coin_stack_medium', -5.7, -5.2]];
+    this.potCoins = slots.map(([name, x, z], i) => put(hub, name, x, z, { s: 0.55, ry: i * 1.3, to: this.group })).filter(Boolean);
+    this.setPot(this.pot);
+
+    // the Library: real bookcases along the north wall and the west wall
+    const lib = at('navigation');
+    put(lib, 'bookcase_double_decoratedA', -3.0, -5.25);
+    put(lib, 'bookcase_double_decoratedB', 0.0, -5.25);
+    put(lib, 'bookcase_single', 4.9, -5.25);
+    [-2.6, -1.1, 0.4, 1.9].forEach((z) => put(lib, 'bookcase_single', -7.26, z, { ry: WEST }));
+
+    // the Banquet Hall: a long laid table with ten chairs
+    const hall = at('galley');
+    const TZ = -3.6;
+    ['table_long_tablecloth_decorated_A', 'table_long_tablecloth', 'table_long_tablecloth', 'table_long_tablecloth_decorated_A'].forEach((name, i) => put(hall, name, -4.5 + i * 3, TZ, { ry: WEST }));
+    for (let i = 0; i < 5; i++) {
+      put(hall, 'chair', -4.8 + i * 2.4, TZ - 1.45, { s: 0.85 });
+      put(hall, 'chair', -4.8 + i * 2.4, TZ + 1.45, { s: 0.85, ry: Math.PI });
+    }
+    for (const x of [-1.5, 1.5]) {
+      put(hall, 'candle_triple', x, TZ, { s: 0.7, y: 0.75 });
+      this.flame(hall, x + 0.05, 0.75 + 0.87 * 0.7 + 0.12, TZ, 0.8);
+    }
+    put(hall, 'plate_food_A', -1.5, TZ + 0.45, { s: 0.5, y: 0.75 });
+    put(hall, 'plate_food_B', 1.5, TZ + 0.45, { s: 0.5, y: 0.75 });
+
+    // the Dungeon: a mimic, a ring of keys, a bucket and a heap of rubble
+    const dun = at('engine');
+    put(dun, 'chest_mimic', 7.0, -2.2, { s: 0.6, ry: EAST });
+    put(dun, 'keyring_hanging', 1.8, -6.45, { s: 0.8, y: 2.1 });
+    put(dun, 'barrel_small', -8.4, 3.6, { s: 0.7 });
+    put(dun, 'bucket', -7.4, 3.9, { s: 0.6 });
+    put(dun, 'rubble_half', 8.4, -5.2, { s: 0.6 });
+
+    // the Bedchambers: two four-poster beds
+    const bed = at('quarters');
+    put(bed, 'bed_decorated', -2.8, -4.1, { s: 0.9 });
+    put(bed, 'bed_decorated', 1.9, -4.1, { s: 0.9 });
+
+    // the Wine Cellar: barrels along the north wall, and crates and a keg
+    const cellar = at('cargo');
+    [-7.5, -6.1, -4.7, -3.3, 3.3, 4.7, 6.1, 7.5].forEach((x, i) => {
+      put(cellar, 'barrel_large', x, -3.8, { s: 0.52 });
+      if (i % 2 === 0 && x !== 3.3) put(cellar, 'barrel_large', x + 0.7, -3.8, { s: 0.52, y: 1.0 });
+    });
+    put(cellar, 'crates_stacked', 2.2, 3.3, { s: 0.55 });
+    put(cellar, 'crate_large', 3.7, 3.7, { s: 0.5, ry: 0.4 });
+    put(cellar, 'keg_decorated', -7.0, 3.0, { s: 0.5, ry: 0.5 });
+
+    this.group.add(mergeStatic(S));
+    S.clear();
+  }
+
+  // the Prize Pot grows: one more heap of coins for every 1,500 star-gold
+  setPot(pot) {
+    this.pot = pot || 0;
+    const n = Math.min(this.potCoins.length, Math.floor(this.pot / 1500));
+    this.potCoins.forEach((m, i) => { m.visible = i < n; });
+  }
+
   setActive(on) {
     this.active = on;
     this.group.visible = on;
+    if (on && !this.dressed) this.dressWithModels();
   }
 
   update(t, dt) {

@@ -335,6 +335,7 @@ export class World {
     this.space.progress = p;
     this.backdrop.setProgress(p);
     this.ship.holo.scale.setScalar(1 + p * 0.8);
+    this.traitorsRooms.setPot(state.pot);
     for (const light of this.ship.lights) light.userData.base = 40 * (1 - p * 0.35);
   }
 

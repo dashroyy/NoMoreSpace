@@ -23,6 +23,7 @@ const PORT = process.env.PORT != null ? Number(process.env.PORT) : 3000;
 const ROOT = path.join(__dirname, '..');
 const PUBLIC_DIR = path.join(ROOT, 'public');
 const THREE_DIR = path.join(ROOT, 'node_modules', 'three', 'build');
+const THREE_ADDONS_DIR = path.join(ROOT, 'node_modules', 'three', 'examples', 'jsm'); // GLTFLoader and friends, for the 3D models in public/assets
 const MAX_ROOMS = 150;
 const NEAR_RADIUS = 7; // proximity chat distance (players in the same room always hear each other)
 const ROOM_IDS = ['bridge', 'observation', 'navigation', 'comms', 'medbay', 'galley', 'reactor', 'engine', 'hydroponics', 'airlock', 'quarters', 'cargo', 'corridor'];
@@ -66,6 +67,8 @@ const MIME_TYPES = {
   '.json': 'application/json',
   '.svg': 'image/svg+xml',
   '.png': 'image/png',
+  '.glb': 'model/gltf-binary',
+  '.gltf': 'model/gltf+json',
   '.ico': 'image/x-icon',
 };
 
@@ -166,6 +169,14 @@ const server = http.createServer((req, res) => {
   if (url.pathname === '/game-data.json') {
     res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' });
     res.end(GAME_DATA);
+    return;
+  }
+  if (url.pathname.startsWith('/vendor/three-addons/')) {
+    sendFile(res, THREE_ADDONS_DIR, url.pathname.slice('/vendor/three-addons/'.length), 'public, max-age=604800');
+    return;
+  }
+  if (url.pathname.startsWith('/assets/')) {
+    sendFile(res, path.join(PUBLIC_DIR, 'assets'), url.pathname.slice('/assets/'.length), 'public, max-age=86400'); // models and textures: they only change with a release
     return;
   }
   if (url.pathname.startsWith('/vendor/three/')) {
