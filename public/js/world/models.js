@@ -2,6 +2,7 @@
 // Each player's suit colour is used as an accent so you can still tell who's who.
 import * as THREE from 'three';
 import { loadModels, cloneSkinned, clipsOf } from './assets.js';
+import { buildParasite } from './parasite.js';
 
 const m = (color, extra = {}) => new THREE.MeshStandardMaterial({ color, roughness: 0.6, metalness: 0.05, ...extra });
 const glow = (color, intensity = 1.5) => new THREE.MeshStandardMaterial({ color, emissive: color, emissiveIntensity: intensity });
@@ -21,15 +22,31 @@ const SKINS = [0xf1c7a1, 0xd9a27a, 0xa86f4b, 0x7a4b2e, 0xffe0bd];
 function person({ outfit, pants = 0x2b2f3a, skin = SKINS[0], head = 'human' }) {
   const g = new THREE.Group();
   const outfitMat = m(outfit);
-  for (const s of [-1, 1]) part(g, new THREE.CapsuleGeometry(0.12, 0.42, 4, 8), m(pants), s * 0.14, 0.33, 0);
+  const skinMat = m(skin);
+  const bootMat = m(0x2a2018, { roughness: 0.8 });
+  for (const s of [-1, 1]) {
+    part(g, new THREE.CapsuleGeometry(0.12, 0.42, 4, 8), m(pants), s * 0.14, 0.33, 0);
+    part(g, new THREE.SphereGeometry(0.15, 10, 8), bootMat, s * 0.14, 0.08, 0.04, null, [1, 0.7, 1.4]); // boots
+  }
   part(g, new THREE.CapsuleGeometry(0.3, 0.45, 6, 14), outfitMat, 0, 0.95, 0);
+  part(g, new THREE.TorusGeometry(0.3, 0.035, 6, 20), m(0x3a2a1a, { roughness: 0.7 }), 0, 0.72, 0, [Math.PI / 2, 0, 0]); // a belt
+  part(g, new THREE.BoxGeometry(0.1, 0.08, 0.03), m(0xd9b441, { metalness: 0.7, roughness: 0.3 }), 0, 0.72, 0.3); // and its buckle
+  for (const s of [-1, 1]) part(g, new THREE.SphereGeometry(0.13, 10, 8), outfitMat, s * 0.34, 1.2, 0); // shoulders
   const armL = part(g, new THREE.CapsuleGeometry(0.09, 0.4, 4, 8), outfitMat, -0.4, 0.98, 0, [0, 0, 0.2]);
   const armR = part(g, new THREE.CapsuleGeometry(0.09, 0.4, 4, 8), outfitMat, 0.4, 0.98, 0, [0, 0, -0.2]);
+  part(g, new THREE.SphereGeometry(0.09, 10, 8), skinMat, -0.47, 0.72, 0); // hands
+  part(g, new THREE.SphereGeometry(0.09, 10, 8), skinMat, 0.47, 0.72, 0);
   let headMesh;
   if (head === 'human') {
-    headMesh = part(g, new THREE.SphereGeometry(0.27, 18, 14), m(skin), 0, 1.55, 0);
-    for (const s of [-1, 1]) part(g, new THREE.SphereGeometry(0.035, 8, 6), m(0x111111), s * 0.1, 1.58, 0.24);
-    part(g, new THREE.TorusGeometry(0.07, 0.015, 6, 12, Math.PI), m(0x5a2a2a), 0, 1.47, 0.24, [0, 0, Math.PI]);
+    headMesh = part(g, new THREE.SphereGeometry(0.27, 18, 14), skinMat, 0, 1.55, 0);
+    for (const s of [-1, 1]) {
+      part(g, new THREE.SphereGeometry(0.06, 10, 8), m(0xffffff, { roughness: 0.3 }), s * 0.1, 1.58, 0.22, null, [1, 1.1, 0.5]); // eyes: whites, pupils, brows
+      part(g, new THREE.SphereGeometry(0.032, 8, 6), m(0x111111, { roughness: 0.2 }), s * 0.1, 1.58, 0.255);
+      part(g, new THREE.BoxGeometry(0.1, 0.022, 0.03), m(0x3a2a1a), s * 0.1, 1.67, 0.235, [0, 0, -s * 0.18]);
+      part(g, new THREE.SphereGeometry(0.05, 8, 6), skinMat, s * 0.27, 1.54, 0, null, [0.5, 1, 0.8]); // ears
+    }
+    part(g, new THREE.SphereGeometry(0.045, 8, 6), skinMat, 0, 1.5, 0.27, null, [1, 0.9, 1]); // a nose
+    part(g, new THREE.TorusGeometry(0.07, 0.015, 6, 12, Math.PI), m(0x5a2a2a), 0, 1.45, 0.24, [0, 0, Math.PI]);
   }
   const hand = new THREE.Group();
   hand.position.set(0.48, 0.72, 0.12);
@@ -61,12 +78,76 @@ function robot(bodyColor, accent) {
   return { g, hand };
 }
 
-// Real animated characters (KayKit Adventurers and Skeletons, CC0) for the Citadel of Traitors' roles.
-// They load in the background: until a character arrives, the model is just its ring.
+// Real animated characters (KayKit Adventurers, Skeletons and Mystery Monthly, CC0) for the Citadel of Traitors'
+// roles and for many of the others. They load in the background: until a character arrives, the model is just
+// its ring. A few carry a small prop in their right hand (see ROLE_PROPS).
 const KAYKIT = {
+  // the Citadel of Traitors
   seer: ['mage', 1.9], daggerbearer: ['rogue', 1.9], guardian: ['knight', 1.9], loyalist: ['barbarian', 2.0],
   recruiter: ['rogue_hooded', 1.9], mole: ['ranger', 1.9], blackmailer: ['engineer', 1.8],
   recruit: ['skeleton_minion', 1.9], headtraitor: ['necromancer', 2.4],
+  // the crew, drifters and saboteurs of the other scripts
+  engineer: ['engineer', 1.8], security: ['spaceranger', 1.8], droid: ['robot_one', 2.0], medic: ['cleric', 1.9], clown: ['clown', 1.9],
+  jester: ['animatronic_creepy', 1.9], hexer: ['witch', 1.9], sentinel: ['paladin', 1.95], stowaway: ['survivalist', 1.9], hacker: ['ninja', 1.8],
+  sporehost: ['plantwarrior', 2.0], marine: ['toysoldier', 1.8], coroner: ['vampire', 1.9],
+};
+
+// what a character holds in its right hand, built pointing up from the palm
+const ROLE_PROPS = {
+  medic: () => {
+    const g = new THREE.Group();
+    part(g, new THREE.CylinderGeometry(0.05, 0.05, 0.4, 10), m(0xcfe9ff, { transparent: true, opacity: 0.55 }), 0, 0.25, 0);
+    part(g, new THREE.CylinderGeometry(0.036, 0.036, 0.3, 10), glow(0x7dff6b, 1.2), 0, 0.22, 0);
+    part(g, new THREE.CylinderGeometry(0.012, 0.012, 0.22, 6), m(0xdddddd), 0, 0.55, 0);
+    part(g, new THREE.CylinderGeometry(0.07, 0.07, 0.015, 10), m(0xdddddd), 0, 0.66, 0);
+    part(g, new THREE.CylinderGeometry(0.008, 0.008, 0.2, 5), m(0xe9eef2, { metalness: 0.9 }), 0, -0.05, 0);
+    return g;
+  },
+  security: () => {
+    const g = new THREE.Group();
+    part(g, new THREE.CylinderGeometry(0.04, 0.04, 0.55, 10), m(0x1a1a22), 0, 0.3, 0);
+    part(g, new THREE.CylinderGeometry(0.043, 0.043, 0.08, 10), glow(0xffcc33, 1), 0, 0.5, 0);
+    return g;
+  },
+  hexer: () => {
+    const g = new THREE.Group();
+    part(g, new THREE.CylinderGeometry(0.018, 0.026, 0.7, 6), m(0x4a2a14), 0, 0.35, 0);
+    part(g, new THREE.OctahedronGeometry(0.08), glow(0xb36bff, 2), 0, 0.76, 0);
+    return g;
+  },
+  engineer: () => {
+    const g = new THREE.Group();
+    part(g, new THREE.BoxGeometry(0.06, 0.6, 0.03), m(0x9aa4b8, { metalness: 0.8, roughness: 0.3 }), 0, 0.3, 0);
+    part(g, new THREE.TorusGeometry(0.09, 0.035, 6, 12, Math.PI * 1.5), m(0x9aa4b8, { metalness: 0.8, roughness: 0.3 }), 0, 0.62, 0);
+    return g;
+  },
+  sentinel: () => {
+    const g = new THREE.Group();
+    part(g, new THREE.CylinderGeometry(0.025, 0.025, 0.7, 8), m(0x2a2a36, { metalness: 0.6 }), 0, 0.35, 0);
+    part(g, new THREE.SphereGeometry(0.08, 10, 8), glow(0xffe14f, 2.4), 0, 0.75, 0);
+    part(g, new THREE.TorusGeometry(0.1, 0.012, 6, 16), glow(0xffe14f, 1.4), 0, 0.75, 0, [Math.PI / 2, 0, 0]);
+    return g;
+  },
+  hacker: () => {
+    const g = new THREE.Group();
+    part(g, new THREE.BoxGeometry(0.4, 0.025, 0.28), m(0x1c2230, { metalness: 0.6 }), 0, 0.05, 0.1, [-0.2, 0, 0]);
+    part(g, new THREE.BoxGeometry(0.4, 0.28, 0.02), m(0x1c2230, { metalness: 0.6 }), 0, 0.2, -0.04, [-0.25, 0, 0]);
+    part(g, new THREE.PlaneGeometry(0.34, 0.22), glow(0x6cf0ff, 1.4), 0, 0.2, -0.03, [-0.25, 0, 0]);
+    return g;
+  },
+  stowaway: () => {
+    const g = new THREE.Group();
+    part(g, new THREE.BoxGeometry(0.34, 0.3, 0.3), m(0xa8803a), 0, 0.2, 0);
+    part(g, new THREE.BoxGeometry(0.36, 0.05, 0.32), m(0x6b4a2a), 0, 0.2, 0);
+    return g;
+  },
+  clown: () => {
+    const g = new THREE.Group();
+    part(g, new THREE.CylinderGeometry(0.008, 0.008, 0.7, 4), m(0xdddddd), 0, 0.35, 0);
+    const balloon = part(g, new THREE.SphereGeometry(0.2, 14, 10), glow(0xe8203a, 0.5), 0, 0.9, 0, null, [1, 1.2, 1]);
+    balloon.userData.bob = true;
+    return g;
+  },
 };
 const characterId = (file) => `characters/${file}`;
 export const preloadCharacters = (roleIds = Object.keys(KAYKIT)) => loadModels([...new Set(roleIds.filter((r) => KAYKIT[r]).map((r) => characterId(KAYKIT[r][0]))), characterId('anims')]);
@@ -88,6 +169,13 @@ function buildCharacter(roleId, accent) {
     character.scale.setScalar(k);
     character.position.y = -box.min.y * k;
     g.add(character);
+    const hand = ROLE_PROPS[roleId] && character.getObjectByName('handslotr');
+    if (hand) {
+      // the hand bone's own x axis points to the floor and its y axis forward: a quarter turn stands the prop up
+      const prop = ROLE_PROPS[roleId]();
+      prop.rotation.z = Math.PI / 2;
+      hand.add(prop);
+    }
     const idle = THREE.AnimationClip.findByName(clipsOf(characterId('anims')), 'Idle_A');
     if (idle) {
       anim.mixer = new THREE.AnimationMixer(character);
@@ -823,33 +911,9 @@ export function buildRoleModel(roleId, accentHex = '#ffffff') {
     }
     case 'parasite':
     default: {
-      const g = new THREE.Group();
-      const flesh = m(0x5a1a8a, { emissive: 0x2a0050, emissiveIntensity: 0.6, roughness: 0.4 });
-      const body = part(g, new THREE.SphereGeometry(0.75, 24, 18), flesh, 0, 1.0, 0, null, [1, 1.15, 1]);
-      const eyes = [];
-      for (let i = 0; i < 7; i++) {
-        const a = -0.9 + i * 0.3;
-        const y = 1.15 + Math.sin(i * 2.1) * 0.25;
-        const eye = part(g, new THREE.SphereGeometry(0.1 + (i % 3) * 0.03, 10, 8), m(0xffffff, { emissive: 0xffffaa, emissiveIntensity: 0.4 }), Math.sin(a) * 0.68, y, Math.cos(a) * 0.62);
-        part(eye, new THREE.SphereGeometry(0.05, 8, 6), m(0x000000), 0, 0, 0.08);
-        eyes.push(eye);
-      }
-      part(g, new THREE.TorusGeometry(0.28, 0.05, 6, 18, Math.PI), m(0xff3b5c, { emissive: 0xff3b5c, emissiveIntensity: 0.8 }), 0, 0.85, 0.66, [0, 0, Math.PI]);
-      const tentacles = [];
-      for (let i = 0; i < 8; i++) {
-        const a = (i / 8) * Math.PI * 2;
-        const t = new THREE.Group();
-        t.position.set(Math.cos(a) * 0.55, 0.45, Math.sin(a) * 0.55);
-        t.rotation.y = -a;
-        part(t, new THREE.CylinderGeometry(0.03, 0.12, 0.9, 8), flesh, 0.35, -0.2, 0, [0, 0, 1.2]);
-        g.add(t);
-        tentacles.push(t);
-      }
-      part(g, new THREE.TorusGeometry(0.8, 0.05, 6, 24), m(accent, { emissive: accent, emissiveIntensity: 0.5 }), 0, 0.2, 0, [Math.PI / 2, 0, 0]);
-      anim.tentacles = tentacles;
-      anim.body = body;
-      g.scale.setScalar(1.25);
-      root = g;
+      // the Parasite unmasked: see parasite.js
+      root = buildParasite(accent);
+      Object.assign(anim, root.userData.anim);
       break;
     }
   }
@@ -858,11 +922,12 @@ export function buildRoleModel(roleId, accentHex = '#ffffff') {
 }
 
 // Idle animation for revealed characters.
-export function animateRoleModel(model, t) {
+export function animateRoleModel(model, t, camera = null) {
   const a = model.userData.anim || {};
   if (a.wobble) model.rotation.z = Math.sin(t * 2.2) * 0.18;
   if (a.tentacles) a.tentacles.forEach((ten, i) => (ten.rotation.z = Math.sin(t * 3 + i) * 0.35));
   if (a.body) a.body.scale.set(1 + Math.sin(t * 2) * 0.04, 1.15 + Math.sin(t * 2 + 1) * 0.05, 1 + Math.sin(t * 2) * 0.04);
+  if (a.tick) a.tick(t, camera, model);
   if (a.mixer) {
     a.mixer.update(Math.min(0.1, Math.max(0, t - (a.lastT ?? t))));
     a.lastT = t;

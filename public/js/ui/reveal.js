@@ -579,7 +579,7 @@ export class Reveal {
           c.model.scale.setScalar(p < 1 ? 1.3 * Math.sin((p * Math.PI) / 2) : 1);
           if (p >= 1) c.popT = null;
         }
-        animateRoleModel(c.model, this.time);
+        animateRoleModel(c.model, this.time, this.camera);
       }
       if (c.dead) {
         c.deathT += sdt;

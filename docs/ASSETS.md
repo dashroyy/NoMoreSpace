@@ -7,9 +7,12 @@ Nearly everything in the game is built from code (shapes, canvas textures, synth
 | KayKit Dungeon Pack | The Citadel of Traitors: wall torches, pillars, the Prize Pot chest and coins, bookcases, the banquet table and chairs, beds, barrels and crates, a mimic chest, keys |
 | KayKit Halloween Bits | The Citadel: the burial ground by the Banishment Gate (gravestones, crypt, fences, dead trees, lantern posts), skull and ribcage in the Dungeon |
 | KayKit Adventurers and Skeletons | The Citadel's end-game reveal: animated characters for the 9 Traitors roles (Mage = Seer, Rogue = Dagger Bearer, Knight = Guardian, Barbarian = Loyalist, hooded Rogue = Recruiter, Ranger = Mole, Engineer = Blackmailer, Skeleton Minion = Recruit, Necromancer = Head Traitor), and two skeleton prisoners in the Dungeon |
+| KayKit Mystery Monthly characters | The end-game reveal for the other scripts: Space Ranger = Security Chief, Robot One = Droid, Cleric = Medic, Clown = Clown, Animatronic = Jester, Witch = Hexer, Paladin = Sentinel, Survivalist = Stowaway, Ninja = Hacker, Plant Warrior = Spore Host, Toy Soldier = Marine, Vampire = Coroner (the Engineer shares the Adventurer Engineer). Several hold a small prop in their right hand (a syringe, baton, staff, laptop, crate or balloon; see `ROLE_PROPS` in `models.js`). All of them share one rig, so one `anims.glb` (Idle_A, Idle_B) animates every character |
 | KayKit Restaurant Bits | Black Hole Blues: a kitchen and dining tables in the Galley |
 | KayKit Furniture Bits | Black Hole Blues: a lounge in the Crew Quarters |
 | KayKit Space Base Bits | Black Hole Blues: cargo stacks in the Cargo Bay, space farms in Hydroponics |
+
+The Parasite is not a model: `public/js/world/parasite.js` builds it from code (a veined, breathing body with a toothed maw, one big and many small eyes that follow the camera, writhing tentacles, and the empty helmet at its feet). The remaining roles are small cartoon people built from shapes in `models.js` (`person()`: faces, hands, boots, belt, plus a prop or hat per role).
 
 ## How it works
 
