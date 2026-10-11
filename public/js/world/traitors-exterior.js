@@ -133,7 +133,6 @@ export class TraitorsExterior {
     // ---------- east: the Bedchamber turrets ----------
     tower(66, -8, 3.2, 17, 0x5a1a28, 0);
     tower(66, 18, 3.0, 14, SLATE, 2);
-    add(S, box(6, 0.3, 26), T('stripes', 0x5a3c22, 0x6a4a2a, 1, 8), 58, Y - 0.2, 5);
 
     // ---------- south: a squat gatehouse behind the Wine Cellar ----------
     for (const sx of [-1, 1]) tower(sx * 9, 62, 3.3, 9, SLATE, 1 + sx);
@@ -183,7 +182,10 @@ export class TraitorsExterior {
     }
     for (let i = 0; i < (lowFx ? 5 : 11); i++) {
       const g = new THREE.Group();
-      g.position.set((Math.random() - 0.5) * 120, 3 + Math.random() * 6, (Math.random() - 0.5) * 100 + 7);
+      // out beyond the station, never over the rooms where they would hang in front of the players
+      const a = Math.random() * Math.PI * 2;
+      const rad = 74 + Math.random() * 22;
+      g.position.set(2 + Math.cos(a) * rad * 1.05, 3 + Math.random() * 7, 7 + Math.sin(a) * rad * 0.9);
       add(g, new THREE.OctahedronGeometry(0.5 + Math.random() * 0.3), gold, 0, 0, 0, null, [0.7, 1.4, 0.7]);
       this.group.add(g);
       this.crystals.push({ g, ph: Math.random() * 6, y: g.position.y });
@@ -276,7 +278,7 @@ export class TraitorsExterior {
       const t = Math.max(0, Math.min(1, -y));
       // moss-dark on top, bruised grey-purple down the sides, nearly black at the tip
       c.setRGB(0.2 + (1 - t) * 0.06 + crag * 0.4, 0.2 + (1 - t) * 0.1 + crag * 0.3, 0.26 + (1 - t) * 0.02 + crag * 0.3);
-      if (y > 0.2) c.setRGB(0.13 + crag, 0.2 + crag, 0.13 + crag * 0.5);
+      if (y > 0.2) c.setRGB(0.07 + crag * 0.5, 0.1 + crag * 0.5, 0.08 + crag * 0.3);
       col[i * 3] = c.r;
       col[i * 3 + 1] = c.g;
       col[i * 3 + 2] = c.b;

@@ -37,7 +37,7 @@ export const TRAITORS_LIGHTS = {
 const FLOORS = {
   observation: ['checker', 0x4a4852, 0x3c3a44], navigation: ['stripes', 0x5a3a22, 0x4a2e1a], comms: ['checker', 0x544e48, 0x423d38], medbay: ['checker', 0x3a4a3c, 0x2e3a30],
   galley: ['checker', 0x6a2a2e, 0x2a1a1c], reactor: ['checker', 0x3c3232, 0x2c2424], engine: ['checker', 0x2e2e34, 0x232329], hydroponics: ['dots', 0x2f5a2a, 0x4a7a38],
-  airlock: ['diag', 0x2a2a30, 0x4a1a1e], quarters: ['stripes', 0x6a4a2a, 0x5a3c22], cargo: ['checker', 0x3a2c24, 0x2e2018], bridge: null,
+  airlock: ['diag', 0x2a2a30, 0x4a1a1e], quarters: ['stripes', 0x6a4a2a, 0x5a3c22], cargo: ['checker', 0x3a2c24, 0x2e2018], bridge: ['checker', 0x413d4a, 0x35323f],
 };
 
 // ---------- canvas-drawn materials (cached) ----------
@@ -160,14 +160,14 @@ const crestMat = () => {
   if (drawnMats.has('crest')) return drawnMats.get('crest');
   const mat = drawn('crest', 1024, 1024, (g) => {
     const c = 512;
-    g.fillStyle = 'rgba(18,10,16,0.62)';
+    g.fillStyle = 'rgba(20,12,18,0.93)';
     g.beginPath();
     g.arc(c, c, 506, 0, Math.PI * 2);
     g.fill();
     for (let k = 0; k < 16; k++) {
       const a0 = (k / 16) * Math.PI * 2;
       const a1 = ((k + 1) / 16) * Math.PI * 2;
-      g.fillStyle = k % 2 ? 'rgba(130,20,34,0.62)' : 'rgba(34,22,48,0.6)';
+      g.fillStyle = k % 2 ? 'rgba(130,20,34,0.8)' : 'rgba(40,26,56,0.8)';
       g.beginPath();
       g.arc(c, c, 470, a0, a1);
       g.arc(c, c, 345, a1, a0, true);

@@ -3,6 +3,8 @@
 //             a bright photon ring, jets and a stream of matter spiralling in.
 //   carnival  🤡 the Great Grin: a scary clown planet with a cracked white face, hollow
 //             glowing eyes that follow the camera, and an endless fanged grin.
+//   traitors  🌕 the Blood Moon: a huge cratered, cracked crimson moon over banks of red mist,
+//             with ravens circling it and a bell that tolls.
 //   outbreak  🦠 the Bloom: a vast, scary gas cloud, layered and turning, with a glowing
 //             heart, tendrils, drifting spores, lightning, and an eye looking out of it.
 //
@@ -10,7 +12,7 @@
 // the one for the current script is shown. Everything is unlit (it glows), so the ship's
 // lights do not change how it looks. Pieces animate in update(); flash() kicks them.
 import * as THREE from 'three';
-import { cloudCanvas, CLOUD_TINTS, CLOUD_DARK, eyeCanvas, glowCanvas, lensCanvas, grinFaceCanvas, grinGlowCanvases, planetCanvas, FACE, CAP_RADIUS } from './doom-art.js';
+import { cloudCanvas, CLOUD_TINTS, CLOUD_DARK, eyeCanvas, glowCanvas, lensCanvas, grinFaceCanvas, grinGlowCanvases, planetCanvas, moonCanvas, moonCracksCanvas, ravenCanvas, FACE, CAP_RADIUS } from './doom-art.js';
 
 const tex = (canvas) => {
   const t = new THREE.CanvasTexture(canvas);
@@ -505,6 +507,80 @@ class Bloom3D {
 }
 
 // ---------------------------------------------------------------------------
+// 🌕 The Blood Moon
+// ---------------------------------------------------------------------------
+class Moon3D {
+  constructor({ lowFx }) {
+    this.group = new THREE.Group();
+    this.group.visible = false;
+    this.flare = 0;
+    this.heat = 0;
+    this.body = new THREE.Group();
+    this.group.add(this.body);
+    const map = tex(moonCanvas(512));
+    map.wrapS = THREE.RepeatWrapping;
+    this.moonMat = new THREE.ShaderMaterial({ vertexShader: PLANET_VERT, fragmentShader: PLANET_FRAG, uniforms: { uMap: { value: map }, uRim: { value: 0.5 } } });
+    this.body.add(new THREE.Mesh(new THREE.SphereGeometry(1, 64, 40), this.moonMat));
+    // cracks that glow, and spread as the end gets near
+    this.cracks = new THREE.Mesh(new THREE.SphereGeometry(1.004, 64, 40), new THREE.MeshBasicMaterial({ map: tex(moonCracksCanvas(1024)), transparent: true, opacity: 0.25, blending: THREE.AdditiveBlending, depthWrite: false, fog: false }));
+    this.body.add(this.cracks);
+    // a red haze round the moon
+    this.halo = new THREE.Sprite(additive(tex(glowCanvas('rgba(255,40,30,0.6)', 'rgba(120,10,24,0.25)', 256)), 0xffffff, 0.8));
+    this.halo.scale.setScalar(4.6);
+    this.group.add(this.halo);
+    // banks of red mist below it, so it floats up out of them
+    this.mists = [];
+    const specs = [[3, [90, 14, 26], 'smoke', -0.3, 6.8, false], [8, [60, 10, 40], 'smoke', -0.55, 6.0, false], [13, [255, 70, 50], 'veins', -0.75, 5.4, true], [18, [120, 20, 34], 'smoke', -1.0, 4.6, false]];
+    specs.slice(0, lowFx ? 3 : 4).forEach(([seed, tint, style, y, size, glows], i) => {
+      const mat = new THREE.MeshBasicMaterial({ map: tex(cloudCanvas(seed, tint, 256, style)), transparent: true, opacity: glows ? 0.45 : 0.6, blending: glows ? THREE.AdditiveBlending : THREE.NormalBlending, depthWrite: false, side: THREE.DoubleSide, fog: false });
+      const plane = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), mat);
+      plane.rotation.x = -Math.PI / 2;
+      plane.scale.setScalar(size);
+      plane.position.y = y;
+      this.group.add(plane);
+      this.mists.push({ plane, mat, speed: (i % 2 ? 1 : -1) * (0.02 + i * 0.01), base: mat.opacity, glows });
+    });
+    // ravens circling it
+    this.ravens = [];
+    const ravenMat = new THREE.SpriteMaterial({ map: tex(ravenCanvas(64)), transparent: true, depthWrite: false, fog: false });
+    for (let i = 0; i < (lowFx ? 8 : 16); i++) {
+      const spr = new THREE.Sprite(ravenMat);
+      spr.scale.setScalar(0.11);
+      this.group.add(spr);
+      this.ravens.push({ spr, a: rand(0, Math.PI * 2), r: rand(1.25, 2.5), y: rand(0.1, 1.2), s: rand(0.18, 0.4) * (i % 2 ? 1 : -1), ph: rand(0, 6) });
+    }
+  }
+
+  setProgress(p) {
+    this.heat = p;
+    this.moonMat.uniforms.uRim.value = 0.45 + p * 0.6;
+  }
+
+  flash() {
+    this.flare = 1; // the bell tolls: the moon flares and the ravens scatter
+  }
+
+  update(t, dt) {
+    this.flare = Math.max(0, this.flare - dt * 0.8);
+    const beat = Math.pow(Math.max(0, Math.sin(t * 0.9)), 3) * 0.35;
+    this.body.rotation.y += dt * 0.01;
+    this.body.scale.setScalar(1 + Math.sin(t * 0.7) * 0.006 + this.flare * 0.015);
+    this.cracks.material.opacity = 0.1 + this.heat * 0.3 + beat * 0.3 + this.flare * 0.5;
+    this.halo.material.opacity = 0.55 + this.heat * 0.35 + beat * 0.3 + this.flare * 0.35;
+    this.halo.scale.setScalar(4.6 * (1 + beat * 0.03 + this.flare * 0.06));
+    for (const m of this.mists) {
+      m.plane.rotation.z += m.speed * dt;
+      m.mat.opacity = Math.min(1, m.base * (0.9 + Math.sin(t * 0.3 + m.base * 9) * 0.1) * (m.glows ? 1 + this.heat * 0.5 + this.flare * 1.2 : 1));
+    }
+    for (const r of this.ravens) {
+      r.a += (r.s * dt * (1 + this.flare * 3 + this.heat * 0.5)) / r.r;
+      r.spr.position.set(Math.cos(r.a) * r.r, r.y + Math.sin(t * 0.6 + r.ph) * 0.06, Math.sin(r.a) * r.r);
+      r.spr.scale.set(0.11, 0.11 * (0.35 + 0.65 * Math.abs(Math.sin(t * 6 + r.ph))), 1); // flapping
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
 // The doom under the ship
 // ---------------------------------------------------------------------------
 export class Doom {
@@ -516,6 +592,7 @@ export class Doom {
       classic: new BlackHole3D({ lowFx }),
       carnival: new Grin3D({ lowFx }),
       outbreak: new Bloom3D({ lowFx }),
+      traitors: new Moon3D({ lowFx }),
     };
     for (const part of Object.values(this.parts)) this.group.add(part.group);
     this.script = 'classic';

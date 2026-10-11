@@ -558,3 +558,149 @@ export function planetCanvas(size = 512) {
     return c;
   });
 }
+
+
+// ---------------------------------------------------------------------------
+// 🌕 The Blood Moon (Citadel of Traitors): a huge crimson moon, cratered and cracked, with
+// ravens circling it. The surface is painted per pixel from the direction on the sphere,
+// so nothing stretches at the poles.
+// ---------------------------------------------------------------------------
+const fbm3 = (x, y, z, seed = 1, oct = 4) => (fbm(x, y, seed, oct) + fbm(y + 11.3, z + 5.7, seed + 7, oct) + fbm(z + 3.1, x + 17.9, seed + 13, oct)) / 3;
+
+export function moonCanvas(size = 512) {
+  return cached(`moon|${size}`, () => {
+    const W = size;
+    const H = size / 2;
+    const c = makeCanvas(W, H);
+    const g = c.getContext('2d');
+    const img = g.createImageData(W, H);
+    const rnd = seededRandom(31);
+    // craters: a centre on the sphere, an angular radius and a depth (more of them near the top, where the camera looks)
+    const craters = [];
+    for (let i = 0; i < 70; i++) {
+      const y = i < 26 ? 0.5 + rnd() * 0.5 : rnd() * 2 - 1;
+      const a = rnd() * Math.PI * 2;
+      const rr = Math.sqrt(1 - y * y);
+      craters.push({ x: rr * Math.cos(a), y, z: rr * Math.sin(a), r: 0.05 + Math.pow(rnd(), 2.2) * 0.22, d: 0.5 + rnd() * 0.5 });
+    }
+    for (let py = 0; py < H; py++) {
+      const theta = ((py + 0.5) / H) * Math.PI;
+      const sy = Math.cos(theta);
+      const sr = Math.sin(theta);
+      for (let px = 0; px < W; px++) {
+        const phi = ((px + 0.5) / W) * Math.PI * 2;
+        const x = -Math.cos(phi) * sr;
+        const z = Math.sin(phi) * sr;
+        const n = fbm3(x * 1.8 + 5, sy * 1.8 + 5, z * 1.8 + 5, 4, 5);
+        const maria = Math.max(0, Math.min(1, (n - 0.5) * 3.2)); // dark seas
+        let v = 0.62 + n * 0.6 - maria * 0.3;
+        for (const cr of craters) {
+          const dot = x * cr.x + sy * cr.y + z * cr.z;
+          if (dot < 0.93) continue;
+          const d = Math.acos(Math.min(1, dot)) / cr.r;
+          if (d < 1) v -= (1 - d * d) * 0.42 * cr.d;
+          else if (d < 1.35) v += (1 - (d - 1) / 0.35) * 0.4 * cr.d;
+        }
+        const t = Math.max(0, Math.min(1, v));
+        const i = (py * W + px) * 4;
+        img.data[i] = 60 + t * 185;
+        img.data[i + 1] = 4 + t * t * 105;
+        img.data[i + 2] = 8 + t * t * 55;
+        img.data[i + 3] = 255;
+      }
+    }
+    g.putImageData(img, 0, 0);
+    return c;
+  });
+}
+
+// glowing cracks across the moon (an additive layer): random walks over the sphere
+export function moonCracksCanvas(size = 1024) {
+  return cached(`moon-cracks|${size}`, () => {
+    const W = size;
+    const H = size / 2;
+    const c = makeCanvas(W, H);
+    const g = c.getContext('2d');
+    g.lineCap = 'round';
+    g.lineJoin = 'round';
+    const rnd = seededRandom(77);
+    const norm = (v) => {
+      const l = Math.hypot(v[0], v[1], v[2]) || 1;
+      return [v[0] / l, v[1] / l, v[2] / l];
+    };
+    const toUv = (p) => [(((Math.atan2(p[2], -p[0]) / (Math.PI * 2)) + 1) % 1) * W, (Math.acos(Math.max(-1, Math.min(1, p[1]))) / Math.PI) * H];
+    const paths = [];
+    const walk = (p, t, steps, depth) => {
+      const pts = [toUv(p)];
+      for (let i = 0; i < steps; i++) {
+        const np = norm([p[0] + t[0] * 0.045, p[1] + t[1] * 0.045, p[2] + t[2] * 0.045]);
+        const d = t[0] * np[0] + t[1] * np[1] + t[2] * np[2];
+        let nt = norm([t[0] - np[0] * d, t[1] - np[1] * d, t[2] - np[2] * d]);
+        const b = [np[1] * nt[2] - np[2] * nt[1], np[2] * nt[0] - np[0] * nt[2], np[0] * nt[1] - np[1] * nt[0]];
+        const a = (rnd() - 0.5) * 0.9;
+        nt = norm([nt[0] * Math.cos(a) + b[0] * Math.sin(a), nt[1] * Math.cos(a) + b[1] * Math.sin(a), nt[2] * Math.cos(a) + b[2] * Math.sin(a)]);
+        p = np;
+        t = nt;
+        pts.push(toUv(p));
+        if (depth < 1 && rnd() < 0.09) {
+          const a2 = rnd() < 0.5 ? 0.8 : -0.8;
+          walk(p, norm([t[0] * Math.cos(a2) + b[0] * Math.sin(a2), t[1] * Math.cos(a2) + b[1] * Math.sin(a2), t[2] * Math.cos(a2) + b[2] * Math.sin(a2)]), 14, depth + 1);
+        }
+      }
+      paths.push(pts);
+    };
+    for (let i = 0; i < 9; i++) {
+      const y = 0.15 + rnd() * 0.85;
+      const a = rnd() * Math.PI * 2;
+      const rr = Math.sqrt(1 - y * y);
+      const p = [rr * Math.cos(a), y, rr * Math.sin(a)];
+      const r0 = [rnd() - 0.5, rnd() - 0.5, rnd() - 0.5];
+      const d = r0[0] * p[0] + r0[1] * p[1] + r0[2] * p[2];
+      walk(p, norm([r0[0] - p[0] * d, r0[1] - p[1] * d, r0[2] - p[2] * d]), 34, 0);
+    }
+    for (const [lw, col] of [[5, 'rgba(255,50,20,0.12)'], [2, 'rgba(255,110,40,0.4)'], [0.8, 'rgba(255,220,140,0.8)']]) {
+      g.lineWidth = lw * (W / 1024);
+      g.strokeStyle = col;
+      for (const pts of paths) {
+        g.beginPath();
+        for (let i = 0; i < pts.length; i++) {
+          if (i === 0 || Math.abs(pts[i][0] - pts[i - 1][0]) > W / 2) g.moveTo(pts[i][0], pts[i][1]);
+          else g.lineTo(pts[i][0], pts[i][1]);
+        }
+        g.stroke();
+      }
+    }
+    return c;
+  });
+}
+
+// a raven in flight, wings up, as a dark silhouette with a red rim
+export function ravenCanvas(size = 64) {
+  return cached(`raven|${size}`, () => {
+    const c = makeCanvas(size);
+    const g = c.getContext('2d');
+    const s = size / 64;
+    g.scale(s, s);
+    g.shadowColor = 'rgba(255,60,40,0.9)';
+    g.shadowBlur = 5;
+    g.fillStyle = '#0a0508';
+    g.beginPath();
+    g.moveTo(32, 30);
+    g.quadraticCurveTo(20, 14, 3, 20);
+    g.quadraticCurveTo(14, 26, 18, 38);
+    g.quadraticCurveTo(26, 36, 32, 40);
+    g.quadraticCurveTo(38, 36, 46, 38);
+    g.quadraticCurveTo(50, 26, 61, 20);
+    g.quadraticCurveTo(44, 14, 32, 30);
+    g.fill();
+    g.beginPath();
+    g.ellipse(32, 36, 5, 10, 0, 0, Math.PI * 2);
+    g.fill();
+    g.beginPath();
+    g.moveTo(32, 26);
+    g.lineTo(36, 22);
+    g.lineTo(30, 22);
+    g.fill();
+    return c;
+  });
+}

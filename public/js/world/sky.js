@@ -45,19 +45,23 @@ function emojiShape(emoji) {
 
 const CONFETTI = ['rgba(255,120,190,', 'rgba(255,225,90,', 'rgba(110,230,255,', 'rgba(160,255,140,'];
 const SPORES = ['rgba(170,255,90,', 'rgba(110,255,210,', 'rgba(215,130,255,'];
+const EMBERS = ['rgba(255,214,140,', 'rgba(255,120,90,', 'rgba(255,240,200,'];
 
 export function paintSpace(ctx, w, h, { t = 0, progress = 0, clue = null, colorOf = () => '#fff', iconOf = () => '★', withHole = true, holeX = 0.5, script = 'classic' } = {}) {
   const carnival = script === 'carnival';
   const outbreak = script === 'outbreak';
+  const traitors = script === 'traitors';
   const bg = ctx.createRadialGradient(w * holeX, h * 0.6, 10, w * 0.5, h * 0.5, Math.max(w, h));
-  bg.addColorStop(0, carnival ? '#2b0b34' : outbreak ? '#10301a' : '#1a0b22');
-  bg.addColorStop(0.4, carnival ? '#12071f' : outbreak ? '#07160f' : '#070816');
-  bg.addColorStop(1, carnival ? '#05020d' : outbreak ? '#020805' : '#020208');
+  bg.addColorStop(0, carnival ? '#2b0b34' : outbreak ? '#10301a' : traitors ? '#2e0a12' : '#1a0b22');
+  bg.addColorStop(0.4, carnival ? '#12071f' : outbreak ? '#07160f' : traitors ? '#14060b' : '#070816');
+  bg.addColorStop(1, carnival ? '#05020d' : outbreak ? '#020805' : traitors ? '#050205' : '#020208');
   ctx.fillStyle = bg;
   ctx.fillRect(0, 0, w, h);
 
   // Nebula wisps.
-  const wisps = outbreak
+  const wisps = traitors
+    ? [[0.2, 0.3, 0.5, 'rgba(200,30,50,0.2)'], [0.8, 0.25, 0.4, 'rgba(255,180,70,0.1)'], [0.6, 0.85, 0.5, 'rgba(90,40,130,0.16)']]
+    : outbreak
     ? [[0.2, 0.3, 0.5, 'rgba(90,255,80,0.16)'], [0.8, 0.25, 0.4, 'rgba(60,220,190,0.12)'], [0.6, 0.85, 0.5, 'rgba(170,70,230,0.14)']]
     : carnival
     ? [[0.2, 0.3, 0.5, 'rgba(230,60,170,0.2)'], [0.8, 0.25, 0.4, 'rgba(255,200,60,0.12)'], [0.6, 0.85, 0.5, 'rgba(60,200,230,0.14)']]
@@ -74,7 +78,7 @@ export function paintSpace(ctx, w, h, { t = 0, progress = 0, clue = null, colorO
     const s = STARS[i];
     const a = 0.45 + 0.55 * Math.abs(Math.sin(t * 0.8 + s.tw));
     // in the Carnival, the stars are bits of confetti; in the Outbreak, glowing spores
-    ctx.fillStyle = `${carnival && i % 3 ? CONFETTI[i % CONFETTI.length] : outbreak && i % 3 ? SPORES[i % SPORES.length] : s.hue}${a})`;
+    ctx.fillStyle = `${traitors && i % 3 ? EMBERS[i % EMBERS.length] : carnival && i % 3 ? CONFETTI[i % CONFETTI.length] : outbreak && i % 3 ? SPORES[i % SPORES.length] : s.hue}${a})`;
     ctx.beginPath();
     ctx.arc(s.x * w, s.y * h, s.r, 0, Math.PI * 2);
     ctx.fill();
@@ -312,9 +316,91 @@ export function paintBlackHole(ctx, cx, cy, r, t) {
   ctx.restore();
 }
 
-// Whichever doom this script is about (the black hole, the Great Grin or the Bloom).
+// 🌕 The Blood Moon: a crimson cratered moon with glowing cracks, a bank of red mist across its
+// foot and ravens circling it. The bell tolls now and then, and the moon flares.
+export function paintMoon(ctx, cx, cy, r, t) {
+  const beat = Math.pow(Math.max(0, Math.sin(t * 0.9)), 3) * 0.3;
+  ctx.save();
+  const halo = ctx.createRadialGradient(cx, cy, r * 0.8, cx, cy, r * 3);
+  halo.addColorStop(0, `rgba(255,40,30,${0.5 + beat})`);
+  halo.addColorStop(0.4, 'rgba(120,10,24,0.2)');
+  halo.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = halo;
+  ctx.fillRect(cx - r * 3.2, cy - r * 3.2, r * 6.4, r * 6.4);
+  const body = ctx.createRadialGradient(cx - r * 0.3, cy - r * 0.35, r * 0.1, cx, cy, r);
+  body.addColorStop(0, '#e0583a');
+  body.addColorStop(0.6, '#9a2420');
+  body.addColorStop(1, '#3a0810');
+  ctx.fillStyle = body;
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, 0, Math.PI * 2);
+  ctx.clip();
+  for (let i = 0; i < 14; i++) {
+    const a = hashT(i) * Math.PI * 2;
+    const d = Math.sqrt(hashT(i + 30)) * r * 0.85;
+    const cr = r * (0.05 + hashT(i + 60) * 0.13);
+    const x = cx + Math.cos(a) * d;
+    const y = cy + Math.sin(a) * d;
+    ctx.fillStyle = 'rgba(40,4,10,0.45)';
+    ctx.beginPath();
+    ctx.arc(x, y, cr, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(255,130,90,0.35)';
+    ctx.lineWidth = Math.max(1, r * 0.02);
+    ctx.beginPath();
+    ctx.arc(x - cr * 0.12, y - cr * 0.12, cr, Math.PI * 0.9, Math.PI * 1.7);
+    ctx.stroke();
+  }
+  ctx.globalCompositeOperation = 'lighter';
+  ctx.strokeStyle = `rgba(255,110,50,${0.35 + beat})`;
+  ctx.lineWidth = Math.max(1, r * 0.025);
+  for (let i = 0; i < 5; i++) {
+    let x = cx + (hashT(i + 100) - 0.5) * r;
+    let y = cy + (hashT(i + 120) - 0.5) * r;
+    let a = hashT(i + 140) * Math.PI * 2;
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    for (let k = 0; k < 7; k++) {
+      a += (hashT(i * 9 + k) - 0.5) * 1.1;
+      x += Math.cos(a) * r * 0.2;
+      y += Math.sin(a) * r * 0.2;
+      ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+  }
+  ctx.restore();
+  ctx.globalCompositeOperation = 'source-over';
+  for (let i = 0; i < 5; i++) {
+    ctx.fillStyle = `rgba(${90 - i * 8},14,28,0.32)`;
+    ctx.beginPath();
+    ctx.ellipse(cx + Math.sin(t * 0.2 + i) * r * 0.25, cy + r * (0.55 + i * 0.13), r * (1.5 - i * 0.12), r * 0.2, 0, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.strokeStyle = '#080408';
+  ctx.lineWidth = Math.max(1.2, r * 0.03);
+  for (let i = 0; i < 8; i++) {
+    const a = t * (0.2 + hashT(i) * 0.15) + i * 0.8;
+    const rr = r * (1.3 + hashT(i + 9) * 0.7);
+    const x = cx + Math.cos(a) * rr;
+    const y = cy + Math.sin(a) * rr * 0.35 - r * 0.2;
+    const flap = Math.sin(t * 7 + i) * r * 0.05;
+    ctx.beginPath();
+    ctx.moveTo(x - r * 0.1, y - flap);
+    ctx.lineTo(x, y);
+    ctx.lineTo(x + r * 0.1, y - flap);
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+// Whichever doom this script is about (the black hole, the Great Grin, the Bloom or the Blood Moon).
 export function paintDoom(ctx, cx, cy, r, t, script = 'classic') {
-  if (script === 'carnival') paintGrin(ctx, cx, cy, r * 0.95, t);
+  if (script === 'traitors') paintMoon(ctx, cx, cy, r * 0.85, t);
+  else if (script === 'carnival') paintGrin(ctx, cx, cy, r * 0.95, t);
   else if (script === 'outbreak') paintBloom(ctx, cx, cy, r * 0.7, t);
   else paintBlackHole(ctx, cx, cy, r, t);
 }

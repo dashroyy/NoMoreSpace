@@ -88,7 +88,7 @@ The role card also has a private **🗒️ Notebook**, like the scrap of paper B
 
 ## 2a. Scripts, and the 🎪 Cosmic Carnival
 
-A **script** is a cast of characters plus a story, like BotC's *Trouble Brewing*, *Bad Moon Rising* and *Sects & Violets*. The host picks one in the docking bay (cards under **🎭 Script**; everyone sees the choice, with a "how this script plays" panel). ARIA only deals roles from the chosen script, and the wiki, claim menu and notebook list only those roles. There are two:
+A **script** is a cast of characters plus a story, like BotC's *Trouble Brewing*, *Bad Moon Rising* and *Sects & Violets*. The host picks one in the docking bay (cards under **🎭 Script**; everyone sees the choice, with a "how this script plays" panel). ARIA only deals roles from the chosen script, and the wiki, claim menu and notebook list only those roles. There are four:
 
 - 🕳️ **Black Hole Blues**: the original game described in this document (3–15 players).
 - 🎪 **Cosmic Carnival**: a space circus with 12 new roles and two possible Demons (5–15 players). Also available as **🎪 Practice: Cosmic Carnival** on the title screen.
@@ -115,6 +115,8 @@ The Carnival has its **own universe**: no black hole. The Big Top is drifting in
 The Carnival also uses the Engineer, Scanner, Coroner, Medic, Black Box, First Officer, Gunner, Space Drunk, Stowaway, Hacker and Incubator. Its Demon is the Parasite, or (7+ players, about 4 games in 10) the Reflection; nobody is told which, so a day without an airlocking is a gamble.
 
 - 🦠 **Outbreak**: a research station adrift in a spreading spore cloud, the **Bloom** (5–15 players, **🦠 Practice: Outbreak** on the title screen). The Demon, **The Carrier**, does not kill: it **infects** a player each night. An infected player is told at once, their abilities malfunction, and they **burst** (die) when the next night ends, unless a **Vaccinator** cures them. 11 new roles: Vaccinator, Contact Tracer, Hazmat Tech, Blood Donor, Biohazard Sensor (Crew), Patient Zero, Hypochondriac (Drifters), Bioterrorist, Quack Doctor (whose fake fevers are indistinguishable from real ones), Spore Host (Saboteurs), and the Carrier. The station becomes a lab (a Containment Hub with a biohazard symbol, a Genome Lab with a spinning helix, a Mold Garden of giant mushrooms, a Decon Chamber, cryo pods), with its own sounds, a research complex outside and a Bloom with an eye in every window.
+
+- 🗡️ **Citadel of Traitors**: a gothic castle under a **Blood Moon**, based on the TV show *The Traitors* (7–15 players, **🗡️ Practice: Traitors** on the title screen). Missions fill a **Prize Pot** (500 star-gold per task, split by the winners) and the guest with the most missions each day wins a **Shield** against the night's murder. A banished guest is **unmasked** (everyone learns Faithful or Traitor). The Faithful win when every Traitor is banished; the Traitors win when they are as many as the Faithful, and if the Head Traitor goes, another Traitor takes the cloak. 9 new roles: Seer, Dagger Bearer, Guardian, Loyalist (Faithful), Recruiter (offers a black envelope), Mole, Blackmailer, Recruit (Traitors) and the Head Traitor. The station becomes a castle (a Round Table with a floor crest, a Library of floating books, a Bell Tower, a Dungeon, a Walled Garden, a Banishment Gate) on a floating crag, with its own sounds and a cratered Blood Moon circled by ravens.
 
 For the research behind them, the design reasoning, simulation results and how to make the next script, see [SCRIPTS.md](SCRIPTS.md).
 

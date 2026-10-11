@@ -7,11 +7,12 @@ A **script** is a whole cast of characters plus a story, exactly like Blood on t
 | 🕳️ **Black Hole Blues** (`classic`) | 3–15 | The original game: a ship falling into a black hole. The gentlest script, built on *Trouble Brewing*. |
 | 🎪 **Cosmic Carnival** (`carnival`) | 5–15 | A space circus with a Parasite in the troupe. Twins, tricks, pies, a method actor and a mirror demon. |
 | 🦠 **Outbreak** (`outbreak`) | 5–15 | A research station in a spreading spore cloud. The Demon infects instead of killing; the infected burst a night later unless cured. |
+| 🗡️ **Citadel of Traitors** (`traitors`) | 7–15 | A castle under a Blood Moon, based on the TV show *The Traitors*: a Prize Pot, daily Shields, recruiting and unmasked banishments. |
 
 Everything about scripts lives in a few places:
 
 - `server/scripts.js`: the registry (name, icon, story, rules, role lists, which demons can appear).
-- `server/roles.js` + `server/roles-carnival.js` + `server/roles-outbreak.js`: every role. Roles are shared across scripts; a script just lists the ids it uses.
+- `server/roles.js` + `server/roles-carnival.js` + `server/roles-outbreak.js` + `server/roles-traitors.js`: every role. Roles are shared across scripts; a script just lists the ids it uses.
 - `server/storyteller.js`: dealing a cast for a script (`pickRoles(n, random, script)`), plus the stories each script tells.
 - `server/engine.js`: the rules. Abilities that need more than "choose a player and learn something" are coded here.
 
@@ -153,7 +154,60 @@ About 400 robot games (6 to 15 players): every game finishes, the crew wins abou
 - **Sounds:** a slow heartbeat and a PA "ding-dong" in the hub, a geiger counter and bubbling glass in the gallery, a sequencer chattering in the Genome Lab, a siren in the Alarm Center, muffled coughing through the walls, fans, a furnace roar, wet pops in the Mold Garden and a decon shower.
 - **Characters:** 3D models for all 11 roles in the end-game reveal, and replay captions for every infection, cure, fever and burst.
 
-### Making a new script
+## 🗡️ Citadel of Traitors
+
+*The Citadel stands on a drifting crag, lit by a Blood Moon that rises a little higher every night. Twelve guests sit at the Round Table, playing for a Prize Pot of star-gold. A few of them wear black cloaks under their coats.*
+
+Based on the TV game show *The Traitors*. The big idea: **the show's own rules, as game rules.** The Faithful earn a pot and shields by doing missions, the Traitors murder by night and recruit when they are losing, and every banishment ends with an unmasking: **everyone learns what the banished guest really was**, so every vote leaves a trail of evidence.
+
+### The show's rules, and how the game plays them
+
+| On the show | In the Citadel |
+|---|---|
+| The Traitors know each other. | The Traitors learn each other on night 1 (from 5 players; the Head Traitor also gets 3 bluffs). |
+| Missions build the Prize Pot. | Every task completed adds **500 star-gold** to the pot. The HUD shows it (💰). The winning team splits it, and the end-of-game screen says how much each winner takes home. |
+| The Shield. | Each dawn, the guest who completed the **most missions** wins a Shield. The Traitors cannot murder them that night (nobody dies, and the Traitors are told it was a Shield). |
+| Murder by night. | The Head Traitor murders one guest per night. |
+| Banishment, then the reveal. | The Round Table votes. The banished guest is **unmasked**: everyone sees *Faithful* or *Traitor*, in the announcement, the log and the replay. |
+| Recruiting. | A Recruiter slips a black envelope under a Faithful's door. They have a minute to accept (and become a Traitor) or refuse. |
+| The Traitors win by being as many as the Faithful. | Same, plus: **if the Head Traitor goes, another Traitor takes the cloak** and the murders go on. The Faithful must banish *every* Traitor. |
+
+### The cast
+
+| Role | Type | Inspired by | What it does |
+|---|---|---|---|
+| 🔮 Seer | Faithful | Fortune Teller | Once per game, learn whether a player is a Traitor. If they are, they learn who you are. |
+| 🗡️ Dagger Bearer | Faithful | Mayor | Your YES votes at the Round Table count twice. |
+| 🏰 Guardian | Faithful | Monk | Each night, guard a player (not yourself, not the same one twice): the Traitors cannot murder them. |
+| 💂 Loyalist | Faithful | Soldier | Cannot be recruited, and is told that someone tried. |
+| ✉️ Recruiter | Traitor | Scarlet Woman | Once per game (not night 1), offer a Faithful a place among the Traitors. |
+| 🕵️ Mole | Traitor | Spy | A Traitor who looks Faithful to every check. |
+| 🤐 Blackmailer | Traitor | Witch | Each night, gag a player: tomorrow they cannot nominate, and their vote is ignored. |
+| 🐍 Recruit | Traitor | Minion | A Faithful who accepted an offer. Never dealt at the start. |
+| 🦇 The Head Traitor | Demon | Imp | Each night (not night 1), murder a player. If banished, another Traitor takes the cloak. |
+
+The script also borrows seven Faithful roles (Comms Officer, Archivist, Security, Navigator, Engineer, Coroner, Black Box), two Drifters (Space Drunk, Stowaway) and one Traitor (Hacker). It needs **7 or more players** (the show needs enough guests for a Round Table).
+
+### Why it should be fun
+
+- **Banishment is information.** Every unmasking is a free clue about who voted for whom, so the Traitors cannot just vote with the crowd.
+- **A gift and a threat at once.** Doing missions makes you the pot's friend, and wins you a Shield, and makes you the Traitors' favourite target the night after the Shield wears off.
+- **The Recruiter's choice.** Offer the cloak to someone who has been wrongly accused: they may not say no. But a refusal tells them a Recruiter exists, and a Loyalist tears the envelope up in front of you.
+- **Succession.** Banishing the Head Traitor is no longer the end: the cloak passes, and the Mole may be next.
+
+### Check by simulation
+
+450 robot games (7 to 15 players): every game finishes and the crew wins about **30%** (robots are worse than people at deduction, so human Faithful should win more). Games last about 4.9 days; the pot averages about 13,700 star-gold. Robots read unmasking results (a banished Traitor's voters become suspicious), which is what lifted the crew from 16% to 30%.
+
+### A universe of its own: the Blood Moon
+
+- **The disaster** is **the Blood Moon**, a huge cratered moon with glowing cracks that spread as the end nears, circled by ravens over banks of red mist. The bell tolls now and then, the moon flares and the ravens scatter. It is painted in every window and in the sea under the Citadel.
+- **The rooms** are a castle (room ids and rules are unchanged): the Bridge is **The Round Table** (a gold and crimson crest on the floor, candles ringing the table), the Observation Deck is **The Battlements** (a creaking trebuchet, merlons), Navigation is **The Library** (floating books, a ticking grandfather clock, a globe), Comms is **The Bell Tower** (a bell that tolls, ravens on perches), the Medbay is **The Apothecary** (a bubbling cauldron, shelves of potions), the Galley is **The Banquet Hall** (a long table laid for a feast), the Reactor is **The Great Hearth** (a roaring fire and a sleeping hound), the Engine Room is **The Dungeon** (cells, a swinging gibbet, rats), Hydroponics is **The Walled Garden** (a fountain, roses and fireflies), the Airlock is **The Banishment Gate** (a portcullis and a red carpet), Crew Quarters is **The Bedchambers** (four-poster beds) and the Cargo Bay is **The Wine Cellar** (barrels and wine racks). Torches burn on every north wall and banners hang between them.
+- **The outside:** the whole station sits on a jagged floating crag with gold crystals in it. Round towers with conical roofs stand at the corners, a great keep with a beacon fire rises behind the Battlements, a drawbridge runs out from the Banishment Gate to a gatehouse and then a single plank over nothing at all, and ravens circle the towers.
+- **Sounds:** choir drones, wind and ravens under the moon; a tolling bell, a ticking clock, a crackling hearth, dripping water, chains, a night garden with crickets and an owl, a slow war drum at the Gate.
+- **Characters:** 3D models for all 9 roles in the end-game reveal, and replay captions for every recruit, gag, shield, unmasking and succession.
+
+## Making a new script
 
 1. Add roles to a `roles-<name>.js` file (the same fields as in `roles.js`) and merge them in `roles.js`.
 2. Add an entry to `server/scripts.js`: id, name, icon, minimum players, blurb, rules, role ids, which demons can appear, and a `theme` (what the disaster is called, the win and lose lines, optional room names). If the disaster looks different from a black hole, add a painter for it in `public/js/world/sky.js` (`paintDoom`, `buildBackdrop`).
@@ -162,13 +216,13 @@ About 400 robot games (6 to 15 players): every game finishes, the crew wins abou
 5. Give each role a 3D model in `public/js/world/models.js` for the end-game reveal, and captions in `reveal.js` for new kinds of events.
 6. Add a `SCENARIOS`-style "moments" list to the wiki, a story voice in `storyteller.js`, and tests (see `test/carnival.test.js`).
 
-### Ideas for the next scripts
+## Ideas for the next scripts
 
 - **Quantum Rift** (from *Sects & Violets*): clones and swaps. A Cryo Technician who swaps roles with the Parasite when they pick it (the Snake Charmer), a Copycat that borrows an ability (the Philosopher), a Re-roller (the Pit-Hag), and a Reflection that makes everything false.
 - **Mutiny at the Hub** (from *Trouble Brewing* plus Traveller ideas): late joiners who arrive mid-game as stowaways with a one-night ability.
 - **Cult Night** (from the Cult Leader and Fearmonger): a secret "join us" vote where the crew can win by all agreeing.
 
-### Sources
+## Sources
 
 - [Bad Moon Rising](https://wiki.bloodontheclocktower.com/Bad_Moon_Rising), [Sects & Violets](https://wiki.bloodontheclocktower.com/Sects_%26_Violets) (the BotC wiki)
 - Character pages used for the adaptations: [Exorcist](https://wiki.bloodontheclocktower.com/Exorcist), [Fool](https://wiki.bloodontheclocktower.com/Fool), [Dreamer](https://wiki.bloodontheclocktower.com/Dreamer), [Flowergirl](https://wiki.bloodontheclocktower.com/Flowergirl), [Chambermaid](https://wiki.bloodontheclocktower.com/Chambermaid), [Professor](https://wiki.bloodontheclocktower.com/Professor), [Klutz](https://wiki.bloodontheclocktower.com/Klutz), [Lunatic](https://wiki.bloodontheclocktower.com/Lunatic), [Assassin](https://wiki.bloodontheclocktower.com/Assassin), [Evil Twin](https://wiki.bloodontheclocktower.com/Evil_Twin), [Witch](https://wiki.bloodontheclocktower.com/Witch), [Vortox](https://wiki.bloodontheclocktower.com/Vortox)

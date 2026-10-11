@@ -417,6 +417,115 @@ const OUTBREAK_SOUNDS = {
   },
 };
 
+// ---------- 🗡️ the Citadel of Traitors: a castle at night ----------
+const caw = (k, o, t, vol = 0.02) => {
+  blip(k, o, t, { freq: rand(420, 520), to: rand(260, 330), dur: 0.22, vol, type: 'sawtooth', attack: 0.01 });
+  burst(k, o, t, { type: 'bandpass', freq: 1100, q: 1.2, dur: 0.2, vol: vol * 0.8 });
+};
+// a great bell: a handful of inharmonic partials, each ringing out for seconds
+const toll = (k, o, t, f, vol) => [[1, 1], [2.01, 0.55], [2.76, 0.4], [4.07, 0.22], [5.4, 0.12]].forEach(([m, a]) => blip(k, o, t, { freq: f * m, dur: 3.2 / (0.6 + m * 0.4), vol: vol * a, type: 'sine', attack: 0.004 }));
+const drip = { every: [1, 4], play: (k, o, t) => blip(k, o, t, { freq: rand(1500, 2100), to: rand(700, 1000), dur: 0.1, vol: 0.02 }) };
+const crackle = { every: [0.2, 1.1], play: (k, o, t) => burst(k, o, t, { freq: rand(1500, 3200), q: 1.5, dur: 0.03, vol: 0.035 }) };
+const TRAITORS_SOUNDS = {
+  bridge: {
+    gain: 0.5,
+    bed: (k, o) => [...drone(k, o, 73, 'sine', 0.03), ...hiss(k, o, 'lowpass', 300, 0.6, 0.014, { swell: [0.12, 0.6] })], // a vast stone hall
+    events: [
+      { every: [0.2, 0.9], play: (k, o, t) => burst(k, o, t, { type: 'highpass', freq: 3400, q: 0.8, dur: 0.012, vol: 0.012 }) }, // candles
+      { every: [18, 30], play: (k, o, t) => toll(k, o, t, 262, 0.012) },
+    ],
+  },
+  observation: {
+    gain: 1.6,
+    bed: (k, o) => hiss(k, o, 'bandpass', 500, 0.7, 0.03, { swell: [0.2, 0.7] }), // wind on the battlements
+    events: [
+      { every: [1.5, 4], play: (k, o, t) => burst(k, o, t, { type: 'bandpass', freq: 700, q: 1, dur: 0.18, vol: 0.03 }) }, // a flag cracks
+      { every: [9, 16], play: (k, o, t) => caw(k, o, t, 0.02) },
+    ],
+  },
+  navigation: {
+    gain: 1.4,
+    bed: (k, o) => [...drone(k, o, 50, 'sine', 0.01), ...hiss(k, o, 'lowpass', 200, 0.6, 0.008)],
+    events: [
+      { every: [1, 1], play: (k, o, t) => blip(k, o, t, { freq: 1400, dur: 0.02, vol: 0.015, type: 'square' }) }, // the grandfather clock
+      { every: [3, 8], play: (k, o, t) => burst(k, o, t, { type: 'highpass', freq: 3000, q: 0.8, dur: 0.12, vol: 0.02, attack: 0.02 }) }, // a page turns
+      { every: [9, 18], play: (k, o, t) => blip(k, o, t, { freq: 140, to: 120, dur: 0.4, vol: 0.02, type: 'sawtooth' }) }, // a creak
+    ],
+  },
+  comms: {
+    gain: 2.2,
+    bed: (k, o) => hiss(k, o, 'bandpass', 600, 0.8, 0.025, { swell: [0.15, 0.7] }),
+    events: [
+      { every: [8, 14], play: (k, o, t) => toll(k, o, t, 330, 0.05) }, // the bell
+      { every: [4, 9], play: (k, o, t) => blip(k, o, t, { freq: rand(500, 650), to: rand(420, 500), dur: 0.18, vol: 0.012, type: 'triangle' }) }, // a coo
+    ],
+  },
+  medbay: {
+    gain: 3.2,
+    bed: (k, o) => hiss(k, o, 'bandpass', 900, 0.8, 0.014, { swell: [0.5, 0.6] }), // a bubbling cauldron
+    events: [
+      { every: [0.3, 1.1], play: (k, o, t) => { const f = rand(150, 320); blip(k, o, t, { freq: f, to: f * 2.2, dur: 0.12, vol: 0.03 }); } },
+      { every: [5, 10], play: (k, o, t) => blip(k, o, t, { freq: 2600, dur: 0.3, vol: 0.012, type: 'triangle' }) }, // glass clinks
+      { every: [8, 14], play: (k, o, t) => burst(k, o, t, { type: 'highpass', freq: 4000, q: 0.5, dur: 0.6, vol: 0.02, attack: 0.1 }) }, // a sizzle
+    ],
+  },
+  galley: {
+    gain: 1.5,
+    bed: (k, o) => [...hiss(k, o, 'bandpass', 350, 0.6, 0.02, { swell: [0.3, 0.5] }), ...hiss(k, o, 'bandpass', 700, 0.7, 0.01)], // a murmur of guests
+    events: [
+      { every: [2, 6], play: (k, o, t) => blip(k, o, t, { freq: rand(2000, 2800), dur: 0.35, vol: 0.014, type: 'triangle' }) }, // goblets
+      crackle,
+    ],
+  },
+  reactor: {
+    gain: 1.2,
+    bed: (k, o) => [...hiss(k, o, 'lowpass', 300, 0.6, 0.07, { swell: [0.5, 0.4] }), ...drone(k, o, 55, 'sawtooth', 0.02, { lp: 150 })], // the hearth roars
+    events: [crackle, { every: [6, 12], play: (k, o, t) => blip(k, o, t, { freq: 80, to: 60, dur: 0.2, vol: 0.04 }) }], // a log shifts
+  },
+  engine: {
+    gain: 1.2,
+    bed: (k, o) => [...drone(k, o, 45, 'sine', 0.025), ...hiss(k, o, 'lowpass', 150, 0.6, 0.03)],
+    events: [
+      drip,
+      { every: [6, 12], play: (k, o, t) => { for (let i = 0; i < 4; i++) burst(k, o, t + i * 0.08, { type: 'bandpass', freq: rand(3000, 4200), q: 2, dur: 0.05, vol: 0.025 }); } }, // chains rattle
+      { every: [14, 24], play: (k, o, t) => blip(k, o, t, { freq: 150, to: 110, dur: 1.4, vol: 0.02, type: 'triangle', attack: 0.4 }) }, // a distant moan
+    ],
+  },
+  hydroponics: {
+    gain: 3.2,
+    bed: (k, o) => [...hiss(k, o, 'highpass', 3500, 0.5, 0.008, { swell: [0.3, 0.7] }), ...hiss(k, o, 'bandpass', 2200, 1, 0.01, { swell: [0.5, 0.4] })], // leaves, and a fountain
+    events: [
+      { every: [0.8, 2], play: (k, o, t) => { for (let i = 0; i < 3; i++) blip(k, o, t + i * 0.07, { freq: 3500, dur: 0.03, vol: 0.01, type: 'square' }); } }, // night crickets
+      { every: [10, 20], play: (k, o, t) => { blip(k, o, t, { freq: 420, dur: 0.35, vol: 0.02, type: 'triangle' }); blip(k, o, t + 0.5, { freq: 360, dur: 0.5, vol: 0.02, type: 'triangle' }); } }, // an owl
+    ],
+  },
+  airlock: {
+    gain: 1.8,
+    bed: (k, o) => [...drone(k, o, 40, 'sine', 0.03), ...hiss(k, o, 'lowpass', 250, 0.7, 0.025, { swell: [0.2, 0.5] })],
+    events: [
+      { every: [2.4, 2.4], play: (k, o, t) => { blip(k, o, t, { freq: 55, dur: 0.3, vol: 0.06 }); blip(k, o, t + 0.5, { freq: 50, dur: 0.3, vol: 0.04 }); } }, // a slow war drum
+      { every: [10, 18], play: (k, o, t) => { blip(k, o, t, { freq: 90, dur: 0.12, vol: 0.035, type: 'square' }); burst(k, o, t, { freq: 3500, q: 2, dur: 0.4, vol: 0.03 }); } }, // the portcullis chain clanks
+    ],
+  },
+  quarters: {
+    gain: 2.2,
+    bed: (k, o) => hiss(k, o, 'lowpass', 250, 0.7, 0.02, { swell: [0.18, 0.5] }),
+    events: [
+      { every: [4, 6], play: (k, o, t) => burst(k, o, t, { type: 'lowpass', freq: 200, q: 0.6, dur: 1, vol: 0.03, attack: 0.4 }) }, // snoring
+      { every: [9, 16], play: (k, o, t) => blip(k, o, t, { freq: 130, to: 150, dur: 0.3, vol: 0.02, type: 'sawtooth' }) }, // a floorboard
+    ],
+  },
+  cargo: {
+    gain: 1.5,
+    bed: (k, o) => [...drone(k, o, 52, 'sine', 0.025), ...hiss(k, o, 'lowpass', 200, 0.7, 0.03)],
+    events: [
+      drip,
+      { every: [7, 14], play: (k, o, t) => blip(k, o, t, { freq: 180, to: 210, dur: 0.4, vol: 0.02, type: 'sawtooth' }) }, // a barrel creaks
+      { every: [9, 18], play: (k, o, t) => blip(k, o, t, { freq: 200, to: 420, dur: 0.25, vol: 0.02 }) }, // a glug
+    ],
+  },
+};
+
 // ---------- the disaster outside: a bed that grows as it gets closer, and one-off cues ----------
 // bed(kit, out) builds the steady sound; tune(nodes, p, kit) (optional) retunes it as the end nears.
 const MINOR = [392, 466, 392, 349, 311, 349, 392, 523]; // a music-box lullaby in a minor key
@@ -484,6 +593,27 @@ const DOOM_SOUNDS = {
       blip(k, o, t + 0.1, { freq: 70, to: 38, dur: 1.8, vol: 0.07 * power, type: 'sine', attack: 0.1 });
     },
   },
+  // 🌕 the Blood Moon: a low choir of voices a minor third apart, wind, the odd raven, and a bell that tolls
+  traitors: {
+    gain: 1,
+    bed: (k, o) => [
+      ...drone(k, o, 98, 'sawtooth', 0.007, { lp: 260, swell: [0.12, 0.6] }),
+      ...drone(k, o, 116.5, 'triangle', 0.009, { lp: 400, swell: [0.09, 0.7] }),
+      ...drone(k, o, 147, 'sine', 0.008, { swell: [0.15, 0.5] }),
+      ...hiss(k, o, 'bandpass', 600, 0.7, 0.03, { swell: [0.17, 0.8] }),
+    ],
+    events: [
+      { every: [9, 20], play: (k, o, t) => [0, 0.32, 0.7].slice(0, 2 + Math.floor(Math.random() * 2)).forEach((d) => caw(k, o, t + d, 0.014)) },
+      { every: [20, 34], play: (k, o, t) => toll(k, o, t, 196, 0.02) },
+    ],
+    // the bell tolls twice, a rumble under it, and the ravens scatter
+    cue: (k, o, t, power) => {
+      toll(k, o, t, 110, 0.09 * power);
+      toll(k, o, t + 1.7, 98, 0.06 * power);
+      burst(k, o, t, { type: 'lowpass', freq: 160, q: 0.6, dur: 2.4, vol: 0.09 * power, attack: 0.1 });
+      [0.5, 0.75, 1.1, 1.3].forEach((d) => caw(k, o, t + d, 0.025 * power));
+    },
+  },
 };
 
 // how loud the disaster is in each phase
@@ -539,7 +669,7 @@ export class Soundscape {
 
   // which set of room sounds this ship plays (the Cosmic Carnival has its own)
   defs() {
-    return this.script === 'carnival' ? CARNIVAL_SOUNDS : this.script === 'outbreak' ? OUTBREAK_SOUNDS : SOUNDS;
+    return this.script === 'carnival' ? CARNIVAL_SOUNDS : this.script === 'outbreak' ? OUTBREAK_SOUNDS : this.script === 'traitors' ? TRAITORS_SOUNDS : SOUNDS;
   }
 
   setScript(id) {

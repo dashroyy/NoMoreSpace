@@ -12,6 +12,7 @@ const THEMES = {
   classic: { color: 0xff7a2a, rgb: '255,110,40', every: [26, 10], flash: 0.1, shake: 1.1 },
   carnival: { color: 0xff2030, rgb: '255,30,50', every: [30, 12], flash: 0.2, shake: 0.5 },
   outbreak: { color: 0x7dff3a, rgb: '125,255,60', every: [14, 5], flash: 0.35, shake: 0 },
+  traitors: { color: 0xff2a2a, rgb: '255,40,40', every: [24, 9], flash: 0.2, shake: 0.35 },
 };
 const PLAYING = ['roam', 'meeting', 'nominations', 'lastwords', 'dusk', 'dawn', 'night'];
 
@@ -54,6 +55,7 @@ export class DoomFx {
     // a throb that suits the thing outside
     let pulse;
     if (this.id === 'carnival') pulse = Math.pow(Math.max(0, Math.sin(t * 2.1)), 6) * 0.5 + Math.pow(Math.max(0, Math.sin(t * 2.1 - 0.5)), 6) * 0.3 + 0.35;
+    else if (this.id === 'traitors') pulse = 0.5 + 0.3 * Math.pow(Math.max(0, Math.sin(t * 0.9)), 3) + 0.1 * Math.sin(t * 2.2);
     else if (this.id === 'outbreak') pulse = 0.5 + 0.25 * Math.sin(t * 1.7) + (Math.random() < 0.06 + p * 0.1 ? Math.random() * 0.4 : 0);
     else pulse = 0.55 + 0.25 * Math.sin(t * 0.9) + 0.1 * Math.sin(t * 2.7);
     this.flash = Math.max(0, this.flash - dt * (this.id === 'outbreak' ? 2.8 : 1.4));
