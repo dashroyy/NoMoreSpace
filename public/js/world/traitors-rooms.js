@@ -34,7 +34,7 @@ const BRONZE = 0xb8803a;
 const D = (n) => `dungeon/${n}`;
 const MODEL_NAMES = [
   'torch_mounted', 'pillar', 'chest_large_gold', 'coin_stack_small', 'coin_stack_medium', 'coin_stack_large',
-  'bookcase_double_decoratedA', 'bookcase_double_decoratedB', 'bookcase_single',
+  'bookcase_double_decoratedA', 'bookcase_double_decoratedB', 'bookcase_single_decoratedA', 'bookcase_single_decoratedB',
   'table_long_tablecloth_decorated_A', 'table_long_tablecloth', 'chair', 'candle_triple', 'plate_food_A', 'plate_food_B',
   'chest_mimic', 'keyring_hanging', 'barrel_small', 'bucket', 'rubble_half',
   'barrel_large', 'crates_stacked', 'crate_large', 'keg_decorated',
@@ -913,16 +913,16 @@ export class TraitorsRooms {
     const lib = at('navigation');
     put(lib, 'bookcase_double_decoratedA', -3.0, -5.25);
     put(lib, 'bookcase_double_decoratedB', 0.0, -5.25);
-    put(lib, 'bookcase_single', 4.9, -5.25);
-    [-2.6, -1.1, 0.4, 1.9].forEach((z) => put(lib, 'bookcase_single', -7.26, z, { ry: WEST }));
+    put(lib, 'bookcase_single_decoratedA', 4.9, -5.25);
+    [-2.6, -1.1, 0.4, 1.9].forEach((z, i) => put(lib, i % 2 ? 'bookcase_single_decoratedA' : 'bookcase_single_decoratedB', -7.26, z, { ry: WEST }));
 
     // the Banquet Hall: a long laid table with ten chairs
     const hall = at('galley');
     const TZ = -3.6;
     ['table_long_tablecloth_decorated_A', 'table_long_tablecloth', 'table_long_tablecloth', 'table_long_tablecloth_decorated_A'].forEach((name, i) => put(hall, name, -4.5 + i * 3, TZ, { ry: WEST }));
     for (let i = 0; i < 5; i++) {
-      put(hall, 'chair', -4.8 + i * 2.4, TZ - 1.45, { s: 0.85 });
-      put(hall, 'chair', -4.8 + i * 2.4, TZ + 1.45, { s: 0.85, ry: Math.PI });
+      put(hall, 'chair', -4.8 + i * 2.4, TZ - 1.45, { s: 0.85, ry: Math.PI / 2 }); // (this chair faces west in its file: a quarter turn makes it face south, to the table)
+      put(hall, 'chair', -4.8 + i * 2.4, TZ + 1.45, { s: 0.85, ry: -Math.PI / 2 });
     }
     for (const x of [-1.5, 1.5]) {
       put(hall, 'candle_triple', x, TZ, { s: 0.7, y: 0.75 });
@@ -940,7 +940,7 @@ export class TraitorsRooms {
     put(dun, 'rubble_half', 8.4, -5.2, { s: 0.6 });
     put(dun, 'halloween/skull_candle', -2.2, 5.6, { s: 0.55 });
     put(dun, 'halloween/ribcage', -0.3, 5.1, { s: 0.6, ry: 0.8 });
-    put(dun, 'halloween/coffin_decorated', -8.3, -3.4, { s: 0.55, ry: Math.PI / 2 });
+    put(dun, 'halloween/coffin_decorated', -8.3, -3.4, { s: 0.55 });
     // two prisoners who have not moved in a long time, breathing (a skeleton still does that here)
     const prisoner = async (R, file, x, z, ry) => {
       const c = await cloneSkinned(`characters/${file}`);

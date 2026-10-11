@@ -612,12 +612,21 @@ export class Doom {
   // however big it gets, it stays below the ship.
   setProgress(p) {
     this.progress = p;
+    if (this.script === 'traitors') {
+      // the Blood Moon hangs far off beyond the castle, low in the sky, so it is always there to look at
+      // (the others sit right under the ship, where the camera mostly sees the ship itself)
+      this.k = 34 + p * 90;
+      this.group.scale.setScalar(this.k);
+      this.group.position.set(0, -14 - this.k, -150 - this.k * 0.3);
+      this.parts[this.script].setProgress(p);
+      return;
+    }
     const flat = this.script === 'outbreak'; // the Bloom is a flat cloud; the others are round
     this.k = flat ? 37 + p * 153 : 30 + p * 170;
     this.group.scale.setScalar(this.k);
     // the Bloom is flat, the Grin is a ball, and the black hole's tilted disk reaches up the highest
     const lift = flat ? 0.45 : this.script === 'classic' ? 1.9 : 1.0;
-    this.group.position.y = -105 - this.k * lift;
+    this.group.position.set(10, -105 - this.k * lift, -60);
     this.parts[this.script].setProgress(p);
   }
 

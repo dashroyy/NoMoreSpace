@@ -387,7 +387,7 @@ Small details borrowed from the best party games (Among Us, Jackbox, Town of Sal
 - **Lobby launch backup:** if the host leaves or goes quiet for a minute, anyone can launch.
 - **Player card:** click any seat on the bridge table to see their bio and claim, and to mute or turn down their voice (just for you).
 - **Letters on every token** on the bridge table and the minimap, so colour is never the only way to tell people apart.
-- **🗣️ Read aloud:** the browser's built-in text to speech reads the stories (ARIA has a low, calm voice) and last words in the speaker's own voice; switch it to also read the chat. Cycles off → stories → stories and chat.
+- **🗣️ Read aloud:** the browser's built-in text to speech reads the stories (ARIA has a low, calm voice) and last words in the speaker's own voice, and the chat too. **On by default** (stories, last words and chat); the button cycles stories and chat → off → stories only, and the choice is remembered.
 - **New dances:** 🐶 the Scooby dance (arms swinging side to side) and 🤿 the Scuba dance (pinch your nose, wave and sink, with bubbles), each with its own sound.
 - **More sounds:** friends boarding and leaving, claims (a little trumpet), being nominated (a dread sting), becoming a ghost (a theremin "woo"), pause and resume, @mention pings, and a sound for every emote.
 

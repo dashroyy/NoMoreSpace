@@ -3,12 +3,14 @@
 // read in the speaker's own voice; and, if you like, chat messages too.
 // Each player gets their own pitch and speed so you can tell them apart.
 // Uses the browser's built-in speech (no downloads, nothing leaves your device).
+// Everything is read aloud by default; the 🗣️ button (or Settings) turns it down or off, and
+// the choice is remembered.
 
 const KEY = 'nms-tts';
 const MODES = ['off', 'stories', 'all']; // off · stories & last words · stories, last words & chat
-let mode = 'off';
+let mode = 'all'; // until someone chooses otherwise
 try {
-  mode = MODES.includes(localStorage.getItem(KEY)) ? localStorage.getItem(KEY) : 'off';
+  mode = MODES.includes(localStorage.getItem(KEY)) ? localStorage.getItem(KEY) : 'all';
 } catch {}
 
 const synth = typeof window !== 'undefined' ? window.speechSynthesis : null;

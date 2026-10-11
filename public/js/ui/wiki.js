@@ -301,7 +301,7 @@ function controls() {
     ),
     el('h3', {}, 'Top bar'),
     el('ul', { className: 'tips' },
-      el('li', {}, '🗣️ Read aloud: ARIA reads the stories (and, if you like, the chat) out loud.'),
+      el('li', {}, '🗣️ Read aloud (on by default): ARIA reads the stories, last words and the chat out loud. The 🗣️ button turns it down or off.'),
       el('li', {}, '🎵 Music · 🔊 Sound · 🎙️ Voice chat · ⏸️ Pause (host of an Autopilot game)'),
       el('li', {}, 'Click anyone\'s seat on the bridge table to see their claim and turn their voice up or down.'),
     ),

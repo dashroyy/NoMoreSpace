@@ -8,6 +8,7 @@ import { makeTextSprite } from './avatar.js';
 import { CARNIVAL_LIGHTS } from './carnival-rooms.js';
 import { OUTBREAK_LIGHTS } from './outbreak-rooms.js';
 import { TRAITORS_LIGHTS } from './traitors-rooms.js';
+import { brickify } from './brick.js';
 
 const WALL_H = 2.4;
 const LOW_WALL_H = 0.9; // south-facing walls are low so they don't hide players from the camera
@@ -91,12 +92,20 @@ function floorLabel(text, color) {
   return mesh;
 }
 
+
 export function buildShip(scene, space) {
   const ship = new THREE.Group();
   scene.add(ship);
   const panel = panelTexture();
-  const wallMat = m(0x2a3046, { roughness: 0.6, metalness: 0.45 });
-  const lowWallMat = m(0x242a3e, { roughness: 0.6, metalness: 0.45 });
+  // Materials that turn to stone for the Citadel of Traitors (see setTheme): the walls, the hull, the arches, the trim...
+  const stoneMats = [];
+  const stone = (mat, look) => {
+    stoneMats.push({ mat, look, orig: { color: mat.color.getHex(), metalness: mat.metalness, roughness: mat.roughness, emissive: mat.emissive.getHex(), emissiveIntensity: mat.emissiveIntensity } });
+    return mat;
+  };
+  const uStone = { value: 0 };
+  const wallMat = brickify(stone(m(0x2a3046, { roughness: 0.6, metalness: 0.45 }), { color: 0x7a7482, metalness: 0.02, roughness: 0.95 }), uStone);
+  const lowWallMat = brickify(stone(m(0x242a3e, { roughness: 0.6, metalness: 0.45 }), { color: 0x6c6676, metalness: 0.02, roughness: 0.95 }), uStone);
   const lights = [];
   const flicker = [];
   const stations = {};
@@ -104,9 +113,9 @@ export function buildShip(scene, space) {
 
   // ---------- floors and hull ----------
   // Rooms are station modules: octagonal decks sitting on rounded hull pods.
-  const hullMat = m(0x39415a, { metalness: 0.7, roughness: 0.45 });
-  const hullDarkMat = m(0x1a1f30, { metalness: 0.6, roughness: 0.5, side: THREE.DoubleSide });
-  const ribMat = m(0x8790ab, { metalness: 0.85, roughness: 0.3 });
+  const hullMat = stone(m(0x39415a, { metalness: 0.7, roughness: 0.45 }), { color: 0x45414f, metalness: 0.02, roughness: 0.95 });
+  const hullDarkMat = stone(m(0x1a1f30, { metalness: 0.6, roughness: 0.5, side: THREE.DoubleSide }), { color: 0x25232d, metalness: 0.02, roughness: 0.95 });
+  const ribMat = stone(m(0x8790ab, { metalness: 0.85, roughness: 0.3 }), { color: 0x5d5966, metalness: 0.05, roughness: 0.9 });
   for (const room of ROOMS) {
     const [x0, z0, x1, z1] = room.rect;
     const outline = roomOutline(room.rect);
@@ -169,9 +178,10 @@ export function buildShip(scene, space) {
     add(ship, new THREE.CylinderGeometry(0.17, 0.17, len + 0.1, 10), mat, mx, h, mz, [0, angle, Math.PI / 2]);
     add(ship, new THREE.BoxGeometry(len, 0.05, 0.06), trimMat, mx, h + 0.18, mz, [0, angle, 0]);
   };
+  const frameMat = stone(m(0x5a6584, { metalness: 0.8 }), { color: 0x7a5a24, metalness: 0.3, roughness: 0.6 });
   for (const rect of all) {
     const room = ROOMS.find((r) => r.rect === rect);
-    const trimMat = glowMat(room ? room.light : 0x4a6cff, 0.9);
+    const trimMat = stone(glowMat(room ? room.light : 0x4a6cff, 0.9), { color: 0xd9a441, emissive: 0xd9a441, emissiveIntensity: 0.3 });
     if (room) {
       // the cut-off corners
       for (const c of cornerWalls(rect)) wallPiece(c.a[0], c.a[1], c.b[0], c.b[1], c.south ? LOW_WALL_H : WALL_H, c.south ? lowWallMat : wallMat, trimMat);
@@ -200,8 +210,8 @@ export function buildShip(scene, space) {
         const win = add(ship, new THREE.PlaneGeometry(w, wh), new THREE.MeshBasicMaterial({ map: tex }), x, big ? 1.25 : 1.35, z + 0.17);
         win.userData.window = true;
         // frame
-        add(ship, new THREE.BoxGeometry(w + 0.2, 0.12, 0.1), m(0x5a6584, { metalness: 0.8 }), x, (big ? 1.25 : 1.35) + wh / 2, z + 0.2);
-        add(ship, new THREE.BoxGeometry(w + 0.2, 0.12, 0.1), m(0x5a6584, { metalness: 0.8 }), x, (big ? 1.25 : 1.35) - wh / 2, z + 0.2);
+        add(ship, new THREE.BoxGeometry(w + 0.2, 0.12, 0.1), frameMat, x, (big ? 1.25 : 1.35) + wh / 2, z + 0.2);
+        add(ship, new THREE.BoxGeometry(w + 0.2, 0.12, 0.1), frameMat, x, (big ? 1.25 : 1.35) - wh / 2, z + 0.2);
       }
     }
   }
@@ -252,8 +262,8 @@ export function buildShip(scene, space) {
   // ---------- bridge: table, hologram, seats ----------
   const bridge = new THREE.Group();
   ship.add(bridge);
-  add(bridge, new THREE.CylinderGeometry(TABLE_RADIUS, TABLE_RADIUS * 0.85, 0.9, 40), m(0x1c2136, { metalness: 0.6, roughness: 0.4 }), 0, 0.45, 0);
-  add(bridge, new THREE.TorusGeometry(TABLE_RADIUS - 0.1, 0.05, 6, 48), glowMat(0x7f6bff, 1.5), 0, 0.92, 0, [Math.PI / 2, 0, 0]);
+  add(bridge, new THREE.CylinderGeometry(TABLE_RADIUS, TABLE_RADIUS * 0.85, 0.9, 40), stone(m(0x1c2136, { metalness: 0.6, roughness: 0.4 }), { color: 0x4a2c18, metalness: 0.05, roughness: 0.8 }), 0, 0.45, 0);
+  add(bridge, new THREE.TorusGeometry(TABLE_RADIUS - 0.1, 0.05, 6, 48), stone(glowMat(0x7f6bff, 1.5), { color: 0xd9a441, emissive: 0xd9a441, emissiveIntensity: 0.7 }), 0, 0.92, 0, [Math.PI / 2, 0, 0]);
   const holo = new THREE.Group();
   holo.position.y = 1.9;
   add(holo, new THREE.SphereGeometry(0.45, 24, 16), new THREE.MeshBasicMaterial({ color: 0x000000 }), 0, 0, 0);
@@ -274,6 +284,18 @@ export function buildShip(scene, space) {
     const theme = themes[id];
     holo.children.forEach((m, i) => m.material.color.setHex((theme ? theme.holo : holoColors)[i]));
     sciProps.visible = !theme;
+    // the Citadel is built of stone: the walls, the hull, the arches and the trim change their look
+    for (const { mat, look, orig } of stoneMats) {
+      const l = id === 'traitors' ? look : orig;
+      mat.color.setHex(l.color);
+      if (l.metalness != null) mat.metalness = l.metalness;
+      if (l.roughness != null) mat.roughness = l.roughness;
+      if (l.emissive != null) {
+        mat.emissive.setHex(l.emissive);
+        mat.emissiveIntensity = l.emissiveIntensity;
+      }
+    }
+    uStone.value = id === 'traitors' ? 1 : 0;
     exterior.group.visible = !theme; // the solar wings, mast and shuttle make way for the script's own outside
     decor.setTheme(!!theme);
     lights.forEach((light, i) => {
@@ -284,9 +306,9 @@ export function buildShip(scene, space) {
   seats.userData.dynamic = true;
   bridge.add(seats);
 
+  const chairMat = stone(m(0x343b58, { metalness: 0.5 }), { color: 0x4a2c18, metalness: 0.05, roughness: 0.8 });
   function setSeats(count) {
     seats.clear();
-    const chairMat = m(0x343b58, { metalness: 0.5 });
     for (let i = 0; i < count; i++) {
       const { x, z, facing } = seatPosition(i, count);
       const chair = new THREE.Group();
@@ -316,8 +338,8 @@ export function buildShip(scene, space) {
   });
 
   // ---------- hatches: a round frame where each corridor meets a room ----------
-  const hatchMat = m(0x5a6584, { metalness: 0.85, roughness: 0.3 });
-  const hatchGlow = glowMat(0xffb547, 1.3);
+  const hatchMat = stone(m(0x5a6584, { metalness: 0.85, roughness: 0.3 }), { color: 0x5d5966, metalness: 0.05, roughness: 0.9 });
+  const hatchGlow = stone(glowMat(0xffb547, 1.3), { color: 0xd9a441, emissive: 0xd9a441, emissiveIntensity: 0.6 });
   for (const [x0, z0, x1, z1] of CORRIDORS) {
     const alongX = x1 - x0 > z1 - z0;
     const width = alongX ? z1 - z0 : x1 - x0;
