@@ -312,13 +312,13 @@ export class Reveal {
     const R = store.data.roles;
     switch (e.k) {
       case 'nomination': {
-        const result = { block: ' — heading for the airlock!', tie: ' — a tie!', safe: '' }[e.result];
+        const result = { block: ` — heading for ${themeInfo(this.state.script).banishPlace}!`, tie: ' — a tie!', safe: '' }[e.result];
         return { dur: 2.4, focus: e.t, beam: [e.a, e.t, 0xffb547], caption: `☝️ ${name(e.a)} nominated ${name(e.t)}: ${e.votes} vote${e.votes === 1 ? '' : 's'}${result}`, enter: () => sfx('gavel') };
       }
       case 'execute': {
         const c = this.cast.get(e.id);
         const r = R[c?.finalRole || c?.startRole];
-        return { dur: 3.6, focus: e.id, caption: `🚪 ${name(e.id)} was airlocked. They were ${r ? `the ${r.name} ${r.icon}` : 'mysterious'}.${e.story ? ` ${e.story}` : ''}`, enter: () => { sfx('airlock'); this.kill(e.id, 'airlock'); } };
+        return { dur: 3.6, focus: e.id, caption: `🚪 ${name(e.id)} was ${themeInfo(this.state.script).banishedVerb}. They were ${r ? `the ${r.name} ${r.icon}` : 'mysterious'}.${e.story ? ` ${e.story}` : ''}`, enter: () => { sfx('airlock'); this.kill(e.id, 'airlock'); } };
       }
       case 'shot': {
         // a Stowaway can register as the Parasite and get hit by mistake

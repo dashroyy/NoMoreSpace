@@ -16,7 +16,7 @@
 import * as THREE from 'three';
 import { ROOMS, CORRIDORS, roomOutline, chamferOf } from './layout.js';
 import { M, T, add, cyl, box, ball, tor, mergeStatic } from './carnival-rooms.js';
-import { loadModels, model } from './assets.js';
+import { loadModels, model, cloneSkinned, clipsOf } from './assets.js';
 
 const STONE = 0x6a6672;
 const DSTONE = 0x45414d;
@@ -39,7 +39,7 @@ const MODEL_NAMES = [
   'chest_mimic', 'keyring_hanging', 'barrel_small', 'bucket', 'rubble_half',
   'barrel_large', 'crates_stacked', 'crate_large', 'keg_decorated',
   'bed_decorated', 'banner_shield_red', 'sword_shield_gold',
-].map(D);
+].map(D).concat(['halloween/skull_candle', 'halloween/ribcage', 'halloween/coffin_decorated', 'characters/skeleton_warrior', 'characters/skeleton_minion', 'characters/anims']);
 
 // the point light in each room takes on a candle, moon or potion colour
 export const TRAITORS_LIGHTS = {
@@ -267,6 +267,7 @@ export class TraitorsRooms {
     this.dressed = false;
     this.pot = 0;
     this.potCoins = [];
+    this.mixers = []; // animated characters (the skeleton prisoners)
     const still = new THREE.Group();
     this.floors(still);
     this.walls(still);
@@ -697,10 +698,7 @@ export class TraitorsRooms {
     bars(5.6);
     add(s, box(3.6, 0.08, 1.3), M(0xc2a45a, { r: 0.95 }), -5.6, 0.04, -6.2); // straw
     add(s, box(3.6, 0.08, 1.3), M(0xc2a45a, { r: 0.95 }), 5.6, 0.04, -6.2);
-    // a skeleton in the east cell
-    add(s, ball(0.16, 8), M(PARCH), 5.2, 0.28, -6.1);
-    add(s, new THREE.CapsuleGeometry(0.14, 0.4, 3, 6), M(PARCH), 5.7, 0.2, -6.1, [0, 0, Math.PI / 2]);
-    for (const z of [-6.3, -5.9]) add(s, cyl(0.03, 0.03, 0.55, 4), M(PARCH), 6.3, 0.1, z, [0, 0, Math.PI / 2]);
+    // (the prisoners in the cells are animated skeletons: see dressWithModels)
     // chains on the wall
     for (const [x, y] of [[-7.0, 1.9], [-3.0, 2.0], [3.0, 1.9]]) {
       for (let i = 0; i < 5; i++) add(s, tor(0.07, 0.016, 8), M(IRON, { r: 0.5 }), x, y - i * 0.16, -6.85, [i % 2 ? 0 : Math.PI / 2, 0, 0]);
@@ -885,7 +883,7 @@ export class TraitorsRooms {
     const at = (id) => this.roomRefs[id];
     // a model at a spot in a room. s = scale, ry = turn (0 faces south, towards the camera), y = lift
     const put = (R, name, x, z, { s = 0.75, ry = 0, y = 0, to = S } = {}) => {
-      const m = model(D(name));
+      const m = model(name.includes('/') ? name : D(name));
       if (!m) return null;
       m.position.set(R.cx + x, y, R.cz + z);
       m.rotation.y = ry;
@@ -940,6 +938,30 @@ export class TraitorsRooms {
     put(dun, 'barrel_small', -8.4, 3.6, { s: 0.7 });
     put(dun, 'bucket', -7.4, 3.9, { s: 0.6 });
     put(dun, 'rubble_half', 8.4, -5.2, { s: 0.6 });
+    put(dun, 'halloween/skull_candle', -2.2, 5.6, { s: 0.55 });
+    put(dun, 'halloween/ribcage', -0.3, 5.1, { s: 0.6, ry: 0.8 });
+    put(dun, 'halloween/coffin_decorated', -8.3, -3.4, { s: 0.55, ry: Math.PI / 2 });
+    // two prisoners who have not moved in a long time, breathing (a skeleton still does that here)
+    const prisoner = async (R, file, x, z, ry) => {
+      const c = await cloneSkinned(`characters/${file}`);
+      if (!c) return;
+      const box = new THREE.Box3().setFromObject(c);
+      const k = 1.7 / Math.max(0.1, box.max.y - box.min.y);
+      c.scale.setScalar(k);
+      c.position.set(R.cx + x, -box.min.y * k, R.cz + z);
+      c.rotation.y = ry;
+      this.group.add(c);
+      const clip = THREE.AnimationClip.findByName(clipsOf('characters/anims'), 'Idle_B');
+      if (clip) {
+        const mixer = new THREE.AnimationMixer(c);
+        const action = mixer.clipAction(clip);
+        action.time = Math.random() * clip.duration;
+        action.play();
+        this.mixers.push(mixer);
+      }
+    };
+    prisoner(dun, 'skeleton_warrior', -5.6, -6.1, 0.3);
+    prisoner(dun, 'skeleton_minion', 5.6, -6.1, -0.3);
 
     // the Bedchambers: two four-poster beds
     const bed = at('quarters');
@@ -975,6 +997,7 @@ export class TraitorsRooms {
 
   update(t, dt) {
     if (!this.active) return;
+    for (const m of this.mixers) m.update(dt);
     for (const fn of this.anims) fn(t, dt);
     for (const f of this.flames) {
       const k = 0.8 + Math.sin(t * 11 + f.ph) * 0.2 + Math.sin(t * 17.3 + f.ph * 2) * 0.12;

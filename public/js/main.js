@@ -346,7 +346,7 @@ function onPhaseChange(state, prev, world, reveal) {
     case 'lastwords': {
       sfx('drumroll');
       const who = player(state.lastWords?.id);
-      phaseBanner(`🎤 Last words: ${who?.name || '…'}`, '15 seconds in the spotlight, then the airlock.', 5000);
+      phaseBanner(`🎤 Last words: ${who?.name || '…'}`, `15 seconds in the spotlight, then ${themeInfo(state.script).banishPlace}.`, 5000);
       if (state.lastWords?.id === state.you?.id) toast('🎤 You have 15 seconds for your last words. Type in the chat: everyone will see it in a big bubble.', 'evil', 9000);
       break;
     }
@@ -369,9 +369,9 @@ function onPhaseChange(state, prev, world, reveal) {
         world.playDeaths([{ id: dusk.id, anim: dusk.anim || 'airlock' }]);
         showStory(dusk.story, [], 7000);
       } else {
-        showStory(dusk?.story || 'Nobody is airlocked today.', [], 5000);
+        showStory(dusk?.story || `Nobody is ${themeInfo(state.script).banishedVerb} today.`, [], 5000);
       }
-      phaseBanner(dusk?.survived ? '🤸 The net holds!' : '🌇 Dusk', dusk?.survived ? `${player(dusk.id)?.name} survives the airlock` : dusk?.id ? `${player(dusk.id)?.name} is airlocked` : 'Nobody is airlocked');
+      phaseBanner(dusk?.survived ? '🤸 The net holds!' : '🌇 Dusk', dusk?.survived ? `${player(dusk.id)?.name} survives ${themeInfo(state.script).banishPlace}` : dusk?.id ? `${player(dusk.id)?.name} is ${themeInfo(state.script).banishedVerb}` : `Nobody is ${themeInfo(state.script).banishedVerb}`);
       break;
     }
     case 'ended': {

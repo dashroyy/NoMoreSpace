@@ -11,6 +11,7 @@
 import * as THREE from 'three';
 import { M, T, add, cyl, box, ball, tor, mergeStatic } from './carnival-rooms.js';
 import { bannerMat, glowTex, mistTex } from './traitors-rooms.js';
+import { loadModels, model } from './assets.js';
 
 const Y = -0.9; // just under deck level, like the station's own exterior
 const STONE = 0x6a6672;
@@ -21,6 +22,7 @@ const IRON = 0x2b2b33;
 const GOLD = 0xd9a441;
 const CRIMSON = 0xa3162b;
 const SLATE = 0x2f3550;
+const GRAVEYARD = ['crypt', 'gravestone', 'grave_A', 'grave_B', 'gravemarker_A', 'gravemarker_B', 'grave_A_destroyed', 'tree_dead_large', 'tree_dead_medium', 'tree_dead_small', 'fence', 'fence_broken', 'fence_pillar', 'post_lantern', 'skull_candle', 'shrine_candles'].map((n) => `halloween/${n}`);
 const WIN = 0xffc060;
 
 // a cheap smooth noise, good enough to rough up a rock
@@ -36,6 +38,7 @@ export class TraitorsExterior {
     this.anims = [];
     this.flags = [];
     this.flames = [];
+    this.dressed = false;
     const S = new THREE.Group(); // static pieces, merged at the end
     const base = -2;
 
@@ -290,9 +293,50 @@ export class TraitorsExterior {
     this.group.add(mesh);
   }
 
+  // the burial ground beside the drawbridge, where the banished rest
+  async dress() {
+    this.dressed = true;
+    await loadModels(GRAVEYARD);
+    const S = new THREE.Group();
+    const put = (name, x, z, { s = 1, ry = 0, y = Y - 0.6 } = {}) => {
+      const m = model(`halloween/${name}`);
+      if (!m) return;
+      m.position.set(x, y, z);
+      m.rotation.y = ry;
+      m.scale.setScalar(s);
+      S.add(m);
+    };
+    const stones = ['gravestone', 'grave_A', 'gravemarker_A', 'grave_B', 'gravemarker_B', 'grave_A_destroyed', 'gravestone', 'gravemarker_A'];
+    let k = 0;
+    for (const side of [-1, 1]) {
+      for (let r = 0; r < 3; r++) {
+        for (let c = 0; c < 4; c++) {
+          const name = stones[(k + (side > 0 ? 3 : 0)) % stones.length];
+          put(name, -53.5 - c * 3.6 + (r % 2) * 1.4, side * (9 + r * 4.2), { s: name.startsWith('grave_') ? 1.0 : 1.5, ry: (((k * 37) % 9) - 4) * 0.05 });
+          k++;
+        }
+      }
+      // a fence round it, with a gap for the bridge
+      for (let i = 0; i < 4; i++) put(i === 2 && side > 0 ? 'fence_broken' : 'fence', -52 - i * 4, side * 6.2, { s: 1.0 });
+      put('fence_pillar', -50, side * 6.2, { s: 1 });
+      put('fence_pillar', -68, side * 6.2, { s: 1 });
+      put('post_lantern', -50.4, side * 4.6, { s: 0.55, ry: side > 0 ? Math.PI : 0 });
+    }
+    put('crypt', -57, -29, { s: 1.15 });
+    put('shrine_candles', -52, 4.4 + 18, { s: 1.4 });
+    put('tree_dead_large', -50, -24, { s: 1.7 });
+    put('tree_dead_medium', -66.5, -19.5, { s: 1.6, ry: 1.2 });
+    put('tree_dead_small', -64, 21, { s: 1.8, ry: 0.4 });
+    put('tree_dead_large', -51.5, 27, { s: 1.5, ry: 2.6 });
+    put('skull_candle', -53.4, -7.8, { s: 0.8 });
+    this.group.add(mergeStatic(S));
+    S.clear();
+  }
+
   setActive(on) {
     this.active = on;
     this.group.visible = on;
+    if (on && !this.dressed) this.dress();
   }
 
   update(t, dt) {

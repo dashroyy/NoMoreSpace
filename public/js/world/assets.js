@@ -7,7 +7,7 @@
 //   const chair = model('dungeon/chair');                          // a fresh copy, or null
 //
 // Models are optional: if one fails to load (offline, a typo), model() gives null and the
-// room simply goes without it. The loader (GLTFLoader) is only downloaded when a script
+// room simply goes without it. Characters (skinned, animated) are copied with cloneSkinned(). The loader (GLTFLoader) is only downloaded when a script
 // needs models, and every model of a pack shares one material, so a pile of them can be
 // merged into a handful of draw calls.
 import * as THREE from 'three';
@@ -15,8 +15,11 @@ import * as THREE from 'three';
 const BASE = '/assets/models/';
 const templates = new Map(); // 'pack/name' -> THREE.Group (or null if it could not be loaded)
 const pending = new Map();
+const clips = new Map(); // 'pack/name' -> the animation clips in that file
 const packMaterials = new Map(); // 'pack' -> the one MeshStandardMaterial all of its models share
+const SHARED = new Set(['dungeon', 'halloween']); // packs whose models all use one painted texture (characters each bring their own)
 let loader = null;
+let skeletonUtils = null;
 
 function getLoader() {
   loader ??= import('/vendor/three-addons/loaders/GLTFLoader.js').then(({ GLTFLoader }) => new GLTFLoader());
@@ -25,6 +28,7 @@ function getLoader() {
 
 // every model in a KayKit pack uses the same painted texture: share one material between them
 function unify(pack, scene) {
+  if (!SHARED.has(pack)) return;
   scene.traverse((o) => {
     if (!o.isMesh) return;
     const mat = Array.isArray(o.material) ? o.material[0] : o.material;
@@ -47,6 +51,7 @@ export function loadModel(id) {
       .then((gltf) => {
         unify(id.split('/')[0], gltf.scene);
         templates.set(id, gltf.scene);
+        clips.set(id, gltf.animations || []);
         return gltf.scene;
       })
       .catch((err) => {
@@ -67,5 +72,16 @@ export function model(id) {
   const t = templates.get(id);
   return t ? t.clone(true) : null;
 }
+
+// a copy of a skinned character (its own skeleton, so it can be animated on its own), or null
+export async function cloneSkinned(id) {
+  const t = await loadModel(id);
+  if (!t) return null;
+  skeletonUtils ??= await import('/vendor/three-addons/utils/SkeletonUtils.js');
+  return skeletonUtils.clone(t);
+}
+
+// the animation clips in a loaded file (empty if it has none, or did not load)
+export const clipsOf = (id) => clips.get(id) || [];
 
 export const modelsReady = (ids) => ids.every((id) => templates.get(id));

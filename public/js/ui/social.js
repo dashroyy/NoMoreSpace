@@ -5,7 +5,7 @@
 //      show by each seat on the bridge table.
 //   📜 Day log: everything the table has seen happen, searchable.
 import { $, el, clear, problem, toast } from '../util.js';
-import { store, send, socket, player, isCaptain, role, scriptRoleIds } from '../store.js';
+import { store, send, socket, player, isCaptain, role, scriptRoleIds, themeInfo } from '../store.js';
 import { sfx } from '../audio.js';
 import { ROOMS } from '../world/layout.js';
 import { systemLine } from './chat.js';
@@ -141,9 +141,9 @@ function describe(e) {
       const res = { block: '☠️ on the block', tie: '⚖️ tie', safe: '🛟 safe' }[e.result];
       return `☝️ ${name(e.a)} nominated ${name(e.t)}: ${e.votes}/${e.threshold} votes, ${res}. YES: ${e.voters.length ? e.voters.map(name).join(', ') : 'nobody'}`;
     }
-    case 'airlock': return e.unmask ? `🗡️ ${name(e.id)} was banished (${e.votes} votes), and unmasked: ${e.unmask === 'traitor' ? 'a TRAITOR!' : 'FAITHFUL.'}` : `🚪 ${name(e.id)} was airlocked (${e.votes} votes).`;
+    case 'airlock': return e.unmask ? `🗡️ ${name(e.id)} was banished (${e.votes} votes), and unmasked: ${e.unmask === 'traitor' ? 'a TRAITOR!' : 'FAITHFUL.'}` : `🚪 ${name(e.id)} was ${themeInfo().banishedVerb} (${e.votes} votes).`;
     case 'sentinel': return `⚡ ${name(e.id)} nominated the Sentinel and was fried!`;
-    case 'noexec': return '🌇 Nobody was airlocked.';
+    case 'noexec': return `🌇 Nobody was ${themeInfo().banishedVerb}.`;
     case 'shot': return `🔫 ${name(e.a)} fired at ${name(e.t)}${e.hit ? ` and vaporised them!` : '… nothing happened.'}`;
     case 'dawn': return e.deaths.length ? `💀 At dawn: ${e.deaths.map(name).join(' and ')} did not wake up.` : '🌅 Everyone survived the night.';
     case 'clue': return `🔭 A clue drifted past the Observation Deck: "${e.caption}"`;

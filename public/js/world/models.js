@@ -1,6 +1,7 @@
 // Secret character models, only revealed in the end-game cinematic.
 // Each player's suit colour is used as an accent so you can still tell who's who.
 import * as THREE from 'three';
+import { loadModels, cloneSkinned, clipsOf } from './assets.js';
 
 const m = (color, extra = {}) => new THREE.MeshStandardMaterial({ color, roughness: 0.6, metalness: 0.05, ...extra });
 const glow = (color, intensity = 1.5) => new THREE.MeshStandardMaterial({ color, emissive: color, emissiveIntensity: intensity });
@@ -60,8 +61,47 @@ function robot(bodyColor, accent) {
   return { g, hand };
 }
 
+// Real animated characters (KayKit Adventurers and Skeletons, CC0) for the Citadel of Traitors' roles.
+// They load in the background: until a character arrives, the model is just its ring.
+const KAYKIT = {
+  seer: ['mage', 1.9], daggerbearer: ['rogue', 1.9], guardian: ['knight', 1.9], loyalist: ['barbarian', 2.0],
+  recruiter: ['rogue_hooded', 1.9], mole: ['ranger', 1.9], blackmailer: ['engineer', 1.8],
+  recruit: ['skeleton_minion', 1.9], headtraitor: ['necromancer', 2.4],
+};
+const characterId = (file) => `characters/${file}`;
+export const preloadCharacters = (roleIds = Object.keys(KAYKIT)) => loadModels([...new Set(roleIds.filter((r) => KAYKIT[r]).map((r) => characterId(KAYKIT[r][0]))), characterId('anims')]);
+
+function buildCharacter(roleId, accent) {
+  const [file, height] = KAYKIT[roleId];
+  const g = new THREE.Group();
+  // a ring in the player's suit colour at their feet, so you can still tell who is who
+  const ring = new THREE.Mesh(new THREE.TorusGeometry(0.62, 0.05, 6, 28), new THREE.MeshStandardMaterial({ color: accent, emissive: accent, emissiveIntensity: 0.6 }));
+  ring.rotation.x = Math.PI / 2;
+  ring.position.y = 0.05;
+  g.add(ring);
+  const anim = {};
+  g.userData.anim = anim;
+  Promise.all([cloneSkinned(characterId(file)), loadModels([characterId('anims')])]).then(([character]) => {
+    if (!character) return;
+    const box = new THREE.Box3().setFromObject(character);
+    const k = height / Math.max(0.1, box.max.y - box.min.y);
+    character.scale.setScalar(k);
+    character.position.y = -box.min.y * k;
+    g.add(character);
+    const idle = THREE.AnimationClip.findByName(clipsOf(characterId('anims')), 'Idle_A');
+    if (idle) {
+      anim.mixer = new THREE.AnimationMixer(character);
+      const action = anim.mixer.clipAction(idle);
+      action.time = Math.random() * idle.duration; // not all in step
+      action.play();
+    }
+  });
+  return g;
+}
+
 export function buildRoleModel(roleId, accentHex = '#ffffff') {
   const accent = new THREE.Color(accentHex).getHex();
+  if (KAYKIT[roleId]) return buildCharacter(roleId, accent);
   let root;
   const anim = {};
   switch (roleId) {
@@ -823,6 +863,10 @@ export function animateRoleModel(model, t) {
   if (a.wobble) model.rotation.z = Math.sin(t * 2.2) * 0.18;
   if (a.tentacles) a.tentacles.forEach((ten, i) => (ten.rotation.z = Math.sin(t * 3 + i) * 0.35));
   if (a.body) a.body.scale.set(1 + Math.sin(t * 2) * 0.04, 1.15 + Math.sin(t * 2 + 1) * 0.05, 1 + Math.sin(t * 2) * 0.04);
+  if (a.mixer) {
+    a.mixer.update(Math.min(0.1, Math.max(0, t - (a.lastT ?? t))));
+    a.lastT = t;
+  }
   if (a.orbit) a.orbit.rotation.y = t * 1.6;
   if (a.flap) a.flap.forEach((w, i) => (w.rotation.z = (i ? 1 : -1) * (0.15 + Math.sin(t * 2.2) * 0.3)));
   if (a.blob) a.blob.scale.set(1 + Math.sin(t * 4) * 0.08, 1 - Math.sin(t * 4) * 0.06, 1);

@@ -112,7 +112,7 @@ export function renderVote(state) {
     clear(panel,
       el('div', { className: 'vote-stage' }, '🗳️ RESULT'),
       el('div', { className: 'vote-title' }, el('b', {}, name(last.nominee)), ` got ${last.votes} vote${last.votes === 1 ? '' : 's'} (${last.threshold} needed)`),
-      el('div', { className: `vote-outcome ${last.result}` }, { block: '☠️ On the block! Airlocked at dusk unless someone gets more votes.', tie: '⚖️ A tie: nobody is on the block.', safe: '🛟 Safe for now.' }[last.result]),
+      el('div', { className: `vote-outcome ${last.result}` }, { block: `☠️ On the block! ${themeInfo().banishedVerb[0].toUpperCase()}${themeInfo().banishedVerb.slice(1)} at dusk unless someone gets more votes.`, tie: '⚖️ A tie: nobody is on the block.', safe: '🛟 Safe for now.' }[last.result]),
       el('div', { className: 'hint' }, yesNames.length ? `✋ YES: ${yesNames.join(', ')}` : 'Nobody voted YES.'),
     );
     return;

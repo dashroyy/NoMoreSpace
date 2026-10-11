@@ -274,6 +274,8 @@ const SCRIPTS = {
       plants: 'Water the 6 wilting garden roses before the Blood Moon blackens them.',
       demonName: 'The Head Traitor',
       demonDoes: 'Every night it murders a Faithful.',
+      banishedVerb: 'banished',
+      banishPlace: 'the Banishment Gate',
       banishQuestion: '☝️ Who should be banished?',
       banishYes: 'banish them',
       banishVotes: 'votes to banish',

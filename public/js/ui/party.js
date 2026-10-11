@@ -3,7 +3,7 @@
 // a 10-second warning, away-from-keyboard detection, a "what now?" line,
 // the ship's name, and the rematch warm-up.
 import { $, el, clear, problem, toast } from '../util.js';
-import { socket, store, send, player, role, serverNow, suitHex } from '../store.js';
+import { socket, store, send, player, role, serverNow, suitHex, themeInfo } from '../store.js';
 import { sfx } from '../audio.js';
 import { speakingIds } from '../voice.js';
 import { openModal, closeModal } from './rolecard.js';
@@ -203,9 +203,9 @@ function recapLines(state) {
   const lines = [];
   for (const e of state.dayLog || []) {
     if (e.day !== yesterday) continue;
-    if (e.k === 'airlock') lines.push(`🚪 ${name(e.id)} was airlocked (${e.votes} vote${e.votes === 1 ? '' : 's'}).`);
+    if (e.k === 'airlock') lines.push(`🚪 ${name(e.id)} was ${themeInfo(state.script).banishedVerb} (${e.votes} vote${e.votes === 1 ? '' : 's'}).`);
     if (e.k === 'sentinel') lines.push(`⚡ ${name(e.id)} was fried by the Sentinel.`);
-    if (e.k === 'noexec') lines.push('🤷 Nobody was airlocked.');
+    if (e.k === 'noexec') lines.push(`🤷 Nobody was ${themeInfo(state.script).banishedVerb}.`);
     if (e.k === 'shot') lines.push(`🔫 ${name(e.a)} shot at ${name(e.t)}${e.hit ? ' and hit!' : '. Nothing happened.'}`);
   }
   const claims = new Map();
