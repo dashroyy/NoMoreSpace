@@ -15,7 +15,7 @@ import { OutbreakRooms } from './outbreak-rooms.js';
 import { OutbreakExterior } from './outbreak-exterior.js';
 import { TraitorsRooms } from './traitors-rooms.js';
 import { ClassicRooms } from './classic-rooms.js';
-import { preloadCharacters } from './models.js';
+import { preloadCharacters, CITADEL_ROLES } from './models.js';
 import { TraitorsExterior } from './traitors-exterior.js';
 import { DoomFx } from './doomfx.js';
 import { moveWithCollision, roomAt, roomById, walkable, seatPosition, TASK_STATIONS, SPAWN, DRAWING_SLOTS } from './layout.js';
@@ -708,7 +708,7 @@ export class World {
     this.outbreakRooms.setActive(id === 'outbreak');
     this.outbreakExterior.setActive(id === 'outbreak');
     this.traitorsRooms.setActive(id === 'traitors');
-    if (id === 'traitors') preloadCharacters(); // the end-game reveal's characters, fetched while the game is played
+    if (id === 'traitors') preloadCharacters(CITADEL_ROLES); // the end-game reveal's characters, fetched while the game is played
     this.traitorsExterior.setActive(id === 'traitors');
     this.ambience.root.visible = !['carnival', 'outbreak', 'traitors'].includes(id); // steam, sparks and robots belong to the space station
     this.space.last = -1; // repaint the windows now

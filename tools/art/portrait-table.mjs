@@ -12,15 +12,15 @@ const FROM = (icon, o = {}) => {
   return { ...spec, ...o };
 };
 
-const PET = (animal, o = {}) => ({ src: `K:Cube Pets/animal-${animal}`, yaw: -24, pitch: 12, margin: 1.12, outline: 0, ...o });
-const HERO = (pack, model, o = {}) => ({ src: `KK:${pack}/${model}`, yaw: -14, pitch: 6, crop: [0.0, 0.46], margin: 1.04, outline: 0, ...o });
+const PET = (animal, o = {}) => ({ src: `K:Cube Pets/animal-${animal}`, yaw: -24, pitch: 12, margin: 1.12, ...o });
+const HERO = (pack, model, o = {}) => ({ src: `KK:${pack}/${model}`, yaw: -14, pitch: 6, crop: [0.0, 0.46], margin: 1.04, ...o });
 const ADV = (m, o) => HERO('KayKit Adventurers 2.0', m, o);
 const M4 = (m, o) => HERO('KayKit Mystery Monthly Series 4 (1.1)', m, o);
 const M5 = (m, o) => HERO('KayKit Mystery Monthly Series 5 (1.1)', m, o);
 const M6 = (m, o) => HERO('KayKit Mystery Monthly Series 6 (1.1)', m, o);
 const SK = (m, o) => HERO('KayKit Skeletons 1.1', m, o);
-const BODY = (pack, m, o = {}) => ({ src: `KK:${pack}/${m}`, yaw: -24, pitch: 10, margin: 1.1, outline: 0, ...o }); // a whole creature, not a bust
-const TD = (m, o = {}) => ({ src: `K:Tower Defense Kit/${m}`, yaw: -24, pitch: 20, margin: 1.1, outline: 0, ...o });
+const BODY = (pack, m, o = {}) => ({ src: `KK:${pack}/${m}`, yaw: -24, pitch: 10, margin: 1.1, ...o }); // a whole creature, not a bust
+const TD = (m, o = {}) => ({ src: `K:Tower Defense Kit/${m}`, yaw: -24, pitch: 20, margin: 1.1, ...o });
 
 export const PORTRAITS = {
   // ---- Marines
@@ -53,7 +53,7 @@ export const PORTRAITS = {
   nyx: SK('Skeleton_Minion'),
   // ---- Psions
   mindwave: M5('Witch'),
-  zorp: { src: '2d:/kenney/2D assets/Alien UFO Pack/PNG/shipGreen_manned.png', fill: 0.98, outline: 0 },
+  zorp: { src: '2d:/kenney/2D assets/Alien UFO Pack/PNG/shipGreen_manned.png', fill: 0.98 },
   pondering: M6('PlantWarrior'),
   glow: PET('koala'),
   cassie: M6('Cleric'),
@@ -86,7 +86,7 @@ export const PORTRAITS = {
   gnasher: HERO('KayKit Mystery Monthly Series 6 (1.1)', 'Monstrosity', { crop: [0.0, 0.4] }),
   wraith: HERO('KayKit Skeletons 1.1', 'Skeleton_Mage', { crop: [0.0, 0.42], tint: '#7fe9ff', glow: 0.9 }),
   ripper: HERO('KayKit Mystery Monthly Series 5 (1.1)', 'CombatMech', { crop: [0.0, 0.5] }),
-  kraken: { src: 'parasite', center: [0, 1.0, 0.3], span: 3.2, pitch: 8, hemi: 3, key: 3.4, outline: 0 },
+  kraken: { src: 'parasite', center: [0, 1.0, 0.3], span: 3.2, pitch: 8, hemi: 3, key: 3.4 },
   scorpion: PET('crab', { tint: '#ffb347', glow: 0.35 }),
   hound: HERO('KayKit Mystery Monthly Series 4 (1.1)', 'Werewolf_Wolf', { crop: [0.0, 0.4] }),
   bhmoth: PET('bee', { tint: '#8a64d6', glow: 0.3 }),
@@ -95,7 +95,7 @@ export const PORTRAITS = {
   dragon: PET('caterpillar', { tint: '#b48cff', glow: 0.25 }),
   queen: PET('bee', { tint: '#ffe066', glow: 0.3 }),
   serpent: HERO('KayKit Skeletons 1.1', 'Skeleton_Golem', { crop: [0.0, 0.42], tint: '#6cf0ff', glow: 0.5 }),
-  eater: { src: '2d:/kenney/2D assets/Planets/Planets/planet05.png', fill: 0.98, outline: 0 },
+  eater: { src: '2d:/kenney/2D assets/Planets/Planets/planet05.png', fill: 0.98 },
 
   // ---- Gear
   blaster: FROM('blaster'),

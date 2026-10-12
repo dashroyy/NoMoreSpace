@@ -57,7 +57,7 @@ public/
   js/main.js            wires No More Space together
   js/phase/             the Phase to Space client (board, prompts, dice, effects)
   js/icons.js           swaps emoji for the arcade's own icons, in the page and in canvas text
-  js/world/             the 3D ship (Three.js): layout, ship, avatars, role models (KayKit characters, the procedural Parasite), sky
+  js/world/             the 3D ship (Three.js): layout, ship, avatars (the astronaut), role models (KayKit characters with a cartoon outline, the procedural Parasite), sky
   js/ui/                HUD, chat, role card, night & drawing, tasks, lobby,
                         Captain's Command Station, end-game reveal
   js/audio.js           generative music & synthesised sound effects (no audio files)

@@ -7,12 +7,15 @@ Nearly everything in the game is built from code (shapes, canvas textures, synth
 | KayKit Dungeon Pack | The Citadel of Traitors: wall torches, pillars, the Prize Pot chest and coins, bookcases, the banquet table and chairs, beds, barrels and crates, a mimic chest, keys |
 | KayKit Halloween Bits | The Citadel: the burial ground by the Banishment Gate (gravestones, crypt, fences, dead trees, lantern posts), skull and ribcage in the Dungeon |
 | KayKit Adventurers and Skeletons | The Citadel's end-game reveal: animated characters for the 9 Traitors roles (Mage = Seer, Rogue = Dagger Bearer, Knight = Guardian, Barbarian = Loyalist, hooded Rogue = Recruiter, Ranger = Mole, Engineer = Blackmailer, Skeleton Minion = Recruit, Necromancer = Head Traitor), and two skeleton prisoners in the Dungeon |
-| KayKit Mystery Monthly characters | The end-game reveal for the other scripts: Space Ranger = Security Chief, Robot One = Droid, Cleric = Medic, Clown = Clown, Animatronic = Jester, Witch = Hexer, Paladin = Sentinel, Survivalist = Stowaway, Ninja = Hacker, Plant Warrior = Spore Host, Toy Soldier = Marine, Vampire = Coroner (the Engineer shares the Adventurer Engineer). Several hold a small prop in their right hand (a syringe, baton, staff, laptop, crate or balloon; see `ROLE_PROPS` in `models.js`). All of them share one rig, so one `anims.glb` (Idle_A, Idle_B) animates every character |
+| KayKit Mystery Monthly characters | The end-game reveal for the other scripts: Space Ranger = Security Chief, Robot One = Droid, Cleric = Medic, Clown = Clown, Animatronic = Jester, Witch = Hexer, Paladin = Sentinel, Survivalist = Stowaway, Ninja = Hacker, Plant Warrior = Spore Host, Toy Soldier = Marine, Vampire = Coroner (the Engineer shares the Adventurer Engineer). Several hold a small prop in their right hand (a syringe, baton, staff, laptop, crate, balloon, wand, bottle, clipboard, flag...; see `ROLE_PROPS` in `models.js`). All of them share one rig, so one `anims.glb` (Idle_A, Idle_B) animates every character |
+| KayKit Mystery Monthly, more characters | The rest of the cast: Protagonist A = Comms Officer, Lorekeeper = Archivist, Hiker = Navigator, Magical Girl = Scanner, Robot Two = Black Box, Marksman = Gunner, Superhero = First Officer, Caveman = Space Drunk, Avian Swordsman = Ambassador, Monster costume = Incubator and Patient Zero, Driver = Smuggler, Werewolf man = Lion Tamer, Helpers = Acrobat and Blood Donor, Tiefling = Palm Reader, Farmers = Ticket Taker, Stagehand and Hypochondriac, Mage = Magician, Animatronic (bear) = Method Actor, Rogue = Knife Thrower, Protagonist B = Contact Tracer, Action Figure = Biohazard Sensor, Skeleton Mage = Bioterrorist, Druid = Quack Doctor. `test/characters.test.js` checks that every role in the game has a model and every model file exists |
 | KayKit Restaurant Bits | Black Hole Blues: a kitchen and dining tables in the Galley |
 | KayKit Furniture Bits | Black Hole Blues: a lounge in the Crew Quarters |
 | KayKit Space Base Bits | Black Hole Blues: cargo stacks in the Cargo Bay, space farms in Hydroponics |
 
-The Parasite is not a model: `public/js/world/parasite.js` builds it from code (a veined, breathing body with a toothed maw, one big and many small eyes that follow the camera, writhing tentacles, and the empty helmet at its feet). The remaining roles are small cartoon people built from shapes in `models.js` (`person()`: faces, hands, boots, belt, plus a prop or hat per role).
+The Parasite is not a model: `public/js/world/parasite.js` builds it from code (a veined, breathing body with a toothed maw, one big and many small eyes that follow the camera, writhing tentacles, and the empty helmet at its feet). The few roles that are not people are built from shapes in `models.js`: the Mimic, the Stage Double and the Hazmat Tech wear the same little astronaut the players do (`suited()`), the Reflection is a framed mirror and the Carrier a spotted blob.
+
+**Every character has a dark cartoon outline**, so a whole cast of different models reads as one set and nobody vanishes against a bright wall. `public/js/world/outline.js` makes it: a copy of each mesh, pushed out along its smoothed normals and drawn back-faces only (no per-frame work; it follows skinned animation for free). `outlineGroup()` merges one shell around a still group (the astronaut's body and limbs), `outlineEach()` puts one on every mesh (hats, pets, shape-built roles) and `outlineSkinned()` copies a skinned character's skeleton. The Parasite skips it: it is hundreds of pieces already.
 
 ## How it works
 
@@ -35,6 +38,12 @@ node tools/pack-animations.mjs "<pack>/Animations/gltf/Rig_Medium/Rig_Medium_Gen
 
 Many more packs are free to use the same way (KayKit Prototype, Block, Board Game, City Builder, Forest Nature, Fantasy Weapons...), and the Kenney asset packs are CC0 as well.
 
+## The players' astronaut
+
+`public/js/world/avatar.js` builds the suit from capsules and spheres: a chunky body under a big round glass helmet (the head is about as big as the body), glowing eyes behind a tinted visor, headset pods on both sides, a band over the top in the suit colour, a chest panel with blinking lights, cuffs, round gloves and boots. `SUIT_SCALE` shrinks the whole thing a touch so the crew fits the rooms, and `HAT_SCALE` fits the hats (drawn for a smaller helmet) to the big one. Everything is the same shape for everyone, so nobody can tell roles apart; colours, hats, visors and pets are cosmetic.
+
+To look at the characters without playing, run `node tools/art/serve.mjs` and open `http://localhost:3055/art/characters.html` (`?view=avatars` for the suit with hats and visors, `?view=roles` for every role model, `?view=chars` for every character file in the assets folder; `&tile=`, `&cols=` and `&turn=` change the size, the width and the angle).
+
 # Icons, fonts and card art (the whole arcade)
 
 **The games show ordinary emoji.** A custom icon set exists too, but it is **switched off**: open any page with `?icons=on` to see it (it is remembered in that browser) and `?icons=off` to go back. With it on, `public/js/icons.js` swaps each emoji for a small illustration as the page is drawn (and in canvas text such as name tags and the share card); emoji that are not in the map are left alone. With it off, `initIcons()` does nothing and `iconEl('skull')` gives the skull emoji. The default is one line (`ENABLED` in `icons.js`).
@@ -44,7 +53,7 @@ All of it is made from CC0 packs by Kenney ([kenney.nl](https://kenney.nl)) and 
 | What | From | Where it lands |
 |---|---|---|
 | **Icon atlas**, 256 icons | 3D models (Kenney Cube Pets, Food Kit, Space Kit, Platformer Kit, Graveyard Kit, Furniture Kit, Weapon Pack, Blaster Kit..., KayKit Adventurers, Mystery Monthly, Skeletons, Halloween Bits, RPG Tools, Mixed Bag), Kenney Smilies, Game Icons, Board Game Icons, Generic Items, Medals, Alien UFO Pack, Planets, a few hand-made SVGs, and the game's own Parasite model | `public/assets/icons/atlas.webp` (one image, 16 icons wide) |
-| **Card portraits**, 92 | The same models, drawn bigger: Cube Pets for the animal crew, KayKit characters for Captains and Crew, monsters for Void Beasts, and the object icons for Gear, Protocols and Boosts | `public/assets/phase/art/<card id>.webp` |
+| **Card portraits**, 92 | The same models, drawn bigger and with a bold dark outline (it grows with the picture size, so the same look as the characters in the ship): Cube Pets for the animal crew, KayKit characters for Captains and Crew, monsters for Void Beasts, and the object icons for Gear, Protocols and Boosts | `public/assets/phase/art/<card id>.webp` |
 | **Fonts** | Kenney Future and Future Narrow, Kenney Mini Square, Rocket, Space, Pixel (CC0), plus Sixtyfour, Chakra Petch and Doto from Google Fonts | `public/assets/fonts/`, `public/css/fonts.css` and `typography.css` |
 | **Effects** | Kenney Explosion Pack and Particle Pack | `public/assets/phase/fx/` |
 

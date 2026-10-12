@@ -1,0 +1,158 @@
+<!doctype html>
+<meta charset="utf-8" />
+<title>Character viewer</title>
+<style>
+  body { margin: 0; background: #0d1020; color: #9fe8ff; font: 11px monospace; }
+  #bar { padding: 5px 10px; background: #000; position: sticky; top: 0; z-index: 2; }
+  #grid { display: grid; gap: 4px; padding: 4px; }
+  .tile { position: relative; background: radial-gradient(circle at 50% 40%, #2b3566, #11152b 75%); border-radius: 6px; overflow: hidden; }
+  .tile canvas { display: block; width: 100%; height: auto; }
+  .tile span { position: absolute; left: 6px; bottom: 3px; color: #cfe; text-shadow: 0 1px 2px #000; }
+</style>
+<div id="bar">loading...</div>
+<div id="grid"></div>
+<script type="importmap">{ "imports": { "three": "/vendor/three/three.module.min.js" } }</script>
+<script type="module">
+  // A look at the game's characters, built by the game's own code.
+  //   /art/characters.html?view=avatars               the astronaut suit: colours, hats, visors, pets
+  //   /art/characters.html?view=roles&roles=seer,mole  the secret role models (default: all of them)
+  //   &tile=240   tile size in pixels     &cols=6   tiles per row     &turn=0.5   how far the model is turned (radians)
+  import * as THREE from 'three';
+  import { Avatar } from '/repo/public/js/world/avatar.js';
+  import { buildRoleModel, animateRoleModel, preloadCharacters } from '/repo/public/js/world/models.js';
+
+  const q = new URLSearchParams(location.search);
+  const view = q.get('view') || 'avatars';
+  const TILE = Number(q.get('tile') || 240);
+  const COLS = Number(q.get('cols') || 6);
+  const TURN = Number(q.get('turn') ?? 0.5);
+  const grid = document.getElementById('grid');
+  const bar = document.getElementById('bar');
+  grid.style.gridTemplateColumns = `repeat(${COLS}, 1fr)`;
+
+  const SUITS = { red: '#d7263d', blue: '#1f5fd1', green: '#1f8f4e', pink: '#ee6fb6', orange: '#f08a24', yellow: '#f5d327', black: '#3a3a44', white: '#e8ecf4', purple: '#7b3fe4', brown: '#7a4e2d', cyan: '#38d6e8', lime: '#7fe33b', maroon: '#6e1b2a', rose: '#f4b6c2', gray: '#8a93a6', teal: '#127a7a' };
+  const VISORS = { gold: '#f2b84b', sky: '#7cc7ff', mirror: '#c9d3e6', mint: '#7af0c1', rose: '#ff8fb1', void: '#141420', psychic: '#b46bff' };
+
+  const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true, preserveDrawingBuffer: true });
+  renderer.setPixelRatio(1);
+  renderer.setSize(TILE, TILE * 1.25);
+  renderer.outputColorSpace = THREE.SRGBColorSpace;
+  renderer.setClearColor(0x000000, 0);
+
+  // the same kind of light the ship has: a cool sky, a warm key, a rim
+  function stage() {
+    const scene = new THREE.Scene();
+    scene.add(new THREE.HemisphereLight(0xcfd8ff, 0x3b3452, 1.3));
+    const key = new THREE.DirectionalLight(0xffffff, 2.2);
+    key.position.set(-2.5, 4, 3.5);
+    scene.add(key);
+    const rim = new THREE.DirectionalLight(0x7fe9ff, 1.1);
+    rim.position.set(3, 2, -3);
+    scene.add(rim);
+    return scene;
+  }
+
+  const tiles = [];
+  function addTile(label, object, { height = 2.2, pad = 1.15 } = {}) {
+    const scene = stage();
+    scene.add(object);
+    const cam = new THREE.PerspectiveCamera(28, 1 / 1.25, 0.1, 100);
+    const d = (height * pad) / 2 / Math.tan((28 * Math.PI) / 360) * 1.25;
+    cam.position.set(0, height * 0.52, d);
+    cam.lookAt(0, height * 0.48, 0);
+    const canvas = document.createElement('canvas');
+    canvas.width = TILE;
+    canvas.height = TILE * 1.25;
+    const div = document.createElement('div');
+    div.className = 'tile';
+    div.append(canvas);
+    const sp = document.createElement('span');
+    sp.textContent = label;
+    div.append(sp);
+    grid.append(div);
+    tiles.push({ scene, cam, canvas, object });
+  }
+
+  function draw(t = 1) {
+    for (const k of tiles) {
+      animateRoleModel(k.object, t, k.cam);
+      k.object.userData.avatar?.update?.(0.016, t);
+      renderer.render(k.scene, k.cam);
+      const g = k.canvas.getContext('2d');
+      g.clearRect(0, 0, k.canvas.width, k.canvas.height);
+      g.drawImage(renderer.domElement, 0, 0);
+    }
+  }
+
+  if (view === 'avatars') {
+    const hats = (q.get('hats') || 'none,party,crown,chef,cowboy,headphones,propeller,horns,jester,saucer,crystal,laurel').split(',');
+    const pets = (q.get('pets') || 'none').split(',');
+    const suits = Object.keys(SUITS);
+    const visors = Object.keys(VISORS);
+    const n = Number(q.get('n') || 12);
+    for (let i = 0; i < n; i++) {
+      const look = { suit: suits[i % suits.length], visor: visors[i % visors.length], hat: hats[i % hats.length], pet: pets[i % pets.length] };
+      const av = new Avatar({ look, name: `${look.suit}`, suits: SUITS, visors: VISORS });
+      av.label.visible = false;
+      av.root.rotation.y = TURN;
+      const holder = new THREE.Group();
+      holder.add(av.root);
+      if (av.pet) holder.add(av.pet);
+      addTile(`${look.suit} / ${look.hat} / ${look.visor}`, holder, { height: 2.4 });
+    }
+    bar.textContent = `avatars: ${n}`;
+    draw();
+  } else if (view === 'chars') {
+    // every character file in public/assets/models/characters, standing in its idle pose (to choose who plays which role)
+    const { cloneSkinned, loadModels, clipsOf } = await import('/repo/public/js/world/assets.js');
+    let files = (await fetch('/list?dir=repo/public/assets/models/characters').then((r) => r.json())).filter((f) => f.endsWith('.glb') && f !== 'anims.glb').map((f) => f.slice(0, -4));
+    if (q.get('files')) files = q.get('files').split(',');
+    await loadModels(['characters/anims']);
+    const mixers = [];
+    for (const f of files) {
+      const g = new THREE.Group();
+      const c = await cloneSkinned(`characters/${f}`);
+      if (c) {
+        const box = new THREE.Box3().setFromObject(c);
+        const k = 1.9 / Math.max(0.1, box.max.y - box.min.y);
+        c.scale.setScalar(k);
+        c.position.y = -box.min.y * k;
+        g.add(c);
+        const idle = THREE.AnimationClip.findByName(clipsOf('characters/anims'), 'Idle_A');
+        if (idle) {
+          const mixer = new THREE.AnimationMixer(c);
+          mixer.clipAction(idle).play();
+          mixer.update(0.3);
+        }
+      }
+      g.rotation.y = TURN;
+      addTile(f, g, { height: 2.2 });
+    }
+    bar.textContent = `characters: ${files.length}`;
+    draw();
+  } else {
+    const src = await fetch('/repo/public/js/world/models.js').then((r) => r.text());
+    let ids = [...new Set([...src.matchAll(/case '(\w+)'/g)].map((m) => m[1]))];
+    for (const m of src.matchAll(/^\s+(?:[a-z]+: \['[a-z_]+', [\d.]+\],?\s*)+/gm)) for (const k of m[0].matchAll(/(\w+): \['/g)) ids.push(k[1]);
+    ids = [...new Set(ids)];
+    if (q.get('roles')) ids = q.get('roles').split(',');
+    const accent = q.get('accent') || '#ff3b5c';
+    await preloadCharacters();
+    for (const id of ids) {
+      const model = buildRoleModel(id, accent);
+      model.rotation.y = TURN;
+      addTile(id, model, { height: Number(q.get('height') || 2.6) });
+    }
+    bar.textContent = `roles: ${ids.length}`;
+    // the real characters arrive in the background
+    let n = 0;
+    const loop = () => {
+      draw(n * 0.05);
+      n++;
+      if (n < Number(q.get('frames') || 40)) setTimeout(loop, 60);
+      else bar.textContent += ' (ready)';
+    };
+    setTimeout(loop, 400);
+  }
+  window.__ready = true;
+</script>

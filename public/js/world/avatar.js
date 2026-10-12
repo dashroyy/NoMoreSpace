@@ -2,34 +2,40 @@
 // shape (so nobody can tell roles apart); colours, hats and pets are cosmetic.
 import * as THREE from 'three';
 import { fillTextIcons, strokeTextIcons } from '../icons.js';
+import { outlineGroup, outlineEach, setOutlinesVisible } from './outline.js';
 
-// Shared shapes for the spacesuit (a chunky astronaut with a glass bubble helmet).
+// Shared shapes for the spacesuit: a chunky little astronaut with a big round glass helmet (head and body are about
+// the same size, which is what makes the silhouette easy to recognise from across the ship).
 const geo = {
-  torso: new THREE.CapsuleGeometry(0.29, 0.28, 6, 16),
-  leg: new THREE.CapsuleGeometry(0.11, 0.26, 4, 10),
-  boot: new THREE.BoxGeometry(0.21, 0.13, 0.3),
-  arm: new THREE.CapsuleGeometry(0.085, 0.3, 4, 8),
-  glove: new THREE.SphereGeometry(0.095, 10, 8),
-  pad: new THREE.SphereGeometry(0.12, 12, 8),
-  belt: new THREE.TorusGeometry(0.31, 0.04, 6, 24),
-  neck: new THREE.TorusGeometry(0.2, 0.05, 8, 24),
-  helmet: new THREE.SphereGeometry(0.34, 28, 20),
-  head: new THREE.SphereGeometry(0.25, 16, 12),
-  eye: new THREE.SphereGeometry(0.058, 10, 8),
-  glint: new THREE.SphereGeometry(0.07, 10, 6),
-  ridge: new THREE.TorusGeometry(0.345, 0.025, 6, 24, Math.PI),
-  panel: new THREE.BoxGeometry(0.24, 0.16, 0.05),
-  button: new THREE.SphereGeometry(0.022, 6, 5),
-  tank: new THREE.CylinderGeometry(0.1, 0.1, 0.5, 14),
+  torso: new THREE.CapsuleGeometry(0.27, 0.1, 6, 18),
+  leg: new THREE.CapsuleGeometry(0.115, 0.12, 4, 10),
+  cuff: new THREE.TorusGeometry(0.12, 0.032, 6, 14),
+  boot: new THREE.SphereGeometry(0.15, 14, 10),
+  arm: new THREE.CapsuleGeometry(0.09, 0.14, 4, 10),
+  glove: new THREE.SphereGeometry(0.115, 12, 10),
+  pad: new THREE.SphereGeometry(0.135, 12, 8),
+  belt: new THREE.TorusGeometry(0.285, 0.04, 6, 24),
+  neck: new THREE.TorusGeometry(0.3, 0.06, 8, 24),
+  helmet: new THREE.SphereGeometry(0.47, 32, 24),
+  head: new THREE.SphereGeometry(0.37, 20, 16),
+  eye: new THREE.SphereGeometry(0.082, 12, 10),
+  glint: new THREE.SphereGeometry(0.08, 10, 6),
+  ridge: new THREE.TorusGeometry(0.478, 0.028, 6, 28, Math.PI),
+  panel: new THREE.BoxGeometry(0.26, 0.17, 0.05),
+  button: new THREE.SphereGeometry(0.024, 6, 5),
+  tank: new THREE.CylinderGeometry(0.1, 0.1, 0.44, 14),
   tankCap: new THREE.SphereGeometry(0.1, 12, 6, 0, Math.PI * 2, 0, Math.PI / 2),
-  packBox: new THREE.BoxGeometry(0.34, 0.32, 0.12),
-  lamp: new THREE.CylinderGeometry(0.05, 0.05, 0.1, 10),
-  antenna: new THREE.CylinderGeometry(0.012, 0.012, 0.24, 5),
-  tip: new THREE.SphereGeometry(0.035, 8, 6),
+  packBox: new THREE.BoxGeometry(0.4, 0.34, 0.14),
+  lamp: new THREE.CylinderGeometry(0.055, 0.055, 0.1, 10),
+  pod: new THREE.CylinderGeometry(0.11, 0.11, 0.1, 16),
+  antenna: new THREE.CylinderGeometry(0.014, 0.014, 0.22, 5),
+  tip: new THREE.SphereGeometry(0.04, 8, 6),
   particle: new THREE.SphereGeometry(0.06, 6, 4),
   box: new THREE.BoxGeometry(1, 1, 1),
 };
 const SUIT_SCALE = 0.88;
+const HAT_SCALE = 1.32; // hats are built for a small helmet; this fits them to the big one
+const OUTLINE = 0.022; // width of the dark cartoon outline
 const SHARED_GEOMETRY = new Set(Object.values(geo));
 
 // Free the graphics memory used by throwaway objects (speech bubbles,
@@ -38,7 +44,7 @@ export function disposeTree(obj) {
   obj.traverse((o) => {
     if (o.geometry && !SHARED_GEOMETRY.has(o.geometry)) o.geometry.dispose();
     for (const m of [o.material].flat()) {
-      if (!m) continue;
+      if (!m || m.userData.shared) continue;
       m.map?.dispose();
       m.dispose();
     }
@@ -477,7 +483,7 @@ export class Avatar {
     // the glass bubble helmet, tinted with the visor colour
     this.visorMat = new THREE.MeshStandardMaterial({ color: 0xffffff, metalness: 0.3, roughness: 0.05, transparent: true, opacity: 0.26, emissive: 0x000000, depthWrite: false });
     this.visorMat.userData.wasTransparent = true;
-    this.headMat = mat(0x0b0d18, { roughness: 0.9 });
+    this.headMat = mat(0x151a36, { roughness: 0.8 });
     this.eyeMat = new THREE.MeshStandardMaterial({ color: 0xe6fbff, emissive: 0xaff0ff, emissiveIntensity: 3.2 });
     this.glintMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.75, depthWrite: false });
     this.glintMat.userData.wasTransparent = true;
@@ -494,12 +500,17 @@ export class Avatar {
     this.scaler.add(this.body);
     const b = this.body;
 
-    // legs (pivot at the hip) with chunky boots
+    // legs (pivot at the hip): short and stubby, with a bright cuff and a round boot
     const leg = (side) => {
       const g = new THREE.Group();
-      g.position.set(side * 0.15, 0.55, 0);
-      g.add(mesh(geo.leg, this.darkMat, 0, -0.22, 0));
-      g.add(mesh(geo.boot, this.bootMat, 0, -0.48, 0.04));
+      g.position.set(side * 0.16, 0.5, 0);
+      g.add(mesh(geo.leg, this.darkMat, 0, -0.17, 0));
+      const cuff = mesh(geo.cuff, this.trimMat, 0, -0.29, 0);
+      cuff.rotation.x = Math.PI / 2;
+      g.add(cuff);
+      const boot = mesh(geo.boot, this.bootMat, 0, -0.39, 0.05);
+      boot.scale.set(1, 0.72, 1.4);
+      g.add(boot);
       b.add(g);
       return g;
     };
@@ -507,31 +518,35 @@ export class Avatar {
     this.legR = leg(1);
 
     // body
-    this.torso = mesh(geo.torso, this.suitMat, 0, 0.92, 0);
-    this.torso.scale.set(1.12, 1, 0.9);
+    this.torso = mesh(geo.torso, this.suitMat, 0, 0.82, 0);
+    this.torso.scale.set(1.12, 1, 0.92);
     b.add(this.torso);
-    const belt = mesh(geo.belt, this.metalMat, 0, 0.66, 0);
+    const belt = mesh(geo.belt, this.metalMat, 0, 0.56, 0);
     belt.rotation.x = Math.PI / 2;
     belt.scale.set(1.1, 0.95, 1);
     b.add(belt);
-    b.add(mesh(geo.panel, this.bootMat, 0, 0.98, 0.26));
+    b.add(mesh(geo.panel, this.bootMat, 0, 0.86, 0.255));
     this.buttons = this.buttonMats.map((m, i) => {
-      const btn = mesh(geo.button, m, -0.065 + i * 0.065, 0.98, 0.29);
+      const btn = mesh(geo.button, m, -0.07 + i * 0.07, 0.86, 0.285);
       b.add(btn);
       return btn;
     });
     for (const side of [-1, 1]) {
-      const pad = mesh(geo.pad, this.trimMat, side * 0.33, 1.2, 0);
-      pad.scale.set(1, 0.7, 1);
+      const pad = mesh(geo.pad, this.trimMat, side * 0.34, 1.05, 0);
+      pad.scale.set(1, 0.72, 1);
       b.add(pad);
     }
 
-    // arms (pivot at the shoulder) with gloves
+    // arms (pivot at the shoulder) with big round gloves
     const arm = (side) => {
       const g = new THREE.Group();
-      g.position.set(side * 0.37, 1.17, 0);
-      g.add(mesh(geo.arm, this.suitMat, 0, -0.22, 0));
-      g.add(mesh(geo.glove, this.trimMat, 0, -0.45, 0));
+      g.position.set(side * 0.38, 1.0, 0);
+      g.add(mesh(geo.arm, this.suitMat, 0, -0.17, 0));
+      const cuff = mesh(geo.cuff, this.trimMat, 0, -0.3, 0);
+      cuff.scale.setScalar(0.85);
+      cuff.rotation.x = Math.PI / 2;
+      g.add(cuff);
+      g.add(mesh(geo.glove, this.trimMat, 0, -0.4, 0));
       b.add(g);
       return g;
     };
@@ -539,51 +554,63 @@ export class Avatar {
     this.armR = arm(1);
 
     // oxygen tanks on the back
-    b.add(mesh(geo.packBox, this.darkMat, 0, 1.0, -0.28));
+    b.add(mesh(geo.packBox, this.darkMat, 0, 0.9, -0.29));
     for (const side of [-1, 1]) {
-      b.add(mesh(geo.tank, this.metalMat, side * 0.12, 0.98, -0.36));
-      b.add(mesh(geo.tankCap, this.metalMat, side * 0.12, 1.23, -0.36));
+      b.add(mesh(geo.tank, this.metalMat, side * 0.13, 0.9, -0.4));
+      b.add(mesh(geo.tankCap, this.metalMat, side * 0.13, 1.12, -0.4));
     }
 
-    // neck ring, head and glowing eyes inside a glass bubble helmet
-    const neck = mesh(geo.neck, this.metalMat, 0, 1.36, 0);
+    // neck ring, head and glowing eyes inside a big glass bubble helmet
+    const neck = mesh(geo.neck, this.metalMat, 0, 1.1, 0);
     neck.rotation.x = Math.PI / 2;
     b.add(neck);
-    b.add(mesh(geo.head, this.headMat, 0, 1.6, 0.02));
+    b.add(mesh(geo.head, this.headMat, 0, 1.52, 0.02));
     this.eyes = [-1, 1].map((side) => {
-      const e = mesh(geo.eye, this.eyeMat, side * 0.09, 1.66, 0.2);
-      e.scale.set(1, 1.25, 0.7);
+      const e = mesh(geo.eye, this.eyeMat, side * 0.14, 1.55, 0.355);
+      e.scale.set(1, 1.4, 0.6);
       b.add(e);
       return e;
     });
-    this.visor = mesh(geo.helmet, this.visorMat, 0, 1.62, 0);
+    this.visor = mesh(geo.helmet, this.visorMat, 0, 1.5, 0);
     this.visor.renderOrder = 2;
     b.add(this.visor);
     // a white shine on the glass sells the "bubble helmet" look
-    const glint = mesh(geo.glint, this.glintMat, -0.14, 1.8, 0.24);
-    glint.scale.set(1.3, 0.55, 0.3);
-    glint.rotation.z = 0.5;
+    const glint = mesh(geo.glint, this.glintMat, -0.2, 1.76, 0.3);
+    glint.scale.set(1.4, 0.55, 0.3);
+    glint.rotation.z = 0.55;
     glint.renderOrder = 3;
     b.add(glint);
-    const ridge = mesh(geo.ridge, this.suitMat, 0, 1.62, 0);
-    ridge.rotation.y = Math.PI / 2;
-    b.add(ridge);
-    const lamp = mesh(geo.lamp, this.metalMat, 0.27, 1.76, 0.1);
-    lamp.rotation.x = Math.PI / 2;
+    // a band over the top of the helmet, from pod to pod, in the suit colour
+    b.add(mesh(geo.ridge, this.suitMat, 0, 1.5, 0));
+    // headset pods on both sides of the helmet: a round silhouette with "ears"
+    for (const side of [-1, 1]) {
+      const pod = mesh(geo.pod, this.metalMat, side * 0.49, 1.5, 0);
+      pod.rotation.z = Math.PI / 2;
+      b.add(pod);
+      const disc = mesh(new THREE.CircleGeometry(0.075, 14), this.trimMat, side * 0.545, 1.5, 0);
+      disc.rotation.y = side * Math.PI / 2;
+      b.add(disc);
+    }
+    const lamp = mesh(geo.lamp, this.metalMat, 0.25, 1.9, 0.2);
+    lamp.rotation.x = Math.PI / 2 - 0.5;
     b.add(lamp);
-    b.add(mesh(new THREE.CircleGeometry(0.04, 10), this.lampMat, 0.27, 1.76, 0.155));
-    b.add(mesh(geo.antenna, this.metalMat, -0.22, 1.9, -0.06));
-    this.antennaTip = mesh(geo.tip, this.buttonMats[0], -0.22, 2.03, -0.06);
+    b.add(mesh(new THREE.CircleGeometry(0.042, 10), this.lampMat, 0.25, 1.925, 0.255));
+    b.add(mesh(geo.antenna, this.metalMat, -0.22, 1.92, -0.08));
+    this.antennaTip = mesh(geo.tip, this.buttonMats[0], -0.22, 2.06, -0.08);
     b.add(this.antennaTip);
 
     this.hatAnchor = new THREE.Group();
-    this.hatAnchor.position.y = 1.93;
+    this.hatAnchor.position.y = 1.92;
+    this.hatAnchor.scale.setScalar(HAT_SCALE);
     b.add(this.hatAnchor);
     this.blinkAt = 1 + Math.random() * 4;
 
     // Performance: merge the parts that never move on their own (same look = one mesh).
     const moving = new Set([this.legL, this.legR, this.armL, this.armR, this.visor, this.antennaTip, this.hatAnchor, ...this.eyes, ...this.buttons]);
     mergeChildren(b, (o) => !moving.has(o) && o.isMesh && o.material !== this.glintMat);
+    // the cartoon outline: one dark shell for the still parts and one for each limb
+    outlineGroup(b, OUTLINE, moving);
+    for (const limb of [this.legL, this.legR, this.armL, this.armR]) outlineGroup(limb, OUTLINE);
   }
 
   setLook(look) {
@@ -596,14 +623,16 @@ export class Avatar {
     this.visorMat.emissive.copy(visor).multiplyScalar(0.18);
     for (const old of [...this.hatAnchor.children]) disposeTree(old);
     const hat = buildHat(look.hat);
+    outlineEach(hat, 0.012);
     this.hatAnchor.add(hat);
     if (this.pet) disposeTree(this.pet);
     this.pet = buildPet(look.pet);
+    if (this.pet) outlineEach(this.pet, 0.016);
     // the ghost effect fades every material, so keep the list in step with the outfit
     this.materials = [...this.suitMaterials];
-    hat.traverse((o) => o.isMesh && this.materials.push(o.material));
+    hat.traverse((o) => o.isMesh && !o.userData.isOutline && this.materials.push(o.material));
     if (this.pet) {
-      this.pet.traverse((o) => o.isMesh && this.materials.push(o.material));
+      this.pet.traverse((o) => o.isMesh && !o.userData.isOutline && this.materials.push(o.material));
       this.pet.position.copy(this.root.position);
       this.root.parent?.add(this.pet);
     }
@@ -633,14 +662,14 @@ export class Avatar {
     if (this.label) disposeTree(this.label);
     this.name = name;
     this.label = makeTextSprite(name, { color, size: 34, scale: 0.0115 });
-    this.label.position.y = 2.25;
+    this.label.position.y = 2.4; // above the tallest hat
     this.root.add(this.label);
   }
 
   say(text) {
     if (this.bubble) disposeTree(this.bubble);
     this.bubble = makeTextSprite(text, { color: '#14102a', bg: 'rgba(245,242,255,0.95)', size: 34, maxWidth: 440, scale: 0.0108 });
-    this.bubble.position.y = 2.7 + this.bubble.scale.y / 2;
+    this.bubble.position.y = 2.85 + this.bubble.scale.y / 2;
     this.bubble.userData.until = performance.now() + 5500;
     this.root.add(this.bubble);
   }
@@ -660,6 +689,7 @@ export class Avatar {
       m.needsUpdate = true;
     }
     this.legL.visible = this.legR.visible = !on;
+    setOutlinesVisible(this.body, !on); // a ghost is see-through: no line round it
     if (this.pet) this.pet.visible = !on && this.root.visible;
     if (this.label) this.label.material.opacity = on ? 0.55 : 1;
   }
@@ -941,7 +971,7 @@ export class Avatar {
     this.blinkAt -= dt;
     const closed = this.blinkAt < 0;
     if (this.blinkAt < -0.13) this.blinkAt = 2 + Math.random() * 5;
-    for (const e of this.eyes) e.scale.y = closed ? 0.15 : 1.25;
+    for (const e of this.eyes) e.scale.y = closed ? 0.15 : 1.4;
     this.buttons.forEach((btn, i) => (btn.visible = Math.sin(time * (2 + i) + this.walkPhase + i) > -0.3));
     this.antennaTip.visible = Math.sin(time * 3 + this.walkPhase) > 0;
 
@@ -989,7 +1019,7 @@ export class Avatar {
     if (!this.stars) {
       this.stars = new THREE.Group();
       for (let i = 0; i < 4; i++) this.stars.add(mesh(new THREE.OctahedronGeometry(0.07), new THREE.MeshBasicMaterial({ color: 0xffe14f })));
-      this.stars.position.y = 1.7;
+      this.stars.position.y = 1.9;
       this.root.add(this.stars);
       setTimeout(() => {
         if (this.stars) disposeTree(this.stars);

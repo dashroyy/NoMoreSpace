@@ -150,19 +150,22 @@
     return c;
   }
 
-  // shrink to the icon size and add the dark outline
+  // shrink to the icon size and add the dark outline. The line is 1.6 pixels wide on a 48px icon and grows with the
+  // size (a 192px portrait gets a 6px line); item.outline scales it further, and 0 turns it off.
   function finish(big, item) {
     const body = document.createElement('canvas');
     body.width = body.height = SIZE;
     const g = body.getContext('2d');
     g.imageSmoothingQuality = 'high';
-    const pad = item.outline === 0 ? 0 : 2;
-    g.drawImage(big, pad, pad, SIZE - pad * 2, SIZE - pad * 2);
+    const k = (SIZE / 48) * (item.outline ?? 1);
+    const pad = item.outline === 0 ? 0 : Math.ceil(2 * k);
+    // a bust is cut off at the bottom: push it down so the cut sits on the picture's edge, with no outline along it
+    g.drawImage(big, pad, item.crop ? pad * 2 : pad, SIZE - pad * 2, SIZE - pad * 2);
     if (item.outline === 0) return body;
     const out = document.createElement('canvas');
     out.width = out.height = SIZE;
     const o = out.getContext('2d');
-    // a silhouette in the outline colour, nudged in 8 directions, then the picture on top
+    // a silhouette in the outline colour, nudged round a few circles, then the picture on top
     const sil = document.createElement('canvas');
     sil.width = sil.height = SIZE;
     const s = sil.getContext('2d');
@@ -170,7 +173,7 @@
     s.globalCompositeOperation = 'source-in';
     s.fillStyle = OUTLINE;
     s.fillRect(0, 0, SIZE, SIZE);
-    for (const [dx, dy] of [[-1, 0], [1, 0], [0, -1], [0, 1], [-1, -1], [1, -1], [-1, 1], [1, 1], [-1.6, 0], [1.6, 0], [0, -1.6], [0, 1.6]]) o.drawImage(sil, dx, dy);
+    for (const r of [0.5, 1, 1.6]) for (let a = 0; a < 16; a++) o.drawImage(sil, Math.cos((a / 16) * Math.PI * 2) * r * k, Math.sin((a / 16) * Math.PI * 2) * r * k);
     o.drawImage(body, 0, 0);
     if (item.slash) {
       o.lineCap = 'round';

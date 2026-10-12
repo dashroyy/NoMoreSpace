@@ -19,6 +19,10 @@ const PORT = Number(process.env.ART_PORT || 3055);
 const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.mjs': 'text/javascript', '.json': 'application/json', '.css': 'text/css', '.png': 'image/png', '.webp': 'image/webp', '.glb': 'model/gltf-binary', '.gltf': 'model/gltf+json', '.svg': 'image/svg+xml', '.ttf': 'font/ttf', '.bin': 'application/octet-stream' };
 
 const MOUNTS = [
+  // the game's own paths, so its modules (avatar.js, models.js, assets.js) run unchanged on a tool page
+  ['/assets/', path.join(ROOT, 'public/assets')],
+  ['/vendor/three-addons/', path.join(ROOT, 'node_modules/three/examples/jsm')],
+  ['/vendor/three/', path.join(ROOT, 'node_modules/three/build')],
   ['/art/', HERE],
   ['/repo/', ROOT],
   ['/kenney/', KENNEY],
