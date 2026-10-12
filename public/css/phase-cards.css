@@ -2,8 +2,8 @@
    A card is 5 wide by 7 tall. Everything inside is measured in "em", where 1em is a tenth of the card's width
    (container units), so the same card looks right from a tiny pip in a rival's party up to the big preview. */
 
+:where(.card) { --w: 104px; } /* weightless, like the size classes below, so they and the table can change it */
 .card {
-  --w: 104px;
   --c: #8fb2ff; /* the card's colour: its discipline, or its kind */
   position: relative;
   display: block;
@@ -17,6 +17,8 @@
   box-shadow: 0 calc(var(--w) * 0.03) calc(var(--w) * 0.1) rgba(0, 0, 0, 0.55), 0 0 calc(var(--w) * 0.12) color-mix(in srgb, var(--c) 30%, transparent), inset 0 0 calc(var(--w) * 0.1) rgba(0, 0, 0, 0.45);
   overflow: hidden;
   color: #e8eeff;
+  text-transform: none; /* cards sit inside buttons sometimes: keep their words in normal case */
+  letter-spacing: normal;
   user-select: none;
   -webkit-tap-highlight-color: transparent;
   transition: transform 0.18s cubic-bezier(.3, 1.4, .5, 1), box-shadow 0.2s, filter 0.2s, opacity 0.2s;
@@ -56,12 +58,13 @@
 .card.k-beast { --c: #b36bff; }
 .card.k-captain { --c: #ffd24d; border-style: double; border-width: max(2px, calc(var(--w) * 0.03)); }
 
-/* sizes */
-.card.sz-xs { --w: 46px; }
-.card.sz-sm { --w: 68px; }
-.card.sz-md { --w: 104px; }
-.card.sz-lg { --w: 158px; }
-.card.sz-xl { --w: 262px; }
+/* sizes: the default for each size class. They have no weight (:where), so a place on the table that sets its own
+   size (your hand, the Beasts, a rival's party: see phase.css) always wins. */
+:where(.card.sz-xs) { --w: 46px; }
+:where(.card.sz-sm) { --w: 68px; }
+:where(.card.sz-md) { --w: 104px; }
+:where(.card.sz-lg) { --w: 158px; }
+:where(.card.sz-xl) { --w: 300px; }
 
 .face {
   position: absolute;
@@ -115,9 +118,9 @@
 
 .face .name { flex: 0 0 auto; min-height: 1.8em; display: flex; align-items: center; justify-content: center; text-align: center; font: 0.9em/1.06 var(--font-card); text-transform: uppercase; letter-spacing: 0.02em; color: #fff; text-shadow: 0 0 0.5em color-mix(in srgb, var(--c) 70%, transparent); }
 .face .sub { flex: none; text-align: center; font: 0.6em/1.1 var(--font-small); letter-spacing: 0.06em; text-transform: uppercase; color: var(--c); opacity: 0.95; margin: 0.15em 0 0.25em; }
-.face .text { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; text-align: center; font: 500 0.78em/1.2 var(--font-body); color: #cfd7f7; padding: 0 0.15em; overflow: hidden; }
-.face .text .t { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 5; overflow: hidden; }
-.card.sz-lg .face .text .t { -webkit-line-clamp: 7; }
+.face .text { flex: 1; min-height: 0; display: flex; align-items: safe center; justify-content: center; text-align: center; font: 600 0.9em/1.16 var(--font-body); color: #e6ebff; padding: 0 0.1em; overflow: hidden; }
+.face .text .t { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 4; overflow: hidden; }
+.card.sz-lg .face .text .t { -webkit-line-clamp: 6; }
 .card.sz-xl .face .text .t { -webkit-line-clamp: unset; }
 .kw { color: color-mix(in srgb, var(--c) 70%, #fff); font-weight: 700; }
 
@@ -141,8 +144,13 @@
 .odds .fail { color: #ff7a8a; }
 
 /* small cards drop the words (the big preview has them) */
-@container (max-width: 112px) {
-  .face .text { font-size: 0.72em; line-height: 1.12; }
+/* a card in your hand: a smaller picture, so the words get the room */
+@container (min-width: 113px) and (max-width: 200px) {
+  .face .art { flex-basis: 3.9em; margin-bottom: 0.1em; }
+  .dome { width: 3.9em; height: 3.9em; }
+  .obj { width: 4.2em; height: 4.2em; }
+  .face .sub { display: none; }
+  .face .glyphs { margin: 0.1em 0 0.2em; }
 }
 @container (max-width: 96px) {
   .face .text { display: none; }
@@ -202,7 +210,7 @@
 /* the big preview that follows your pointer */
 .card-preview { position: fixed; z-index: 9999; pointer-events: none; filter: drop-shadow(0 18px 40px rgba(0, 0, 0, 0.7)); animation: pop-in 0.12s ease-out; }
 .card-preview .card { box-shadow: 0 0 40px color-mix(in srgb, var(--c) 55%, transparent); }
-.preview-gear { margin-top: 8px; max-width: 262px; padding: 8px 10px; border-radius: 10px; background: rgba(8, 12, 28, 0.95); border: 1px solid rgba(255, 181, 71, 0.6); font: 15px/1.25 var(--font-body); color: #ffe0a8; }
+.preview-gear { margin-top: 8px; max-width: 300px; padding: 8px 10px; border-radius: 10px; background: rgba(8, 12, 28, 0.95); border: 1px solid rgba(255, 181, 71, 0.6); font: 15px/1.25 var(--font-body); color: #ffe0a8; }
 @keyframes pop-in { from { opacity: 0; transform: scale(0.94); } }
 
 /* in the hand and on the table */
@@ -216,3 +224,27 @@
 .card.targetable:hover { transform: scale(1.12); }
 .card.picked { box-shadow: 0 0 0 4px #7dffa8, 0 0 30px #7dffa8; transform: translateY(-6px); }
 @keyframes target-pulse { 50% { box-shadow: 0 0 0 3px #fff3a0, 0 0 38px #ffd24d; } }
+
+/* what a card does, in pictures (see glyphs.js): the words are on the big preview */
+.glyphs { flex: none; display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 0.22em 0.14em; margin: 0.15em 0 0.3em; }
+.gl { position: relative; display: inline-flex; align-items: center; padding: 0.14em 0.3em 0.14em 0.22em; border-radius: 0.6em; background: rgba(0, 0, 0, 0.5); border: 0.09em solid rgba(255, 255, 255, 0.2); line-height: 1; }
+.gl .ico { --is: 1.4em; margin: 0; vertical-align: middle; }
+.gl b { font: 900 0.95em/1 'Doto', var(--font-title); color: #fff; margin-left: 0.1em; }
+.gl .gl-sub { position: absolute; right: -0.3em; bottom: -0.3em; font-style: normal; filter: drop-shadow(0 0 0.15em #000); }
+.gl .gl-sub .ico { --is: 0.85em; }
+.gl.tone-good { border-color: rgba(125, 255, 168, 0.6); box-shadow: inset 0 0 0.5em rgba(125, 255, 168, 0.15); }
+.gl.tone-good b { color: #7dffa8; }
+.gl.tone-bad { border-color: rgba(255, 110, 130, 0.65); box-shadow: inset 0 0 0.5em rgba(255, 90, 110, 0.18); }
+.gl.tone-bad b { color: #ff8a9a; }
+.gl-then { font: 700 1.1em/1 var(--font-title); color: #8a92b8; font-style: normal; }
+.gl-then.when { color: color-mix(in srgb, var(--c) 80%, #fff); }
+.face .odds .pen { margin-left: 0.25em; font-size: 0.62em; }
+.face .odds .pen .gl { padding: 0.05em 0.2em; }
+/* a hand-sized card shows the pictures instead of the words */
+@container (max-width: 112px) {
+  .face .glyphs { font-size: 1.12em; margin: 0.3em 0 0; }
+  .face .glyphs ~ .text, .face:has(.glyphs) .sub { display: none; }
+}
+@container (max-width: 76px) {
+  .face .glyphs { display: none; }
+}

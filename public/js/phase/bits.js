@@ -17,20 +17,20 @@ export const CLASS_ICON = { marine: 'helmet', warden: 'shield', scout: 'telescop
 
 export const classIcon = (cls, o = {}) => iconEl(CLASS_ICON[cls] || 'star', { title: classInfo(cls)?.name, ...o });
 
-// the six disciplines as little badges: lit when you have them, dim when you do not
-export function classPips(have = [], { size = null } = {}) {
+// the six disciplines as little badges: lit when you have them, dim when you do not (fresh: just gained, they flash)
+export function classPips(have = [], { size = null, fresh = [] } = {}) {
   const set = new Set(have);
   return el(
     'div',
-    { className: 'pips', title: `${set.size} of 6 disciplines` },
-    store.data.classIds.map((c) => el('span', { className: `pip cls-${c} ${set.has(c) ? 'on' : ''}`, title: classInfo(c).name }, classIcon(c, { size }))),
+    { className: `pips ${set.size >= 5 ? 'close' : ''}`, title: `${set.size} of 6 disciplines` },
+    store.data.classIds.map((c) => el('span', { className: `pip cls-${c} ${set.has(c) ? 'on' : ''} ${fresh.includes(c) ? 'fresh' : ''}`, title: classInfo(c).name }, classIcon(c, { size }))),
   );
 }
 
-// 3 glowing orbs for Energy
-export function energyOrbs(now, max) {
+// 3 glowing orbs for Energy (was: how many there were a moment ago, so the ones just spent can pop)
+export function energyOrbs(now, max, was = now) {
   const wrap = el('span', { className: 'orbs', title: `${now} Energy left` });
-  for (let i = 0; i < Math.max(max, now); i++) wrap.append(el('i', { className: `orb ${i < now ? 'full' : ''}` }));
+  for (let i = 0; i < Math.max(max, now); i++) wrap.append(el('i', { className: `orb ${i < now ? 'full' : ''} ${i >= now && i < was ? 'spent' : ''} ${i < now && i >= was ? 'gained' : ''}` }));
   return wrap;
 }
 

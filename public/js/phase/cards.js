@@ -3,6 +3,7 @@ import { el } from '../util.js';
 import { iconEl } from '../icons.js';
 import { store, def, classInfo } from './net.js';
 import { classIcon } from './bits.js';
+import { glyphRow, glyphChip, PENALTY } from './glyphs.js';
 
 const KEYWORDS = /\b(DESTROY|DISCARD|DRAW|STEAL|SACRIFICE|SHIELD|SEARCH|LOOK|PULL|SWAP|ATTACK|CURSED|ONCE PER TURN|Signal Jam|Energy|Boost|Protocol)\b/g;
 
@@ -63,6 +64,7 @@ export function cardEl(id, { size = 'md', uid = null, gear = null, shield = fals
         el('div', { className: 'art' }, el('span', { className: 'dome' }, portrait(d))),
         el('div', { className: 'name' }, d.name),
         el('div', { className: 'sub' }, `${ci.name} · Crew`),
+        glyphRow(d),
         el('div', { className: 'text' }, el('span', { className: 't' }, rich(d.text))),
       );
       break;
@@ -72,6 +74,7 @@ export function cardEl(id, { size = 'md', uid = null, gear = null, shield = fals
         el('div', { className: 'art' }, el('span', { className: 'dome gold' }, portrait(d))),
         el('div', { className: 'name' }, d.name),
         el('div', { className: 'sub' }, `${d.title} · ${ci.name}`),
+        glyphRow(d),
         el('div', { className: 'text' }, el('span', { className: 't' }, rich(d.text))),
       );
       break;
@@ -81,6 +84,7 @@ export function cardEl(id, { size = 'md', uid = null, gear = null, shield = fals
         el('div', { className: 'art' }, el('span', { className: 'obj' }, portrait(d))),
         el('div', { className: 'name' }, d.name),
         el('div', { className: 'sub' }, d.cursed ? 'Cursed Gear: equip to a rival' : 'Equip to your Crew'),
+        glyphRow(d),
         el('div', { className: 'text' }, el('span', { className: 't' }, rich(d.text))),
       );
       break;
@@ -90,6 +94,7 @@ export function cardEl(id, { size = 'md', uid = null, gear = null, shield = fals
         el('div', { className: 'art' }, el('span', { className: 'obj' }, portrait(d))),
         el('div', { className: 'name' }, d.name),
         el('div', { className: 'sub' }, 'One-shot · 1 Energy'),
+        glyphRow(d),
         el('div', { className: 'text' }, el('span', { className: 't' }, rich(d.text))),
       );
       break;
@@ -108,6 +113,7 @@ export function cardEl(id, { size = 'md', uid = null, gear = null, shield = fals
         el('div', { className: 'art' }, el('span', { className: 'obj' }, portrait(d))),
         el('div', { className: 'name' }, d.name),
         el('div', { className: 'sub' }, 'Free · when a card is played'),
+        glyphRow(d),
         el('div', { className: 'text' }, el('span', { className: 't' }, rich(d.text))),
       );
       break;
@@ -117,7 +123,8 @@ export function cardEl(id, { size = 'md', uid = null, gear = null, shield = fals
         el('div', { className: 'art' }, el('span', { className: 'dome beast' }, portrait(d))),
         el('div', { className: 'name' }, d.name),
         el('div', { className: 'reqs' }, el('span', { className: 'need' }, 'NEEDS'), reqChips(d)),
-        el('div', { className: 'odds' }, el('span', { className: 'slay', title: 'Roll this or more to slay it' }, iconEl('sword'), `${d.slay}+`), el('span', { className: 'fail', title: `Roll ${d.fail} or less and it fights back` }, iconEl('burst'), `≤${d.fail}`)),
+        el('div', { className: 'odds' }, el('span', { className: 'slay', title: 'Roll this or more to slay it' }, iconEl('sword'), `${d.slay}+`), el('span', { className: 'fail', title: `Roll ${d.fail} or less and it fights back` }, iconEl('burst'), `≤${d.fail}`, el('span', { className: 'pen' }, glyphChip(PENALTY[d.penalty])))),
+        glyphRow(d, 'power'),
         el('div', { className: 'text' }, el('span', { className: 't' }, d.text)),
       );
       break;
@@ -146,7 +153,7 @@ export function initPreview() {
   document.body.append(previewBox);
   const find = (target) => {
     const c = target.closest?.('.card[data-id]');
-    if (!c || c.closest('#card-preview') || c.classList.contains('sz-xl')) return null;
+    if (!c || c.closest('#card-preview') || c.classList.contains('sz-xl') || c.classList.contains('selected')) return null;
     return c;
   };
   const show = (c) => {

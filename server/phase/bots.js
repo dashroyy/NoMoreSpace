@@ -301,11 +301,13 @@ function pickAnswer(g, p, req) {
 // ---------------------------------------------------------------------------
 // The turn
 // ---------------------------------------------------------------------------
-function action(g, p) {
+// noise: robots add a little randomness so they do not all play alike; the hint shown to a person has none (and so
+// does not touch the game's random numbers)
+function action(g, p, noise = true) {
   const ap = g.turn.ap;
   const list = [];
   const add = (a, score) => {
-    if (!g.validateAction(p, a)) list.push({ a, score: score + rnd(g, 0.8) });
+    if (!g.validateAction(p, a)) list.push({ a, score: score + (noise ? rnd(g, 0.8) : 0) });
   };
   const rolls = g.attackBonus(p).reduce((n, b) => n + b.v, 0);
 
@@ -380,4 +382,11 @@ function action(g, p) {
   return best.a;
 }
 
-module.exports = { decide, odds, threat };
+// What a robot would do in a person's seat right now: shown to them as a gentle hint. Ending the turn is only
+// suggested once nothing else looks worth doing.
+function suggest(g, p) {
+  if (!g.turn || g.turn.pid !== p.id) return null;
+  return action(g, p, false);
+}
+
+module.exports = { decide, suggest, odds, threat };

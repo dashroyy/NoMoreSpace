@@ -397,3 +397,82 @@ test('every icon the Phase to Space client asks for exists, and has an emoji for
     assert.ok(emoji[name], `icon ${name} has an emoji`);
   }
 });
+
+// ---------------------------------------------------------------------------
+// The help on the table: odds, the suggested move, and the pictures on the cards
+// ---------------------------------------------------------------------------
+
+test('the odds on the table: requirement ticks agree with the attack rule, and the chances are right', () => {
+  const g = table(2);
+  const [a] = g.players; // Captain Juno: a Scout
+  g.beastRow = [{ uid: 'b1', id: 'hound' }, { uid: 'b2', id: 'whale' }, { uid: 'b3', id: 'dragon' }];
+  const slab = crewOf(g, a, 'slab'); // a Marine
+  let o = g.oddsFor(a);
+  assert.deepStrictEqual(o.beasts.b1.reqs.map((r) => r.ok), [true, true], 'Comet Hound: the Captain is the Scout, Sgt. Slab the "any"');
+  assert.strictEqual(o.beasts.b1.ready, true);
+  assert.deepStrictEqual([o.beasts.b2.reqs[0].have, o.beasts.b2.reqs[0].need, o.beasts.b2.ready], [1, 4, false], 'Gravity Whale wants 4 Crew');
+  assert.deepStrictEqual(o.beasts.b3.reqs.map((r) => r.ok), [true, false], 'Void Dragon: a Marine yes, a Warden no');
+  // 2d6: 8+ is 15/36, 5 or less is 10/36
+  assert.deepStrictEqual([o.beasts.b1.slay, o.beasts.b1.bite], [42, 28]);
+  assert.strictEqual(o.crew[slab.uid].pct, 28, 'Sgt. Slab needs 9+');
+  slab.gear = { uid: g.uid(), id: 'blaster' }; // +2
+  o = g.oddsFor(a);
+  assert.deepStrictEqual([o.crew[slab.uid].bonus, o.crew[slab.uid].pct], [2, 58]);
+  // and on many random crews the ticks always say the same as the rule the engine attacks by
+  const r = seeded(5);
+  const ids = cards.CREW.map((c) => c.id);
+  for (let i = 0; i < 300; i++) {
+    a.crew = [];
+    for (let k = Math.floor(r() * 6); k > 0; k--) crewOf(g, a, ids[Math.floor(r() * ids.length)]);
+    a.captain = { id: cards.CAPTAINS[Math.floor(r() * cards.CAPTAINS.length)].id };
+    for (const b of cards.BEASTS) assert.strictEqual(g.reqStatus(a, b).every((x) => x.ok), g.meetsReqs(a, b), `${b.id} with ${a.crew.map((c) => c.id)}`);
+  }
+});
+
+test('the suggested move is always allowed, and working it out does not touch the game\'s dice', () => {
+  const { suggest } = require('../server/phase/bots');
+  const make = () => {
+    const g = table(3, { seed: 11 });
+    const [a, b] = g.players;
+    a.hand = [card(g, 'pug'), card(g, 'supply'), card(g, 'b31'), card(g, 'jam')];
+    crewOf(g, a, 'wanda');
+    crewOf(g, b, 'slab');
+    g.beastRow = [{ uid: 'b1', id: 'hound' }, { uid: 'b2', id: 'slug' }, { uid: 'b3', id: 'eater' }];
+    return g;
+  };
+  const g1 = make();
+  const g2 = make();
+  const a = g1.players[0];
+  for (let i = 0; i < 5; i++) {
+    const s = suggest(g1, a);
+    assert.ok(s && s.action, 'there is a suggestion');
+    assert.strictEqual(g1.validateAction(a, s), null, `allowed: ${JSON.stringify(s)}`);
+  }
+  for (let i = 0; i < 5; i++) assert.strictEqual(g1.r(), g2.r(), 'the random numbers are the same as in a game nobody asked');
+  g1.turn.ap = 0;
+  a.freeDrawUsed = true; // (Captain Juno's first draw of the turn is free)
+  assert.strictEqual(suggest(g1, a).action, 'end', 'out of Energy: end the turn');
+  assert.strictEqual(suggest(g1, g1.players[1]), null, 'nothing to suggest when it is not your turn');
+});
+
+test('every card says what it does in pictures, and every picture is a real icon with an emoji', async () => {
+  const glyphs = await import('../public/js/phase/glyphs.js');
+  const map = fs.readFileSync(path.join(ROOT, 'public/js/icon-map.js'), 'utf8');
+  const emoji = JSON.parse(map.match(/ICON_EMOJI = (\{.*\});/)[1]);
+  const atlas = JSON.parse(fs.readFileSync(path.join(ROOT, 'public/assets/icons/atlas.json'), 'utf8')).icons;
+  const used = new Set();
+  const take = (list) => list.forEach((x) => typeof x === 'object' && (used.add(x.icon), x.sub && used.add(x.sub)));
+  for (const d of [...cards.CREW, ...cards.PROTOCOLS, ...cards.CAPTAINS, ...cards.BEASTS, ...cards.GEAR, cards.CHALLENGE]) {
+    const list = glyphs.glyphsFor(d);
+    assert.ok(list.length, `${d.id} has pictures`);
+    // one picture (or more) for every step it runs
+    if (d.fx) assert.ok(list.filter((x) => typeof x === 'object').length >= d.fx.length, `${d.id}: a picture per step`);
+    take(list);
+  }
+  take(glyphs.LEGEND.map(([g]) => g));
+  take(Object.values(glyphs.PENALTY));
+  for (const name of used) {
+    assert.ok(name in atlas, `icon ${name} is in the atlas`);
+    assert.ok(emoji[name], `icon ${name} has an emoji`);
+  }
+});

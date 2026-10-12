@@ -39,6 +39,38 @@ function tumble(die, value, delay = 0) {
 
 const fmt = (v) => (v > 0 ? `+${v}` : String(v).replace('-', '−'));
 
+// The number line under the dice: 2 to 12, coloured by what each total means (green: it works; red: it fails, or the
+// Void Beast fights back), with a marker per side that slides along as Boosts change the total.
+const LO = 2;
+const HI = 12;
+function trackEl(roll) {
+  const check = roll.need != null;
+  const cells = [];
+  for (let v = LO; v <= HI; v++) {
+    let cls = '';
+    if (check) cls = v >= roll.need ? 'win' : roll.fail != null ? (v <= roll.fail ? 'bite' : '') : 'fail';
+    cells.push(el('span', { className: `cell ${cls}` }, String(v)));
+  }
+  const legend = check
+    ? el('div', { className: 'legend' }, el('span', { className: 'l-bite' }, roll.fail != null ? `≤${roll.fail} it bites` : 'fails'), el('span', { className: 'l-win' }, `${roll.need}+ ${roll.fail != null ? 'slain' : 'works'}`))
+    : null;
+  const marks = roll.sides.map((s, i) => el('span', { className: `mark hidden ${i ? 'b' : ''}`, dataset: { pid: s.pid } }, '?'));
+  return el('div', { className: 'roll-track' }, legend, cells, marks);
+}
+
+function moveMarks(track, roll) {
+  if (!track) return;
+  const marks = track.querySelectorAll('.mark');
+  roll.sides.forEach((s, i) => {
+    const m = marks[i];
+    if (!m) return;
+    const clamped = Math.max(LO, Math.min(HI, s.total));
+    m.classList.remove('hidden');
+    m.textContent = String(s.total);
+    m.style.left = `${((clamped - LO + 0.5) / (HI - LO + 1)) * 100}%`;
+  });
+}
+
 export class RollStage {
   constructor(root) {
     this.root = root;
@@ -92,7 +124,8 @@ export class RollStage {
     });
     this.title = el('div', { className: 'roll-title' }, roll.title);
     this.foot = el('div', { className: 'roll-foot' });
-    this.root.replaceChildren(el('div', { className: `roll-panel ${roll.kind}` }, this.title, el('div', { className: 'roll-sides' }, nodes), this.foot));
+    this.track = trackEl(roll);
+    this.root.replaceChildren(el('div', { className: `roll-panel ${roll.kind}` }, this.title, el('div', { className: 'roll-sides' }, nodes), this.track, this.foot));
     requestAnimationFrame(() => this.root.classList.add('show'));
     sfx('dice');
     roll.sides.forEach((s, i) => s.dice.forEach((v, j) => tumble(sides[i].dice[j], v, j * 90 + i * 60)));
@@ -131,6 +164,7 @@ export class RollStage {
         totalEl.classList.add('bump');
       }
     });
+    moveMarks(this.track, roll);
     if (!roll.open && !this.verdictDone) {
       this.verdictDone = true;
       this.foot.replaceChildren(this.verdict(roll));

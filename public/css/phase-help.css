@@ -1,0 +1,252 @@
+/* Phase to Space: help you can see, and things that move.
+   Odds on the Void Beasts, chance rings on Crew, why a card is greyed out, the suggested move, the roll's number line,
+   pop-ups over players when something happens to them, and cards flying round the table. */
+
+/* ---------- Void Beasts: can you attack it, and how likely is it to go well ---------- */
+.odds-bar { flex: none; display: flex; align-items: center; gap: 0.3em; height: 1.35em; margin: 0.05em 0.1em 0.15em; }
+.odds-bar .track { flex: 1; display: flex; height: 0.5em; border-radius: 99px; overflow: hidden; background: rgba(0, 0, 0, 0.7); box-shadow: 0 0 0 0.08em rgba(255, 255, 255, 0.2); }
+.odds-bar i { display: block; height: 100%; transition: width 0.45s cubic-bezier(.3, 1.3, .5, 1); }
+.odds-bar .bite { background: linear-gradient(180deg, #ff8a9a, #d8314a); }
+.odds-bar .meh { background: rgba(150, 160, 200, 0.28); }
+.odds-bar .win { background: linear-gradient(180deg, #b4ffcb, #2fd06a); box-shadow: 0 0 0.6em rgba(125, 255, 168, 0.7); }
+.odds-bar .pct { padding: 0.15em 0.35em; border-radius: 99px; border: 0.08em solid var(--ok); background: #060a18; font: 900 0.85em/1 'Doto', var(--font-title); color: var(--ok); box-shadow: 0 0 0.6em rgba(125, 255, 168, 0.45); }
+.odds-bar .lock-tag { display: none; }
+.odds-bar .lock-tag .ico { --is: 1.15em; margin: 0; }
+.card.locked .odds-bar .track { filter: grayscale(0.85) brightness(0.75); }
+.card.locked .odds-bar .pct { color: #aab3d8; border-color: #4a5170; box-shadow: none; }
+.card.locked .odds-bar .lock-tag { display: inline-flex; }
+.card.ready .odds-bar .pct { animation: pct-glow 1.6s ease-in-out infinite; }
+@keyframes pct-glow { 50% { box-shadow: 0 0 18px rgba(125, 255, 168, 0.9); } }
+.face .reqs .chip.ok { border-color: var(--ok); box-shadow: 0 0 0.5em rgba(125, 255, 168, 0.7); }
+.face .reqs .chip.miss { opacity: 0.6; border-style: dashed; filter: grayscale(0.5); }
+body:not(.tips) .face .reqs .chip.ok, body:not(.tips) .face .reqs .chip.miss { opacity: 1; border-style: solid; box-shadow: none; filter: none; }
+
+/* on the table a Beast card has no room for its "VOID BEAST" tag: the odds go there instead */
+@container (max-width: 160px) {
+  .card.k-beast .face .top, .card.k-beast .face .text { display: none; }
+}
+
+/* the beasts drift a little, as if floating in the void */
+.beast-row .card:not(.enter):not(.targetable):not(.can):not(.suggest) { animation: beast-float 4.2s ease-in-out infinite; }
+.beast-row .card:nth-child(2) { animation-delay: -1.4s; }
+.beast-row .card:nth-child(3) { animation-delay: -2.8s; }
+.beast-row .card:hover, .beast-row .card.selected, .beast-row .card.targetable { animation: none; }
+@keyframes beast-float { 50% { translate: 0 -5px; } }
+
+/* ---------- Crew: a ring round the roll number shows your chance ---------- */
+.card.has-odds .face .req {
+  border-color: transparent;
+  background:
+    radial-gradient(circle, #060a18 56%, transparent 58%),
+    conic-gradient(var(--ring, var(--ok)) calc(var(--pct) * 1%), rgba(255, 255, 255, 0.14) 0);
+  box-shadow: 0 0 0.6em color-mix(in srgb, var(--ring, var(--ok)) 55%, transparent);
+}
+
+/* a greyed-out card in your hand says why (no Energy, no Crew to carry the Gear...) */
+.why-tag {
+  position: absolute;
+  z-index: 7;
+  top: 36%;
+  left: 50%;
+  translate: -50% 0;
+  width: 30cqw;
+  height: 30cqw;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  border: 1.4cqw solid var(--warn);
+  background: rgba(6, 10, 24, 0.88);
+  box-shadow: 0 0 6cqw rgba(0, 0, 0, 0.8);
+}
+.why-tag .ico { --is: 17cqw; margin: 0; }
+
+/* ---------- the suggested move ---------- */
+.tips .card.suggest:not(.targetable):not(.enter) { box-shadow: 0 0 0 2px #ffd24d, 0 0 22px rgba(255, 210, 77, 0.75); animation: suggest 1.5s ease-in-out infinite; }
+.tips .hand .card.suggest { transform: translateY(-8px); }
+@keyframes suggest { 50% { box-shadow: 0 0 0 3px #fff1a8, 0 0 34px rgba(255, 210, 77, 0.95); } }
+.tips .act.suggest { border-color: #ffd24d; box-shadow: 0 0 0 1px #ffd24d, 0 0 16px rgba(255, 210, 77, 0.6); }
+.act.nudge { animation: nudge 0.5s; }
+@keyframes nudge { 20% { transform: translateY(-5px) scale(1.06); } 45% { transform: translateY(0); } 70% { transform: translateY(-2px); } }
+.tip-line {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border: 1px dashed rgba(255, 210, 77, 0.7);
+  border-radius: 99px;
+  background: rgba(255, 210, 77, 0.08);
+  color: #ffe9a0;
+  font: 600 14px var(--font-body);
+  text-transform: none;
+  letter-spacing: 0;
+}
+.tip-line .ico { --is: 20px; margin: 0; animation: bulb 2s ease-in-out infinite; }
+.tip-line:hover { background: rgba(255, 210, 77, 0.18); }
+@keyframes bulb { 50% { filter: drop-shadow(0 0 6px #ffd24d); } }
+.tips-toggle.off { opacity: 0.4; filter: grayscale(1); }
+
+/* ---------- someone else's turn: who, and what you hold to answer them ---------- */
+.actions .status.watch { display: inline-flex; align-items: center; gap: 10px; color: var(--text, #e8eeff); }
+.who-plays { display: inline-flex; align-items: center; gap: 6px; font-size: 16px; }
+.who-plays .ico { --is: 18px; margin: 0; animation: spin-slow 2.4s linear infinite; }
+@keyframes spin-slow { to { rotate: 360deg; } }
+.ready-chip { display: inline-flex; align-items: center; gap: 3px; padding: 3px 9px; border-radius: 99px; border: 1px solid; font: 900 15px 'Doto', var(--font-title); }
+.ready-chip .ico { --is: 18px; margin: 0; }
+.ready-chip.jam { color: #ff7aa8; border-color: #ff4d8a; background: rgba(255, 77, 138, 0.1); }
+.ready-chip.boost { color: #e4ff4d; border-color: #c8e030; background: rgba(228, 255, 77, 0.08); }
+
+/* ---------- small things that change: Energy spent, a new discipline ---------- */
+.orb.spent { animation: orb-pop 0.55s ease-out; }
+@keyframes orb-pop { 0% { background: radial-gradient(circle at 35% 30%, #fff6b0, #ffd24d 55%, #d99a10); transform: scale(1); } 35% { transform: scale(1.9); box-shadow: 0 0 18px #ffd24d; } 100% { transform: scale(1); } }
+.orb.gained { animation: orb-in 0.6s cubic-bezier(.3, 1.6, .5, 1); }
+@keyframes orb-in { from { transform: scale(0.2); } }
+.pip.fresh { animation: pip-pop 1.3s cubic-bezier(.3, 1.5, .5, 1); z-index: 2; }
+@keyframes pip-pop { 0% { transform: scale(0.4); } 30% { transform: scale(1.8); box-shadow: 0 0 22px var(--c); } 100% { transform: scale(1); } }
+.pips.close .pip.on { animation: close-glow 1.4s ease-in-out infinite; }
+@keyframes close-glow { 50% { box-shadow: 0 0 14px var(--c); } }
+
+/* whose turn it is: a light runs round their box */
+.rival { position: relative; }
+.rival.turn::after {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  pointer-events: none;
+  border: 1px solid transparent;
+  background: linear-gradient(90deg, transparent, var(--accent), transparent) border-box;
+  background-size: 40% 100%;
+  background-repeat: no-repeat;
+  -webkit-mask: linear-gradient(#000 0 0) padding-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  animation: sweep 1.8s linear infinite;
+}
+@keyframes sweep { from { background-position: -40% 0; } to { background-position: 140% 0; } }
+.rival.turn-start { animation: turn-start 0.9s cubic-bezier(.3, 1.4, .5, 1); }
+@keyframes turn-start { 30% { transform: scale(1.04); box-shadow: 0 0 40px rgba(255, 107, 214, 0.8); } }
+.card.can:not(.targetable):not(.enter):not(.suggest) { animation: can-breathe 2s ease-in-out infinite; }
+@keyframes can-breathe { 50% { box-shadow: 0 0 0 2px rgba(125, 255, 168, 1), 0 0 26px rgba(125, 255, 168, 0.8); } }
+
+/* ---------- the roll's number line ---------- */
+.roll-track { position: relative; display: grid; grid-template-columns: repeat(11, 1fr); gap: 2px; margin: 10px 2px 26px; }
+.roll-track .cell { height: 16px; display: grid; place-items: center; font: 900 10px/1 'Doto', var(--font-title); color: rgba(255, 255, 255, 0.55); background: rgba(150, 160, 200, 0.18); }
+.roll-track .cell.win { background: rgba(125, 255, 168, 0.32); color: #c9ffd9; }
+.roll-track .cell.bite { background: rgba(255, 90, 110, 0.32); color: #ffc4cc; }
+.roll-track .cell.fail { background: rgba(255, 90, 110, 0.2); }
+.roll-track .cell:first-child { border-radius: 8px 0 0 8px; }
+.roll-track .cell:last-child { border-radius: 0 8px 8px 0; }
+.roll-track .mark {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  translate: -50% 2px;
+  padding: 2px 6px;
+  border-radius: 6px;
+  background: #fff;
+  color: #060a18;
+  font: 900 13px/1 'Doto', var(--font-title);
+  transition: left 0.6s cubic-bezier(.3, 1.4, .5, 1);
+  box-shadow: 0 0 12px rgba(255, 255, 255, 0.7);
+}
+.roll-track .mark::before { content: ''; position: absolute; left: 50%; top: -7px; translate: -50% 0; border: 4px solid transparent; border-bottom: 4px solid #fff; }
+.roll-track .mark.b { background: #ff4d8a; color: #fff; box-shadow: 0 0 12px rgba(255, 77, 138, 0.7); }
+.roll-track .mark.b::before { border-bottom-color: #ff4d8a; }
+.roll-track .mark.hidden { opacity: 0; }
+.roll-track .legend { position: absolute; left: 0; right: 0; bottom: calc(100% + 3px); display: flex; justify-content: space-between; font: 10px var(--font-small); letter-spacing: 0.06em; text-transform: uppercase; }
+.roll-track .legend .l-bite { color: #ff8a9a; }
+.roll-track .legend .l-win { color: var(--ok); }
+
+/* ---------- pop-ups over a player when something happens to them ---------- */
+.fx-float {
+  position: absolute;
+  z-index: 3;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 99px;
+  border: 1.5px solid var(--c, #fff);
+  background: rgba(6, 10, 24, 0.94);
+  color: var(--c, #fff);
+  font: 900 18px/1 'Doto', var(--font-title);
+  white-space: nowrap;
+  box-shadow: 0 0 18px color-mix(in srgb, var(--c, #fff) 55%, transparent);
+  translate: -50% -50%;
+  animation: float-up 1.9s cubic-bezier(.2, 1, .4, 1) forwards;
+}
+.fx-float .ico { --is: 22px; margin: 0; }
+.fx-float small { font: 600 12px var(--font-body); color: #e8eeff; }
+.fx-float.good { --c: #7dffa8; }
+.fx-float.bad { --c: #ff6e82; }
+.fx-float.warn { --c: #ffd24d; }
+.fx-float.info { --c: #6cf0ff; }
+.fx-float.big { font-size: 24px; padding: 6px 14px; }
+.fx-float.big .ico { --is: 30px; }
+@keyframes float-up {
+  0% { opacity: 0; transform: translateY(14px) scale(0.5); }
+  14% { opacity: 1; transform: translateY(0) scale(1.18); }
+  26% { transform: translateY(-4px) scale(1); }
+  75% { opacity: 1; }
+  100% { opacity: 0; transform: translateY(-58px) scale(0.96); }
+}
+
+/* cards flying round the table */
+.fx-fly { position: fixed; z-index: 4; pointer-events: none; will-change: transform, opacity; }
+.fx-trail { position: fixed; z-index: 3; width: 10px; height: 10px; margin: -5px 0 0 -5px; border-radius: 50%; background: var(--c, #6cf0ff); box-shadow: 0 0 12px var(--c, #6cf0ff); pointer-events: none; animation: trail 0.5s ease-out forwards; }
+@keyframes trail { to { opacity: 0; transform: scale(0.2); } }
+.pile.bump { animation: pile-bump 0.35s; }
+@keyframes pile-bump { 40% { transform: scale(1.08); } }
+
+/* a card that is about to go: it shakes */
+.card.doomed { animation: doomed 0.4s linear 2; }
+@keyframes doomed { 25% { transform: translateX(-3px) rotate(-2deg); } 75% { transform: translateX(3px) rotate(2deg); } }
+
+/* ---------- the card you tapped, in words big enough to read ---------- */
+.card-info { position: fixed; z-index: 70; width: min(440px, calc(100vw - 16px)); pointer-events: none; filter: drop-shadow(0 12px 30px rgba(0, 0, 0, 0.75)); }
+.card-info::after { content: ''; position: absolute; left: var(--arrow, 50%); top: 100%; translate: -50% 0; border: 9px solid transparent; border-top-color: #8fb2ff; }
+.card-info.below::after { top: auto; bottom: 100%; border-top-color: transparent; border-bottom-color: #8fb2ff; }
+.card-detail {
+  --c: #8fb2ff;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 14px 11px;
+  border: 1px solid color-mix(in srgb, var(--c) 60%, transparent);
+  border-left: 4px solid var(--c);
+  background: linear-gradient(90deg, color-mix(in srgb, var(--c) 16%, #070b1c), rgba(5, 7, 16, 0.94));
+  text-align: left;
+  animation: detail-in 0.22s ease-out;
+}
+@keyframes detail-in { from { opacity: 0; transform: translateY(8px); } }
+.card-detail.cls-marine { --c: #ff5a4d; } .card-detail.cls-warden { --c: #4da6ff; } .card-detail.cls-scout { --c: #4dff9a; }
+.card-detail.cls-smuggler { --c: #b36bff; } .card-detail.cls-psion { --c: #ff6bd6; } .card-detail.cls-broadcaster { --c: #ffd24d; }
+.card-detail.k-gear { --c: #ffb547; } .card-detail.k-protocol { --c: #6cf0ff; } .card-detail.k-boost { --c: #e4ff4d; }
+.card-detail.k-challenge { --c: #ff4d8a; } .card-detail.k-beast { --c: #b36bff; }
+.cd-head { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.cd-name { font: 16px var(--font-card); text-transform: uppercase; letter-spacing: 0.04em; color: #fff; text-shadow: 0 0 10px color-mix(in srgb, var(--c) 70%, transparent); }
+.card-detail .cd-glyphs { font-size: 15px; justify-content: flex-start; margin: 0; }
+.cd-text { margin: 0; font: 500 18px/1.35 var(--font-body); color: #f2f5ff; }
+.cd-text .kw { color: color-mix(in srgb, var(--c) 65%, #fff); }
+.cd-facts { display: flex; flex-wrap: wrap; gap: 6px 16px; font: 600 15px var(--font-body); color: #cfd7f7; }
+.fact { display: inline-flex; align-items: center; gap: 6px; }
+.fact .ico { --is: 19px; margin: 0; }
+.fact .pct { margin-left: 2px; padding: 2px 8px; border-radius: 99px; border: 1px solid var(--ok); color: var(--ok); font: 900 14px/1 'Doto', var(--font-title); }
+.fact .pct.bad { border-color: var(--danger); color: #ff8a9a; }
+.fact.no { color: #ffb3bf; }
+.fact.bad { color: #ffc9d1; }
+@media (max-width: 640px) {
+  .cd-text { font-size: 16px; }
+  .cd-facts { font-size: 13px; }
+}
+
+/* How to play: what the pictures mean */
+.legend-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 6px 14px; margin: 2px 0 14px 46px; font-size: 15px; }
+.legend-item { display: flex; align-items: center; gap: 10px; color: #dfe5ff; }
+.legend-item .gl, .legend-item .gl-then { flex: none; font-size: 15px; }
+.legend-item .gl-then { min-width: 1.4em; text-align: center; }
+@media (max-width: 640px) { .legend-grid { margin-left: 0; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .beast-row .card, .card.can, .tips .card.suggest, .rival.turn::after, .pips.close .pip.on, .who-plays .ico, .tip-line .ico { animation: none; }
+}

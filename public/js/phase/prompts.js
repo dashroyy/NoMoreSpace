@@ -101,7 +101,7 @@ function showCaptain(p) {
 function findTarget(o) {
   if (o.kind === 'crew') return document.querySelector(`.party .card[data-uid="${o.key}"]`);
   if (o.kind === 'beast') return document.querySelector(`.beast-row .card[data-uid="${o.key}"]`);
-  if (o.kind === 'player') return document.querySelector(`.rival[data-pid="${o.key}"], .mine[data-pid="${o.key}"]`) || (o.key === store.me ? document.querySelector('.mine') : null);
+  if (o.kind === 'player') return document.querySelector(`.rival[data-pid="${o.key}"]`) || (o.key === store.me ? document.querySelector('.pt-table > .mine') : null);
   return null;
 }
 

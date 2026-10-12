@@ -10,6 +10,14 @@
 
 const { CLASSES, CLASS_IDS, CAPTAINS, BEASTS, def, deckList } = require('./cards');
 
+// the chance (a whole percentage) that two dice come to `need` or more
+const WAYS = { 2: 36, 3: 35, 4: 33, 5: 30, 6: 26, 7: 21, 8: 15, 9: 10, 10: 6, 11: 3, 12: 1 };
+function chance(need) {
+  if (need <= 2) return 100;
+  if (need > 12) return 0;
+  return Math.round((WAYS[need] / 36) * 100);
+}
+
 const MIN_PLAYERS = 2;
 const MAX_PLAYERS = 6;
 const HAND_SIZE = 5;
@@ -410,7 +418,7 @@ class PhaseGame {
       hostId: this.hostId,
       settings: this.settings,
       round: this.round,
-      you: { id, isSpectator: !me, hand: me ? me.hand : [], prompts, hints: me ? this.hintsFor(me) : null },
+      you: { id, isSpectator: !me, hand: me ? me.hand : [], prompts, hints: me ? this.hintsFor(me) : null, odds: me && this.phase === 'playing' ? this.oddsFor(me) : null },
       players: this.players.map((p) => this.publicPlayer(p)),
       spectators: this.spectators.length,
       deckCount: this.deck.length,
@@ -439,6 +447,9 @@ class PhaseGame {
       hints.costs[c.uid] = this.energyCost(p, c);
     }
     for (const b of this.beastRow) hints.attack[b.uid] = this.validateAction(p, { action: 'attack', uid: b.uid });
+    // only when the game is waiting for this person's move (not in the middle of a card resolving)
+    const asking = [...this.pending.values()].some((r) => r.pid === p.id && r.req.type === 'action');
+    hints.suggest = asking ? require('./bots').suggest(this, p) : null;
     return hints;
   }
 
@@ -723,11 +734,12 @@ class PhaseGame {
 
   // Rolls 2 dice for each of the sides, lets everyone play Boosts, and returns the final totals.
   // sides: [{ pid, label?, bonus: [{ label, v }] }]; need: a number for a check, null for a duel.
-  async rollDice({ kind, title, sides, need = null, tie = null }) {
+  async rollDice({ kind, title, sides, need = null, tie = null, fail = null }) {
     this.uids += 1;
     this.roll = {
       id: `roll${this.uids}`,
       kind,
+      fail, // a Void Beast attack: at or under this, it fights back (only drawn on the table)
       title,
       need,
       tie,
@@ -1148,6 +1160,55 @@ class PhaseGame {
     return pool.length >= anyNeeded;
   }
 
+  // Which of a Beast's requirements does this crew meet? One entry per requirement, in order:
+  // { ok, have, need } (a discipline needs 1; "any" needs that many Crew cards). Filled the same way as meetsReqs.
+  reqStatus(p, b) {
+    const pool = p.crew.map((c) => def(c.id).cls);
+    const capCls = p.captain ? def(p.captain.id).cls : null;
+    let capUsed = false;
+    const out = b.reqs.map((r) => (r.cls ? { cls: r.cls, ok: false, have: 0, need: 1 } : { any: r.any, ok: false, have: 0, need: r.any }));
+    for (const s of out) {
+      if (!s.cls) continue;
+      if (!capUsed && capCls === s.cls) capUsed = true;
+      else {
+        const i = pool.indexOf(s.cls);
+        if (i < 0) continue;
+        pool.splice(i, 1);
+      }
+      s.ok = true;
+      s.have = 1;
+    }
+    for (const s of out) {
+      if (s.cls) continue;
+      s.have = Math.min(s.need, pool.length);
+      pool.splice(0, s.have);
+      s.ok = s.have >= s.need;
+    }
+    return out;
+  }
+
+  // The odds a person sees on the table: their chance to slay each Beast (and to be bitten back), and the chance
+  // each of their Crew cards' effect works. Percentages, worked out from two dice plus every bonus they have now.
+  oddsFor(p) {
+    const sum = (list) => list.reduce((n, b) => n + b.v, 0);
+    const atk = sum(this.attackBonus(p));
+    const beasts = {};
+    for (const b of this.beastRow) {
+      const d = def(b.id);
+      const reqs = this.reqStatus(p, d);
+      beasts[b.uid] = { reqs, ready: reqs.every((r) => r.ok), bonus: atk, slay: chance(d.slay - atk), bite: 100 - chance(d.fail + 1 - atk) };
+    }
+    const crew = {};
+    for (const c of p.crew) {
+      const bonus = sum(this.effectBonus(p, c));
+      crew[c.uid] = { bonus, pct: chance(def(c.id).req - bonus) };
+    }
+    const hand = {};
+    const fresh = sum(this.effectBonus(p, null));
+    for (const c of p.hand) if (def(c.id).kind === 'crew') hand[c.uid] = { bonus: fresh, pct: chance(def(c.id).req - fresh) };
+    return { beasts, crew, hand };
+  }
+
   async attack(p, beastUid) {
     const b = this.beastRow.find((x) => x.uid === beastUid);
     if (!b) return;
@@ -1155,7 +1216,7 @@ class PhaseGame {
     this.stats.attacks += 1;
     this.say(`${d.art} ${p.name} attacks the ${d.name}!`, { k: 'attack', pid: p.id, card: d.id });
     await this.wait(700);
-    const [res] = await this.rollDice({ kind: 'check', title: `Attack ${d.name}: ${d.slay}+ to slay`, need: d.slay, sides: [{ pid: p.id, bonus: this.attackBonus(p) }] });
+    const [res] = await this.rollDice({ kind: 'check', title: `Attack ${d.name}: ${d.slay}+ to slay`, need: d.slay, fail: d.fail, sides: [{ pid: p.id, bonus: this.attackBonus(p) }] });
     if (res.total >= d.slay) {
       this.beastRow = this.beastRow.filter((x) => x.uid !== b.uid);
       p.beasts.push(b);

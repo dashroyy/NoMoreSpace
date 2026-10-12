@@ -5,8 +5,10 @@ import { store, classInfo } from './net.js';
 import { cardEl } from './cards.js';
 import { classIcon } from './bits.js';
 import { openModal } from './modal.js';
+import { LEGEND, glyphChip } from './glyphs.js';
 
-const step = (icon, title, ...body) => el('div', { className: 'rule' }, el('div', { className: 'rule-ico' }, iconEl(icon)), el('div', {}, el('h3', {}, title), ...body.map((b) => el('p', {}, b))));
+// one rule: an icon, a title, and one paragraph (its words and bold bits run on together)
+const step = (icon, title, ...body) => el('div', { className: 'rule' }, el('div', { className: 'rule-ico' }, iconEl(icon)), el('div', {}, el('h3', {}, title), el('p', {}, ...body)));
 
 export function openRules() {
   const d = store.data;
@@ -23,7 +25,10 @@ export function openRules() {
       step('radio', 'Signal Jam', 'When someone plays a Crew, Gear or Protocol card, anyone with a Signal Jam can answer: you both roll and if the Jammer rolls the same or higher, the card is wasted (and the Energy is lost).'),
       step('sword', 'Void Beasts', 'Three are always up for grabs. You need the right crew (a discipline, or enough Crew cards), then roll. Slay one and it joins your party with a power for the rest of the game. Roll too low and you pay the price.'),
       step('shield', 'Gear, Protocols and Captains', 'Gear is slid under a Crew card. Cursed Gear goes on a rival. Protocols are one-shot tricks. Your Captain starts in your party and has a power all game (and can never be destroyed or stolen).'),
-      el('p', { className: 'hint' }, 'Tip: hover (or press and hold) any card to read it big. The Card Codex shows every card in the game.'),
+      step('eyes', 'Reading the cards', 'Under each name, a row of pictures says what the card does. Tap a card to read it in full, in big letters.'),
+      el('div', { className: 'legend-grid' }, LEGEND.map(([g, text]) => el('div', { className: 'legend-item' }, glyphChip(g), el('span', {}, text)))),
+      step('bulb', 'Help on the table', 'Each Void Beast shows your chance to slay it (the green part of its bar) and a padlock until your crew meets its needs. A ring round the roll number on a Crew card shows how likely the roll is to work. The glowing card and the ', el('b', {}, 'bulb'), ' line suggest a good move: tap the bulb button at the top to turn these tips off.'),
+      el('p', { className: 'hint' }, 'Tip: hover (or press and hold) any card to see it big. The Card Codex shows every card in the game.'),
     ),
     { title: 'How to play', wide: true },
   );
