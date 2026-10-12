@@ -24,3 +24,19 @@ button > .ico:only-child, .btn-ico > .ico { vertical-align: middle; margin: 0; }
 button .ico { --is: 1.6em; vertical-align: -0.38em; }
 /* a muted icon, for things that are off or locked */
 .ico.dim { opacity: 0.45; filter: grayscale(0.7); }
+
+/* With the custom icons switched off (the default, see icons.js) an icon is just its emoji, sized like the icon would be */
+.ico.ico-emoji {
+  width: auto;
+  height: auto;
+  background: none;
+  filter: none;
+  font-size: calc(var(--is) * 0.8);
+  line-height: 1;
+  vertical-align: -0.12em;
+  font-family: 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif;
+  font-style: normal;
+  letter-spacing: 0;
+  text-transform: none;
+}
+button .ico.ico-emoji { vertical-align: -0.1em; }

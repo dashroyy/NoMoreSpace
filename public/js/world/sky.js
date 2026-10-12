@@ -1,7 +1,7 @@
 // Space outside the ship: stars, the black hole, and the clues that appear in
 // the windows. Everything is painted on canvases (no image files).
 import * as THREE from 'three';
-import { drawIcon, iconName } from '../icons.js';
+import { drawIcon, iconName, iconsEnabled } from '../icons.js';
 import { Doom } from './doom.js';
 import { cloudCanvas, CLOUD_TINTS, CLOUD_DARK, eyeCanvas, glowCanvas, lensCanvas, grinFaceCanvas, grinGlowCanvases, planetCanvas, FACE, CAP_RADIUS } from './doom-art.js';
 
@@ -26,7 +26,13 @@ function emojiShape(emoji) {
   c.width = c.height = size;
   const g = c.getContext('2d');
   const name = iconName(emoji);
-  if (name) drawIcon(g, name, 0, 0, size);
+  if (iconsEnabled() && name) drawIcon(g, name, 0, 0, size);
+  else {
+    g.font = `${size * 0.8}px serif`;
+    g.textAlign = 'center';
+    g.textBaseline = 'middle';
+    g.fillText(emoji, size / 2, size / 2 + 2);
+  }
   const data = g.getImageData(0, 0, size, size).data;
   const pts = [];
   const rnd = seededRandom(emoji.codePointAt(0));

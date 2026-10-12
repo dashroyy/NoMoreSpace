@@ -9,9 +9,26 @@
 //   iconEl('skull')                    // an icon element, for code that builds the page by hand
 //
 // An emoji with no icon is left alone (players can still type their own in chat).
-import { ATLAS, EMOJI_ICON } from './icon-map.js';
+//
+// THE CUSTOM ICONS ARE SWITCHED OFF: the games show ordinary emoji. Everything here is still in place, so open any page
+// with ?icons=on to see the icons (it is remembered in that browser) and ?icons=off to go back. With the icons off,
+// initIcons() does nothing, canvas text is plain text, and iconEl() gives the icon's emoji.
+import { ATLAS, EMOJI_ICON, ICON_EMOJI } from './icon-map.js';
 
 const ATLAS_URL = '/assets/icons/atlas.webp';
+const FLAG = 'arcade-icons';
+
+function readFlag() {
+  try {
+    const asked = new URLSearchParams(location.search).get('icons');
+    if (asked === 'on' || asked === 'off') localStorage.setItem(FLAG, asked);
+    return localStorage.getItem(FLAG) === 'on';
+  } catch {
+    return false;
+  }
+}
+const ENABLED = readFlag();
+export const iconsEnabled = () => ENABLED;
 
 // One emoji, with its optional skin tone / "emoji style" marker, and joined sequences (astronaut = person + rocket)
 const UNIT = '\\p{Extended_Pictographic}(?:\\uFE0F|[\\u{1F3FB}-\\u{1F3FF}])?';
@@ -31,6 +48,16 @@ export function iconName(emoji) {
 export function iconEl(name, { size = null, title = null, className = '' } = {}) {
   const i = ATLAS.icons[name];
   const span = document.createElement('span');
+  const label = title || name.replace(/([A-Z])/g, ' $1').toLowerCase();
+  // icons switched off: the same thing as an emoji (an icon with no emoji of its own still draws)
+  if (!ENABLED && ICON_EMOJI[name]) {
+    span.className = `ico ico-emoji ${className}`.trim();
+    span.textContent = ICON_EMOJI[name];
+    if (size) span.style.setProperty('--is', size);
+    span.setAttribute('role', 'img');
+    span.setAttribute('aria-label', label);
+    return span;
+  }
   span.className = `ico ${className}`.trim();
   if (i == null) return span;
   span.style.setProperty('--ix', String(i % ATLAS.cols));
@@ -115,7 +142,7 @@ function plainOptions(root) {
 
 let started = false;
 export function initIcons(root = document.body) {
-  if (started) return;
+  if (!ENABLED || started) return;
   started = true;
   const css = document.documentElement.style;
   css.setProperty('--icon-cols', String(ATLAS.cols));
@@ -149,6 +176,7 @@ export function initIcons(root = document.body) {
 let atlasImage = null;
 let atlasLoading = null;
 export function loadAtlas() {
+  if (!ENABLED) return Promise.resolve(null); // icons off: nothing to download
   if (atlasImage) return Promise.resolve(atlasImage);
   atlasLoading ||= new Promise((resolve) => {
     const img = new Image();
@@ -188,6 +216,7 @@ const fontPx = (ctx) => Number(/(\d+(?:\.\d+)?)px/.exec(ctx.font)?.[1] || 16);
 
 // How wide the text is with icons (each one as wide as the text is tall)
 export function measureTextIcons(ctx, text) {
+  if (!ENABLED) return ctx.measureText(text).width;
   const size = fontPx(ctx);
   let w = 0;
   for (const r of runs(text)) w += r.icon ? size * 1.1 : ctx.measureText(r.text).width;
@@ -195,7 +224,7 @@ export function measureTextIcons(ctx, text) {
 }
 
 function drawRuns(ctx, text, x, y, mode) {
-  const parts = runs(text);
+  const parts = ENABLED ? runs(text) : [];
   if (!parts.some((p) => p.icon)) {
     if (mode === 'stroke') ctx.strokeText(text, x, y);
     else ctx.fillText(text, x, y);

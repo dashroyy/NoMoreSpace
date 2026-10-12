@@ -37,7 +37,7 @@ Many more packs are free to use the same way (KayKit Prototype, Block, Board Gam
 
 # Icons, fonts and card art (the whole arcade)
 
-Neither game uses emoji for its pictures. Text and data still *write* emoji in places (a role's `icon`, a log line, a caption), and `public/js/icons.js` swaps each one for a small illustration as the page is drawn (and in canvas text such as name tags and the share card). Emoji that are not in the map are left alone, so players can still type their own in chat.
+**The games show ordinary emoji.** A custom icon set exists too, but it is **switched off**: open any page with `?icons=on` to see it (it is remembered in that browser) and `?icons=off` to go back. With it on, `public/js/icons.js` swaps each emoji for a small illustration as the page is drawn (and in canvas text such as name tags and the share card); emoji that are not in the map are left alone. With it off, `initIcons()` does nothing and `iconEl('skull')` gives the skull emoji. The default is one line (`ENABLED` in `icons.js`).
 
 All of it is made from CC0 packs by Kenney ([kenney.nl](https://kenney.nl)) and KayKit:
 

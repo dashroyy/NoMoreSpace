@@ -378,3 +378,22 @@ test('the fonts and effect sprites the pages ask for are really there', () => {
   for (const f of ['kenney-future', 'kenney-future-narrow', 'kenney-pixel', 'kenney-rocket', 'kenney-space', 'kenney-mini-square']) assert.ok(fs.existsSync(path.join(ROOT, `public/assets/fonts/${f}.ttf`)), f);
   for (const f of ['star_04', 'boom00', 'boom08']) assert.ok(fs.existsSync(path.join(ROOT, `public/assets/phase/fx/${f}.png`)), f);
 });
+
+test('every icon the Phase to Space client asks for exists, and has an emoji for when the custom icons are off', () => {
+  const map = fs.readFileSync(path.join(ROOT, 'public/js/icon-map.js'), 'utf8');
+  const emoji = JSON.parse(map.match(/ICON_EMOJI = (\{.*\});/)[1]);
+  const atlas = JSON.parse(fs.readFileSync(path.join(ROOT, 'public/assets/icons/atlas.json'), 'utf8')).icons;
+  const dir = path.join(ROOT, 'public/js/phase');
+  const asked = new Set();
+  for (const f of fs.readdirSync(dir)) {
+    const src = fs.readFileSync(path.join(dir, f), 'utf8');
+    for (const m of src.matchAll(/(?:iconEl|btn)\([^)]*?'(\w+)'/g)) if (m[1] in atlas) asked.add(m[1]);
+    for (const m of src.matchAll(/icon: '(\w+)'/g)) asked.add(m[1]);
+    for (const m of src.matchAll(/CLASS_ICON = \{([^}]*)\}/g)) for (const n of m[1].matchAll(/'(\w+)'/g)) asked.add(n[1]);
+  }
+  assert.ok(asked.size > 25, `found ${asked.size} icon names`);
+  for (const name of asked) {
+    assert.ok(name in atlas, `icon ${name} is in the atlas`);
+    assert.ok(emoji[name], `icon ${name} has an emoji`);
+  }
+});
