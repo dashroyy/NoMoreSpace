@@ -12,6 +12,8 @@ Nearly everything in the game is built from code (shapes, canvas textures, synth
 | KayKit Restaurant Bits | Black Hole Blues: a kitchen and dining tables in the Galley |
 | KayKit Furniture Bits | Black Hole Blues: a lounge in the Crew Quarters |
 | KayKit Space Base Bits | Black Hole Blues: cargo stacks in the Cargo Bay, space farms in Hydroponics |
+| KayKit Mystery Monthly Combat Mech | Ruler of the Galaxy: Mecha-Nova Prime (animated with the shared `anims.glb`) |
+| Kenney Space Kit (CC0, [kenney.nl](https://kenney.nl)) | Ruler of the Galaxy (`assets/models/ruler/`): the Chronos Syndicate's craft, the Goliath's turret, and the rocks and meteors of the asteroid belt. `test/ruler.test.js` checks every model the scene loads exists and every file there is used |
 
 The Parasite is not a model: `public/js/world/parasite.js` builds it from code (a veined, breathing body with a toothed maw, one big and many small eyes that follow the camera, writhing tentacles, and the empty helmet at its feet). The few roles that are not people are built from shapes in `models.js`: the Mimic, the Stage Double and the Hazmat Tech wear the same little astronaut the players do (`suited()`), the Reflection is a framed mirror and the Carrier a spotted blob.
 

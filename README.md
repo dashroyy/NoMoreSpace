@@ -1,11 +1,12 @@
 # Space Arcade
 
-Two free multiplayer games that run in the browser, on one site and one server. The front page is a game picker.
+Three free multiplayer games that run in the browser, on one site and one server. The front page is a game picker.
 
 - **[No More Space](#no-more-space)** (`/nms`): a spooky social-deduction game on a 3D spaceship, 3 to 15 players.
 - **[Phase to Space](docs/PHASE_TO_SPACE.md)** (`/phase`): a space card battler for 2 to 6 players with robots to fill empty seats: recruit a crew, slay Void Beasts and Signal Jam your friends.
+- **[Ruler of the Galaxy](docs/RULER.md)** (`/ruler`): a 3D dice battle for 2 to 6 players (robots fill empty seats), in the spirit of *King of Tokyo*: roll, blast your rivals with lasers and hold the Omni-Throne at the heart of a 3D galaxy.
 
-Both share the same fonts and look, and there is an optional custom icon set to replace emoji (`?icons=on`; see [docs/ASSETS.md](docs/ASSETS.md)); older invite and replay links (`/?join=CODE`) still go to No More Space.
+All three share the same fonts and look, and there is an optional custom icon set to replace emoji (`?icons=on`; see [docs/ASSETS.md](docs/ASSETS.md)); older invite and replay links (`/?join=CODE`) still go to No More Space.
 
 # No More Space
 
@@ -31,7 +32,7 @@ A spooky, slightly silly space spin-off of **Blood on the Clocktower**, played o
 
 ```bash
 npm install
-npm run dev     # http://localhost:3000 (the game picker; No More Space is at /nms, Phase to Space at /phase)
+npm run dev     # http://localhost:3000 (the game picker; No More Space is at /nms, Phase to Space at /phase, Ruler of the Galaxy at /ruler)
 npm test        # rules tests, including robot playtests at every player count
 ```
 
@@ -42,6 +43,7 @@ Open several **private/incognito windows** to play against yourself (3 minimum, 
 ```
 server/
   phase/          Phase to Space: cards.js, engine.js (the rules), bots.js, index.js (its own Socket.IO namespace)
+  ruler/          Ruler of the Galaxy: data.js, engine.js, bots.js, index.js (the same pattern, namespace /ruler)
   roles.js        all 23 roles, the setup table, role tips
   engine.js       the rules: nights, days, nominations, voting, winning
   storyteller.js  ARIA: balanced role picks, false info, stories, window clues
@@ -52,10 +54,11 @@ server/
   persist.js      saves running games across restarts
   records.js      play stats, bug reports and replays (in data/)
 public/
-  index.html            the game picker; nms.html (No More Space) and phase.html (Phase to Space)
+  index.html            the game picker; nms.html (No More Space), phase.html (Phase to Space) and ruler.html (Ruler of the Galaxy)
   css/                  style.css... for No More Space, phase.css and phase-cards.css, plus the shared icons, fonts and typography
   js/main.js            wires No More Space together
   js/phase/             the Phase to Space client (board, prompts, dice, effects)
+  js/ruler/             the Ruler of the Galaxy client: scene/ (the 3D galaxy, arena, ships and effects), dice tray, table, prompts
   js/icons.js           swaps emoji for the arcade's own icons, in the page and in canvas text
   js/world/             the 3D ship (Three.js): layout, ship, avatars (the astronaut), role models (KayKit characters with a cartoon outline, the procedural Parasite), sky
   js/ui/                HUD, chat, role card, night & drawing, tasks, lobby,
@@ -65,7 +68,7 @@ public/
 test/                   engine tests (npm test)
 deploy/                 one-time server setup script + config
 .github/workflows/      ci.yml tests every push; deploy.yml publishes main
-docs/                   GAME_DESIGN.md (rules & balance), SCRIPTS.md, ASSETS.md and HOSTING_GUIDE.md
+docs/                   GAME_DESIGN.md (rules & balance), SCRIPTS.md, PHASE_TO_SPACE.md, RULER.md, ASSETS.md and HOSTING_GUIDE.md
 tools/                  pack-models.mjs and pack-animations.mjs (KayKit packs into .glb files); art/ draws the icon atlas and card portraits
 ```
 
@@ -75,6 +78,7 @@ tools/                  pack-models.mjs and pack-animations.mjs (KayKit packs in
 - 📖 **[Hosting guide](docs/HOSTING_GUIDE.md)**: GitHub → Namecheap → droplet → Cloudflare, step by step
 - 🧱 **[3D models, icons, fonts and credits](docs/ASSETS.md)**: the real 3D models, the icon atlas, card portraits and fonts (KayKit and Kenney, CC0), how they are made and loaded
 - 🃏 **[Phase to Space](docs/PHASE_TO_SPACE.md)**: the rules, every card, how the engine and the robots work
+- 👑 **[Ruler of the Galaxy](docs/RULER.md)**: the rules, the contenders, the 3D scene, how to add a card
 
 ## Voice chat behind strict networks (optional)
 

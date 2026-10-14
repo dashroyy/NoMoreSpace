@@ -69,6 +69,7 @@ a.game:hover { border-color: var(--accent, var(--phosphor)); box-shadow: 0 0 0 1
 a.game:focus-visible { outline: 3px solid var(--accent, var(--phosphor)); outline-offset: 3px; }
 .game.nms { --accent: #ff7a3d; }
 .game.pts { --accent: #ff6bd6; }
+.game.rotg { --accent: #00f0ff; }
 
 .art { position: relative; height: 270px; overflow: hidden; background: radial-gradient(ellipse at 50% 60%, rgba(255, 255, 255, 0.05), transparent 70%); }
 .info { padding: 18px 22px 20px; display: flex; flex-direction: column; gap: 10px; flex: 1; position: relative; z-index: 2; background: linear-gradient(180deg, transparent, rgba(2, 3, 8, 0.7)); }
@@ -161,3 +162,20 @@ a.game:hover .go { transform: translateX(4px); filter: brightness(1.1); }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
+
+/* Ruler of the Galaxy: a spiral galaxy with a burning core, contenders circling it, lasers flashing */
+.galaxy-art { position: absolute; left: 50%; top: 52%; width: 220px; height: 220px; margin: -110px 0 0 -110px; transform: rotateX(62deg); transform-style: preserve-3d; }
+.g-arm { position: absolute; inset: 0; border-radius: 50%; background: conic-gradient(from 0deg, transparent 0 8%, rgba(120, 140, 255, 0.55) 14%, transparent 30%, transparent 50%, rgba(181, 55, 242, 0.5) 64%, transparent 80%); filter: blur(6px); animation: spin 14s linear infinite; }
+.g-arm.a2 { inset: 18%; background: conic-gradient(from 90deg, transparent 0 10%, rgba(0, 240, 255, 0.55) 18%, transparent 34%, transparent 55%, rgba(255, 42, 109, 0.45) 70%, transparent 85%); animation-duration: 9s; }
+.g-ring { position: absolute; border-radius: 50%; border: 2px solid rgba(0, 240, 255, 0.7); box-shadow: 0 0 14px rgba(0, 240, 255, 0.7); }
+.g-ring.r1 { inset: 30%; animation: spin 6s linear infinite reverse; border-color: rgba(255, 42, 109, 0.8); box-shadow: 0 0 14px rgba(255, 42, 109, 0.7); border-style: dashed; }
+.g-ring.r2 { inset: 22%; }
+.g-core { position: absolute; inset: 39%; border-radius: 50%; background: radial-gradient(circle, #fff6d0 0%, #ffb800 45%, #ff2a6d 80%, transparent 82%); box-shadow: 0 0 40px #ffb800, 0 0 90px rgba(255, 120, 0, 0.6); transform: rotateX(-62deg); animation: corepulse 2.2s ease-in-out infinite; }
+@keyframes corepulse { 50% { box-shadow: 0 0 60px #ffd36b, 0 0 120px rgba(255, 140, 0, 0.8); } }
+.q1 { --r: 120px; animation-duration: 12s; } .q1 b { animation-duration: 12s; }
+.q2 { --r: 100px; animation-duration: 16s; animation-delay: -5s; } .q2 b { animation-duration: 16s; animation-delay: -5s; }
+.q3 { --r: 138px; animation-duration: 21s; animation-delay: -11s; animation-direction: reverse; } .q3 b { animation-duration: 21s; animation-delay: -11s; animation-direction: reverse; }
+.zap { position: absolute; left: 50%; top: 52%; height: 2px; width: 90px; transform-origin: left center; background: linear-gradient(90deg, #ff2a6d, transparent); box-shadow: 0 0 8px #ff2a6d; opacity: 0; animation: zap 3.6s ease-out infinite; }
+.zap.z2 { animation-delay: 1.8s; background: linear-gradient(90deg, #00f0ff, transparent); box-shadow: 0 0 8px #00f0ff; }
+@keyframes zap { 0%, 60% { opacity: 0; transform: rotate(-30deg) scaleX(0.2); } 64% { opacity: 1; transform: rotate(-30deg) scaleX(1); } 76% { opacity: 0; transform: rotate(-30deg) scaleX(1.1); } }
+.zap.z2 { transform: rotate(150deg); }

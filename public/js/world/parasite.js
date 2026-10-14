@@ -261,6 +261,7 @@ export function buildParasite(accent = 0xffffff) {
 
   // ---------- what is left of the host: a cracked helmet in the player's colour ----------
   const helmet = new THREE.Group();
+  helmet.name = 'host-helmet'; // (Ruler of the Galaxy's Void Kraken is this creature without its host)
   helmet.position.set(0.85, 0.2, 1.0);
   helmet.rotation.set(0.15, -0.6, 0.55);
   helmet.add(new THREE.Mesh(new THREE.SphereGeometry(0.34, 20, 14, 0, Math.PI * 2, 0, Math.PI * 0.64), new THREE.MeshStandardMaterial({ color: 0x9ad8ff, transparent: true, opacity: 0.38, roughness: 0.08, metalness: 0.3 })));

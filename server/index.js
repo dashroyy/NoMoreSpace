@@ -19,6 +19,7 @@ const persist = require('./persist');
 const { runBots, ROOM_RECTS } = require('./bots');
 const crypto = require('crypto');
 const phase = require('./phase');
+const ruler = require('./ruler');
 
 const PORT = process.env.PORT != null ? Number(process.env.PORT) : 3000;
 const ROOT = path.join(__dirname, '..');
@@ -149,6 +150,7 @@ const server = http.createServer((req, res) => {
     const seconds = Math.max(5, Math.min(60, Number(url.searchParams.get('seconds')) || 20));
     io.emit('server-restart', { in: seconds });
     io.of('/phase').emit('server-restart', { in: seconds });
+    io.of('/ruler').emit('server-restart', { in: seconds });
     res.writeHead(200).end('warned');
     return;
   }
@@ -162,7 +164,8 @@ const server = http.createServer((req, res) => {
     const proto = String(req.headers['x-forwarded-proto'] || 'http').split(',')[0].trim();
     const host = String(req.headers.host || 'localhost').replace(/[^\w.:\-\[\]]/g, '');
     const qr = qrcode(0, 'M');
-    qr.addData(`${proto}://${host}${url.searchParams.get('game') === 'phase' ? '/phase' : '/'}?join=${code}`);
+    const gamePath = { phase: '/phase', ruler: '/ruler' }[url.searchParams.get('game')] || '/';
+    qr.addData(`${proto}://${host}${gamePath}?join=${code}`);
     qr.make();
     res.writeHead(200, { 'Content-Type': 'image/svg+xml', 'Cache-Control': 'no-cache' });
     res.end(qr.createSvgTag({ cellSize: 6, margin: 3, scalable: true }));
@@ -175,18 +178,24 @@ const server = http.createServer((req, res) => {
     res.end(JSON.stringify({
       nms: { ships: live.length, people: live.reduce((n, r) => n + r.game.players.filter((p) => p.connected && !p.isBot).length, 0) },
       phase: phaseGame.stats(),
+      ruler: rulerGame.stats(),
     }));
     return;
   }
   if (url.pathname === '/api/code') {
     const code = String(url.searchParams.get('code') || '').toUpperCase().trim();
     res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' });
-    res.end(JSON.stringify({ game: rooms.has(code) ? 'nms' : phase.rooms.has(code) ? 'phase' : null }));
+    res.end(JSON.stringify({ game: rooms.has(code) ? 'nms' : phase.rooms.has(code) ? 'phase' : ruler.rooms.has(code) ? 'ruler' : null }));
     return;
   }
   if (url.pathname === '/phase-data.json') {
     res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' });
     res.end(phase.CLIENT_DATA_JSON);
+    return;
+  }
+  if (url.pathname === '/ruler-data.json') {
+    res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' });
+    res.end(ruler.CLIENT_DATA_JSON);
     return;
   }
   if (url.pathname === '/game-data.json') {
@@ -212,7 +221,7 @@ const server = http.createServer((req, res) => {
     res.writeHead(302, { Location: `/nms${url.search}` }).end();
     return;
   }
-  const PAGES = { '/': 'index.html', '/nms': 'nms.html', '/phase': 'phase.html' };
+  const PAGES = { '/': 'index.html', '/nms': 'nms.html', '/phase': 'phase.html', '/ruler': 'ruler.html' };
   sendFile(res, PUBLIC_DIR, PAGES[url.pathname] || url.pathname, 'no-cache');
 });
 
@@ -221,7 +230,8 @@ const server = http.createServer((req, res) => {
 // ---------------------------------------------------------------------------
 
 const io = new Server(server, { maxHttpBufferSize: 300_000 });
-const phaseGame = phase.attach(io, { isCodeTaken: (code) => rooms.has(code) }); // Phase to Space, on its own namespace
+const phaseGame = phase.attach(io, { isCodeTaken: (code) => rooms.has(code) || ruler.rooms.has(code) }); // Phase to Space, on its own namespace
+const rulerGame = ruler.attach(io, { isCodeTaken: (code) => rooms.has(code) || phase.rooms.has(code) }); // Ruler of the Galaxy, likewise
 const rooms = new Map(); // code -> { game, sockets: Map(socketId -> personId), positions, captainLeftAt, emptySince }
 
 function newRoomCode() {
@@ -229,7 +239,7 @@ function newRoomCode() {
   let code;
   do {
     code = Array.from({ length: 4 }, () => letters[Math.floor(Math.random() * letters.length)]).join('');
-  } while (rooms.has(code) || phase.rooms.has(code));
+  } while (rooms.has(code) || phase.rooms.has(code) || ruler.rooms.has(code));
   return code;
 }
 

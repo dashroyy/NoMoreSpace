@@ -84,14 +84,16 @@ for (const card of document.querySelectorAll('a.game')) {
 async function counts() {
   try {
     const stats = await fetch('/hub-stats', { cache: 'no-store' }).then((r) => r.json());
-    const set = (game, n, noun, plural) => {
+    // key: which count in the stats; one / many: what to call them
+    const set = (game, n, key, one, many) => {
       const node = document.querySelector(`[data-live="${game}"]`);
-      if (!node) return;
+      if (!node || !n) return;
       node.classList.toggle('on', n.people > 0);
-      node.textContent = n.people > 0 ? `${n.people} playing now` : n[noun] > 0 ? `${n[noun]} ${n[noun] === 1 ? noun.replace(/s$/, '') : plural} open` : 'be the first aboard';
+      node.textContent = n.people > 0 ? `${n.people} playing now` : n[key] > 0 ? `${n[key]} ${n[key] === 1 ? one : many} open` : 'be the first aboard';
     };
-    set('nms', stats.nms, 'ships', 'ships');
-    set('phase', stats.phase, 'tables', 'tables');
+    set('nms', stats.nms, 'ships', 'ship', 'ships');
+    set('phase', stats.phase, 'tables', 'table', 'tables');
+    set('ruler', stats.ruler, 'tables', 'galaxy', 'galaxies');
   } catch {}
 }
 counts();
@@ -105,6 +107,7 @@ async function resume() {
   const seats = [
     { key: 'nms-seat', game: 'nms', href: (c) => `/nms`, label: (c) => `🚀 Back to your ship ${c} (No More Space)` },
     { key: 'pts-seat', game: 'phase', href: (c) => `/phase`, label: (c) => `🃏 Back to table ${c} (Phase to Space)` },
+    { key: 'rotg-seat', game: 'ruler', href: (c) => `/ruler`, label: (c) => `🌌 Back to galaxy ${c} (Ruler of the Galaxy)` },
   ];
   for (const s of seats) {
     let seat = null;
@@ -147,8 +150,9 @@ async function join() {
       return;
     }
     msg.className = 'msg ok';
-    msg.textContent = r.game === 'phase' ? 'Boarding Phase to Space…' : 'Boarding No More Space…';
-    location.href = `${r.game === 'phase' ? '/phase' : '/nms'}?join=${code}`;
+    const where = { phase: ['/phase', 'Phase to Space'], ruler: ['/ruler', 'Ruler of the Galaxy'], nms: ['/nms', 'No More Space'] }[r.game] || ['/nms', 'No More Space'];
+    msg.textContent = `Boarding ${where[1]}…`;
+    location.href = `${where[0]}?join=${code}`;
   } catch {
     msg.textContent = 'Could not reach the server. Try again.';
   }
