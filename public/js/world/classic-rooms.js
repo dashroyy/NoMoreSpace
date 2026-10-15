@@ -32,6 +32,7 @@ export class ClassicRooms {
     this.group.visible = false;
     ship.add(this.group);
     this.dressed = false;
+    this.ready = Promise.resolve(); // settles when the models are in (the start screen waits for it)
   }
 
   async dress() {
@@ -98,6 +99,6 @@ export class ClassicRooms {
 
   setActive(on) {
     this.group.visible = on;
-    if (on && !this.dressed) this.dress();
+    if (on && !this.dressed) this.ready = this.dress();
   }
 }

@@ -25,7 +25,12 @@ import { initCoach, renderCoach } from './ui/coach.js';
 import { initExtras, renderExtras, savedLook, extras } from './ui/extras.js';
 import { speak } from './tts.js';
 import { openWiki } from './ui/wiki.js';
-import { initSettings } from './ui/settings.js';
+import { initSettings, openSettings } from './ui/settings.js';
+import { buildHome } from './ui/home.js';
+import { initPause } from './ui/pause.js';
+import { createSplash, returning, loadingLine } from './ui/splash.js';
+import { getCallsign } from './ui/callsign.js';
+import { warp, confirmDialog } from './ui/menu.js';
 import { initSession, renderSession } from './ui/session.js';
 import { initCaptions } from './ui/captions.js';
 import { initWish } from './ui/wish.js';
@@ -64,6 +69,10 @@ function loadFonts() {
 }
 
 async function boot() {
+  // the start screen shows once per visit (not when rejoining a game, following an invite link or watching a replay)
+  const params = new URLSearchParams(location.search);
+  const splash = params.get('replay') || params.get('join') || returning() || loadSeat()?.code ? null : createSplash();
+  splash?.progress(0.1, loadingLine());
   [store.data] = await Promise.all([fetch('/game-data.json').then((r) => r.json()), loadFonts(), loadAtlas()]); // the icon atlas too: canvas text (name tags, signs) draws with it
   const world = new World($('world'), store.data, {
     onSendPos: (p) => socket.emit('pos', p),
@@ -79,6 +88,8 @@ async function boot() {
     },
   });
   window.__world = world; // handy for debugging in the console
+  if (splash) world.titleShot(); // the start screen looks down on the ship from far away
+  splash?.progress(0.55, loadingLine());
   world.serverNow = serverNow;
   // when a clue drifts past, whoever is watching from the Observation Deck gets its caption
   let captioned = null;
@@ -110,10 +121,6 @@ async function boot() {
   initRooms(world);
   initSocial(world);
   initConnection();
-  $('home-bug').addEventListener('click', (e) => {
-    e.preventDefault();
-    openBugReport();
-  });
   initSystems(world);
   initVote();
   initParty(world);
@@ -125,9 +132,8 @@ async function boot() {
   initWish();
   initOffer();
   initDoors(world);
-  for (const id of ['home-profile', 'lobby-profile']) $(id).addEventListener('click', () => openProfile());
-  $('home-public').addEventListener('click', () => openPublicShips({ look: savedLook }));
-  for (const id of ['home-wiki', 'lobby-wiki', 'btn-wiki']) $(id).addEventListener('click', () => openWiki());
+  $('lobby-profile').addEventListener('click', () => openProfile());
+  for (const id of ['lobby-wiki', 'btn-wiki']) $(id).addEventListener('click', () => openWiki());
   initHud(world, {
     onRoleCard: (tab) => openRoleCard(typeof tab === 'string' ? tab : 'role'),
     onUse: () => {
@@ -138,7 +144,8 @@ async function boot() {
       });
     },
   });
-  setupHome();
+  initPause({ onLeave: leave });
+  const home = setupHome();
   setupButtons();
   setupJoystick(world);
   // Small touch screens: start with the panels folded away so the ship is visible.
@@ -171,7 +178,7 @@ async function boot() {
   if (socket.connected) rejoin();
   socket.on('joined', ({ code, token, id }) => {
     store.me = id;
-    const name = $('home-name').value || loadSeat()?.name || '';
+    const name = getCallsign() || loadSeat()?.name || '';
     saveSeat({ code, token, name });
     history.replaceState(null, '', '/nms');
   });
@@ -253,6 +260,25 @@ async function boot() {
     renderSession(state, prev);
     if (prev && prev.code === state.code) announceChanges(state, prev, world);
   });
+
+  // everything is in: wait for a key (the very first visit), then dive in to the ship and bring the menu up
+  if (splash) {
+    let shown = 0.6;
+    const creep = setInterval(() => splash.progress((shown += (0.92 - shown) * 0.08)), 220);
+    const words = setInterval(() => splash.progress(shown, loadingLine()), 1400);
+    await Promise.race([world.classicRooms.ready, new Promise((r) => setTimeout(r, 9000))]);
+    clearInterval(creep);
+    clearInterval(words);
+    const pressed = await splash.ready();
+    if (pressed) {
+      unlockAudio();
+      sfx('start');
+      warp();
+      world.swoopIn();
+    }
+  }
+  home.intro();
+  if (params.get('join')) home.openJoin(params.get('join'));
 }
 
 // Rewatch a finished game from a replay link.
@@ -491,41 +517,25 @@ function hideStory() {
 // ---------------------------------------------------------------------------
 
 function setupHome() {
-  const params = new URLSearchParams(location.search);
-  if (params.get('join')) $('home-code').value = params.get('join').toUpperCase();
-  const saved = loadSeat();
-  if (saved?.name) $('home-name').value = saved.name;
-  $('home-practice').addEventListener('click', () => {
+  const go = (event, data) => {
     unlockAudio();
-    send('create', { name: $('home-name').value || 'Rookie', practice: true, look: savedLook() }).then(() => sfx('whoosh')).catch((e) => problem(e.message));
+    send(event, { ...data, look: savedLook() }).then(() => sfx('whoosh')).catch((e) => problem(e.message));
+  };
+  return buildHome($('screen-home'), {
+    launch: (mode, name) => go('create', { name, mode }),
+    join: (code, name) => go('join', { code, name }),
+    practice: (script, name) => go('create', { name, practice: true, ...(script === 'classic' ? {} : { script }) }),
+    publicShips: () => openPublicShips({ look: savedLook }),
+    profile: () => openProfile(),
+    wiki: () => openWiki(),
+    settings: () => openSettings(MOODS),
+    bug: () => openBugReport(),
   });
-  $('home-practice-carnival').addEventListener('click', () => {
-    unlockAudio();
-    send('create', { name: $('home-name').value || 'Rookie', practice: true, script: 'carnival', look: savedLook() }).then(() => sfx('whoosh')).catch((e) => problem(e.message));
-  });
-  $('home-practice-outbreak').addEventListener('click', () => {
-    unlockAudio();
-    send('create', { name: $('home-name').value || 'Rookie', practice: true, script: 'outbreak', look: savedLook() }).then(() => sfx('whoosh')).catch((e) => problem(e.message));
-  });
-  $('home-practice-traitors').addEventListener('click', () => {
-    unlockAudio();
-    send('create', { name: $('home-name').value || 'Rookie', practice: true, script: 'traitors', look: savedLook() }).then(() => sfx('whoosh')).catch((e) => problem(e.message));
-  });
-  $('home-create').addEventListener('click', () => {
-    unlockAudio();
-    const mode = document.querySelector('input[name="mode"]:checked')?.value || 'autopilot';
-    send('create', { name: $('home-name').value, mode, look: savedLook() }).then(() => sfx('whoosh')).catch((e) => problem(e.message));
-  });
-  $('home-join').addEventListener('click', () => {
-    unlockAudio();
-    send('join', { code: $('home-code').value, name: $('home-name').value, look: savedLook() }).then(() => sfx('whoosh')).catch((e) => problem(e.message));
-  });
-  $('home-code').addEventListener('keydown', (e) => e.key === 'Enter' && $('home-join').click());
-  document.body.classList.add('screen-home');
 }
 
-function leave() {
-  if (!confirm('Leave this ship?')) return;
+async function leave() {
+  const ok = await confirmDialog({ title: 'Leave this ship?', text: store.state?.phase === 'lobby' ? 'Your seat is freed for someone else.' : 'A robot takes over your spacesuit.', yes: 'Leave', no: 'Stay', danger: true });
+  if (!ok) return;
   extras.leaving = true;
   send('leave').catch(() => {});
   saveSeat(null);

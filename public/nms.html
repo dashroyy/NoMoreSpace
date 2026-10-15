@@ -17,6 +17,7 @@
     <link rel="stylesheet" href="/css/icons.css" />
     <link rel="stylesheet" href="/css/fonts.css" />
     <link rel="stylesheet" href="/css/typography.css" />
+    <link rel="stylesheet" href="/css/nms-menu.css" />
     <script type="importmap">
       { "imports": { "three": "/vendor/three/three.module.min.js" } }
     </script>
@@ -27,51 +28,10 @@
     <div id="vignette" aria-hidden="true"></div>
     <div id="doom-glow" aria-hidden="true"></div>
     <div id="doom-flash" aria-hidden="true"></div>
+    <div id="nm-warp" class="nm-warp" aria-hidden="true"></div>
 
-    <!-- ===================== Title screen ===================== -->
-    <section id="screen-home" class="screen">
-      <a class="hub-link" href="/">&larr; All games</a>
-      <div class="title-wrap">
-        <h1 class="logo">NO&nbsp;MORE<br /><span>SPACE</span></h1>
-        <p class="tagline">The ship is falling into a black hole. Something aboard is not human.<br />Find it before there is no more space.</p>
-
-        <div class="card home-card">
-          <label>Your name <input id="home-name" maxlength="18" autocomplete="nickname" placeholder="Commander Biscuit" /></label>
-
-          <div class="mode-pick" role="radiogroup" aria-label="Who runs the game?">
-            <label class="mode">
-              <input type="radio" name="mode" value="autopilot" checked />
-              <span><b>🤖 Autopilot</b><small>Everyone plays. ARIA, the ship's AI, runs the game.</small></span>
-            </label>
-            <label class="mode">
-              <input type="radio" name="mode" value="captain" />
-              <span><b>👨‍✈️ I'll be the Captain</b><small>You run the game from the Command Station (you don't play), like a Blood on the Clocktower Storyteller.</small></span>
-            </label>
-          </div>
-          <button id="home-create" class="primary big">Launch a new ship</button>
-
-          <div class="divider"><span>or join friends</span></div>
-          <div class="row">
-            <input id="home-code" maxlength="4" placeholder="CODE" autocapitalize="characters" class="code-input" />
-            <button id="home-join" class="big">Board</button>
-          </div>
-        </div>
-        <p class="footnote">3–15 players · best with 7+ · voice chat optional · <a href="#" id="home-bug">🐞 Report a bug</a></p>
-        <button id="home-wiki" class="wiki-cta">📖 New here? Read the Ship's Wiki</button>
-        <div class="home-buttons">
-          <button id="home-practice" class="small">🎓 Practice with robots</button>
-          <button id="home-practice-carnival" class="small">🎪 Practice: Cosmic Carnival</button>
-          <button id="home-practice-outbreak" class="small">🦠 Practice: Outbreak</button>
-          <button id="home-practice-traitors" class="small">🗡️ Practice: Traitors</button>
-          <button id="home-public" class="small">🌐 Public ships</button>
-          <button id="home-profile" class="small ghost">👤 Profile</button>
-          <button id="home-settings" class="small ghost">⚙️ Settings</button>
-        </div>
-        <div class="home-audio">
-          <button id="home-music" class="small ghost" title="Music on/off">🎵 Music on</button>
-        </div>
-      </div>
-    </section>
+    <!-- ===================== Title screen (built by js/ui/home.js) ===================== -->
+    <section id="screen-home" class="screen"></section>
 
     <!-- ===================== Lobby ===================== -->
     <section id="screen-lobby" class="screen" hidden>

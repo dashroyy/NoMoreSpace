@@ -1057,6 +1057,22 @@ const SOUNDS = {
     [392, 330].forEach((f, i) => tone({ freq: f, type: 'sine', dur: 0.6, vol: 0.08, delay: 0.1 + i * 0.05 }));
   },
 
+  // the title menu: a tick as the highlight moves, a bright blip to choose, a lower one to go back, a rising sweep to open a window
+  hover: () => tone({ freq: 2100, slide: 1900, dur: 0.03, vol: 0.03, type: 'triangle' }),
+  select: () => {
+    tone({ freq: 1046, dur: 0.05, vol: 0.05, type: 'square' });
+    tone({ freq: 1568, slide: 1760, dur: 0.12, vol: 0.07, type: 'triangle', delay: 0.045 });
+  },
+  back: () => tone({ freq: 740, slide: 440, dur: 0.12, vol: 0.07, type: 'triangle' }),
+  open: () => noise({ dur: 0.28, vol: 0.08, freq: 600, slide: 4200, q: 3 }),
+  error: () => tone({ freq: 196, slide: 160, dur: 0.18, vol: 0.06, type: 'square' }),
+  // pressing start on the title screen: a rising sweep, a chord and a deep note
+  start: () => {
+    noise({ dur: 1.6, vol: 0.2, freq: 180, slide: 5200, q: 5 });
+    [0, 0.12, 0.24, 0.36].forEach((d, i) => tone({ freq: [262, 392, 523, 784][i], type: 'triangle', dur: 1.6, vol: 0.08, delay: d, attack: 0.04 }));
+    tone({ freq: 65, slide: 130, type: 'sine', dur: 1.8, vol: 0.16, attack: 0.2 });
+  },
+
   // UI: soft wooden taps and little bells rather than computer bleeps
   tap: () => tone({ freq: 1500, dur: 0.035, vol: 0.035, type: 'sine' }),
   click: () => {

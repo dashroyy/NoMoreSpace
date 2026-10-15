@@ -10,7 +10,11 @@ import { rememberLook } from './extras.js';
 let rolePicks = null; // array of role ids when hand-picking
 let scriptHelp = false; // the "how this script plays" panel is open
 
+// ideas for the "finish the sentence" box (ARIA works the bio into the story if you get eaten)
+const BIO_HINTS = ['allergic to zero gravity', 'afraid of the ship cat', 'secretly the best at noodles', 'three raccoons in a trench coat', 'banned from the observation deck', 'convinced the hamsters are watching', 'definitely not a Parasite', 'powered entirely by snacks', 'on a first-name basis with the airlock', 'the reason the vending machine is broken'];
+
 export function initLobby({ onLeave }) {
+  $('lobby-bio').placeholder = BIO_HINTS[Math.floor(Math.random() * BIO_HINTS.length)];
   $('lobby-copy').addEventListener('click', () => {
     const url = `${location.origin}/?join=${store.state.code}`;
     navigator.clipboard?.writeText(url).then(() => toast('Invite link copied!'), () => prompt('Copy this link:', url));

@@ -108,6 +108,18 @@ const NIGHT_DEATH_LINES = [
   'Something slithered out of the reactor at midnight. {name} will not be attending breakfast.',
   'Medical log: {name}, deceased. Cause: "extremely rude alien". Time of death: way too early.',
   '{name} tried to pet the thing under the bed. It was not the ship cat.',
+  '{name} said the ship was totally safe, right up until the ship disagreed.',
+  '{name} followed a trail of glowing slime in the middle of the night. It was a short trail.',
+  "At 02:47 the intercom whispered {name}'s name. At 02:48 the intercom stopped, because {name} stopped answering.",
+  "The laundry droid found {name}'s socks, {name}'s helmet and a note that just said 'burp'.",
+  '{name} tried to hug the Parasite. In fairness, it hugged back.',
+  'The hamster wheel in Cargo is still spinning. {name} is not in it, which is the problem.',
+  '{name} opened the vent cover to ask if anyone was in there. Somebody was.',
+  '{name} went looking for the source of the humming. It was the Parasite, humming a little song about {name}.',
+  'ARIA would like to note that {name} ignored fourteen separate warnings. She does not enjoy being right this much.',
+  '{name} found a suspicious puddle and licked it for science. Science lost.',
+  'Whatever took {name} left the bunk made. Neatly. Corners tucked. It is a very tidy Parasite.',
+  '{name} followed the smell of fresh noodles into a dark corridor. The noodles were bait. The noodles are always bait.',
 ];
 
 const QUIET_NIGHT_LINES = [
@@ -115,6 +127,14 @@ const QUIET_NIGHT_LINES = [
   'A quiet night. Too quiet. The ship cat refuses to come out from under the reactor.',
   'Everyone wakes up. Everyone! The Parasite must be having an off night.',
   'The lights flickered, the hull groaned, and yet the whole crew made it to breakfast.',
+  'Nobody died. The Parasite is either scared, full, or running a very slow, very evil spreadsheet.',
+  'The whole crew wakes up complete, which is suspicious on a ship this haunted. ARIA has run the numbers twice and still does not like them.',
+  'A peaceful night. Somewhere in the vents, a Parasite is writing a strongly worded email to itself.',
+  'No victims tonight. The cleaning droid is thrilled. The ship cat is not buying it.',
+  'All present, all alive, all deeply suspicious of each other. Breakfast is going to be awkward.',
+  'The Parasite skipped a night. Experts say this is either mercy or a very elaborate plan.',
+  "Nothing happened. ARIA would like it noted that 'nothing' is extremely unusual for this ship.",
+  'Everyone made it to dawn, and every single one of them is looking at everyone else.',
 ];
 
 const EXECUTION_LINES = [
@@ -122,6 +142,16 @@ const EXECUTION_LINES = [
   '{name} is escorted to the airlock. Their last words: "You will regret this!" (Probably.)',
   'With a polite "mind the gap", the crew sends {name} into the void.',
   '{name} pirouettes out of the airlock. Ten out of ten for style.',
+  "{name} is airlocked with great ceremony and the world's smallest violin.",
+  "The crew votes, the hatch opens, and {name} departs for the black hole in what ARIA calls 'a bold exit'.",
+  '{name} drifts away, still explaining in great detail why this is a mistake. The vacuum does not care.',
+  '{name} grabs the doorframe, then the door, then briefly the cat, and is finally airlocked. Eleven out of ten for grip.',
+  "As the hatch closes, {name} mouths 'I am telling the captain', and floats off into the dark.",
+  '{name} leaves by the airlock with a salute, a shrug and one very passionate interpretive dance.',
+  'The airlock cycles. {name} is gone. The crew votes to feel bad about it later.',
+  "{name} is shown the airlock and says 'Fine, I will walk.' There is no floor out there, but it was a nice thought.",
+  "A small cheer, a small gasp and a very small 'oops'. {name} is now a spaceman in the technical sense.",
+  '{name} waves goodbye from the hatch, which is brave, and also the last thing {name} does with air.',
 ];
 
 const NIGHT_ANIMS = ['consumed', 'spaghettified', 'abducted', 'melted', 'confetti', 'frozen', 'duck', 'floataway', 'balloon', 'disco', 'tiny', 'rocket'];
@@ -137,11 +167,22 @@ const BIO_DEATH_LINES = [
   '{name}, famously {bio}, went to check a noise in the vents. The vents won.',
   'Here lies {name}: {bio}, and now also deceased.',
   'Ship log: {name} ({bio}) was taken in the night. The Parasite left a one-star review.',
+  'Doctors say {name} was {bio} until quite recently. Now {name} is mostly a rumour.',
+  'It is a sad day. {name}, a person who was {bio}, did not come out of the vents.',
+  'Last night, {name}, proudly {bio}, met something that was not.',
+  '{name}, who is {bio}, will be remembered fondly, and also for the sound.',
+  'They say being {bio} builds character. It did not build escape routes, {name}.',
 ];
 
 const BIO_EXECUTION_LINES = [
   '{name}, who is {bio}, is shown the airlock. The airlock is not impressed.',
   'Being {bio} was not enough to save {name}. Out they go.',
+  '{name}, who is {bio}, protests all the way to the hatch. Being {bio} is not a defence in space law.',
+  'The crew regrets this deeply. {name} is {bio}, after all. Out they go anyway.',
+  'Look, {name} is lovely, and {bio}, but the vote is the vote.',
+  '{name}, {bio} to the last, is shown the hatch. The hatch is not {bio}. The hatch is just a hatch.',
+  "'I am {bio}!' says {name}. 'We know,' says the crew, and presses the button.",
+  'Nobody thought {name}, who is {bio}, was evil. Nobody thought that hard, either.',
 ];
 
 function fillBio(template, name, bio) {
@@ -159,6 +200,12 @@ const CARNIVAL_NIGHT_DEATH_LINES = [
   '{name} took the Ghost Train alone. The Ghost Train says it was not alone.',
   'Somebody found {name}\'s big shoes in the ball pit. Just the shoes.',
   'The Parasite did a card trick: "Pick a card, any card." It picked {name}.',
+  '{name} tried to ride the carousel backwards. The carousel took it personally.',
+  '{name} went to win the giant teddy bear. The giant teddy bear won.',
+  'The Parasite wore the balloon-animal costume last night. {name} is now, regrettably, a balloon animal.',
+  '{name} followed a trail of popcorn into the dark side of the big top. The popcorn was a trap.',
+  'The tightrope walker reports a gap in the show where {name} used to be. Everyone is pretending not to see it.',
+  "{name} stuck their head in the lion's mouth for a laugh. The lion, a professional, did not find it funny.",
 ];
 
 const CARNIVAL_QUIET_NIGHT_LINES = [
@@ -166,6 +213,10 @@ const CARNIVAL_QUIET_NIGHT_LINES = [
   'A quiet night under the canvas. Even the clowns are suspicious.',
   'Not a single act went missing. The audience feels strangely cheated.',
   'The lights flickered over the midway, and yet the whole troupe made it to breakfast.',
+  'Not one clown went missing. The clowns are insulted.',
+  'The calliope played the whole night and nobody screamed. The ringmaster would like a refund on the dread.',
+  'A quiet night under the canvas. The Parasite is probably practising its juggling.',
+  'Every act is accounted for. The audience, which is also the troupe, is quietly furious.',
 ];
 
 const CARNIVAL_EXECUTION_LINES = [
@@ -173,6 +224,11 @@ const CARNIVAL_EXECUTION_LINES = [
   'With a drumroll and a rude noise, the troupe sends {name} out of the big top for good.',
   '{name} takes a bow, and the trapdoor takes {name}.',
   '{name} is escorted to the airlock. "I was only the dancing bear!" they protest. (Nobody believes them.)',
+  '{name} is driven out of the airlock in a tiny car, honking, with twenty-three clowns who were not invited.',
+  'The troupe holds a very short, very silly funeral. {name} gets a custard pie as a send-off.',
+  '{name} makes a dramatic exit through the trapdoor, which is a little more dramatic than planned.',
+  'With a flourish, a cymbal crash and an unfortunate squeak, {name} is shown out of the show.',
+  'The crew pulls the lever, the floor drops, and {name} lands in the void with a honk.',
 ];
 
 // A little extra when the Magician brings someone back.
@@ -180,6 +236,11 @@ const REVIVE_LINES = [
   'Then, in a puff of glitter, {name} steps out of the Magician\'s cabinet and takes a bow. Nobody asked how.',
   'A wand flashes, a rabbit looks embarrassed, and {name} is somehow alive again.',
   'And then, with a drumroll nobody ordered, {name} came back from the void. Please do not ask questions.',
+  'A cloud of confetti, one startled pigeon, and there is {name}, back from the dead and a little embarrassed.',
+  "The Magician says 'Ta-da!' and {name} says 'I was in the middle of something.'",
+  '{name} reappears wearing a cape that does not belong to them. The Magician says to ask no questions.',
+  'It was a bit of a trick, mostly mirrors, partly glue, and {name} is back. Applause is optional.',
+  '{name} is back. They would like it on record that the afterlife has very poor snacks.',
 ];
 
 function reviveStory(name, random = Math.random) {
@@ -194,6 +255,10 @@ const OUTBREAK_BURST_LINES = [
   'The fever took {name} at 03:00. All that is left is a bright green smear and a faint smell of mushrooms.',
   '{name} was sneezing glitter at midnight. By dawn, the glitter was all that remained.',
   'Something in {name} bloomed in the night. It was not a flower.',
+  '{name} sneezed once, and then not at all. The mop bucket has been called.',
+  "The lab report on {name} simply reads 'ew'.",
+  'By morning, {name} had bloomed into something not covered by the staff handbook.',
+  '{name} went to the vending machine at midnight. The vending machine gave {name} a spore, and kept the change.',
 ];
 
 const OUTBREAK_QUIET_NIGHT_LINES = [
@@ -201,6 +266,9 @@ const OUTBREAK_QUIET_NIGHT_LINES = [
   'Nobody burst overnight. The lab smells of disinfectant and held breath.',
   'The fever dreams passed, and every bunk is still occupied. The Carrier must be feeling patient.',
   'No bursts, no screams, no mess. The janitor is deeply suspicious.',
+  'A peaceful night, apart from the usual coughing. Somebody has been coughing since Tuesday. It is getting concerning.',
+  'No new cases. The decontamination officer is dancing, quietly, in the corridor.',
+  'Everybody is still themselves, probably. The Carrier is playing the long game, and washing its hands very loudly.',
 ];
 
 const OUTBREAK_EXECUTION_LINES = [
@@ -208,6 +276,10 @@ const OUTBREAK_EXECUTION_LINES = [
   '{name} is led to the airlock in a hazmat suit two sizes too small. "I feel fine!" they protest. (That is exactly what an infected person would say.)',
   'With a hiss of disinfectant, the airlock cycles and {name} goes out into the Bloom.',
   '{name} is quarantined... permanently. The door is welded shut by committee.',
+  '{name} is decontaminated, re-decontaminated and then, for good measure, decontaminated. The airlock does the rest.',
+  '{name} is sent out of the hatch with a surgical mask and a heartfelt apology from the committee.',
+  "'It is just a cold!' cries {name}. The committee notes that is exactly what the cold would say.",
+  '{name} is shown out, wrapped in six layers of hazard tape, to a single sad round of applause.',
 ];
 
 // The Citadel of Traitors' stories: murders, quiet nights and banishments.
@@ -218,6 +290,10 @@ const TRAITORS_MURDER_LINES = [
   'A black envelope lay unopened on {name}\'s bed. So was {name}\'s breakfast.',
   '{name} went to fetch a candle and never came back. The candle did.',
   'The Round Table is one chair short this morning. The chair belonged to {name}.',
+  '{name} left the great hall last night to find the bathroom. The Citadel has a lot of bathrooms, and apparently one of them has a Traitor.',
+  'The Faithful woke to a raven on the windowsill and a very quiet room where {name} used to be.',
+  'A velvet glove lay on the stairs, a trail of crumbs led away, and {name} did not come to breakfast.',
+  "{name} said 'I am sure I am safe, I am extremely Faithful.' The Traitors were very impressed, and also hungry.",
 ];
 
 const TRAITORS_QUIET_NIGHT_LINES = [
@@ -225,6 +301,9 @@ const TRAITORS_QUIET_NIGHT_LINES = [
   'The night passed with a thud and a creak, and no body. The Traitors will have some explaining to do to each other.',
   'No murder. The Traitors are either very clever, very cruel or very confused.',
   'Every chair at the Round Table is full this morning. Somebody is smiling a little too widely.',
+  "No murder tonight. The Traitors are bickering over whose turn it was. It was nobody's. They forgot.",
+  'The cloaks stayed on their hooks and every plate is full. The Prize Pot is not impressed.',
+  'A whole night with no murders. Somebody in the Citadel is very pleased with themselves.',
 ];
 
 const TRAITORS_BANISH_LINES = [
@@ -232,6 +311,10 @@ const TRAITORS_BANISH_LINES = [
   'The Round Table has spoken. {name} puts down their goblet, bows once, and is escorted out into the night.',
   '"I have nothing to hide," says {name}, which is exactly what everyone says. The gate swings open.',
   '{name} is banished from the Citadel by a very small majority and a very large silence.',
+  '{name} is escorted out of the gate to the sound of a very long organ chord and a very short sneeze.',
+  'The Banishment Gate creaks open. {name} bows to the crowd, adjusts their cloak, and gets a polite round of boos.',
+  '{name} is sent into the night with a candle, a sandwich and no clear plan.',
+  "The vote is in, the gate is open, and {name} makes a final speech that is mostly 'this is a mistake' repeated.",
 ];
 
 // The Daredevil's luck runs out (told the same way in every script).
@@ -242,6 +325,10 @@ const DAREDEVIL_LINES = [
   '{name} was found upside down in the vents, grinning, and unfortunately very dead.',
   'The last words of {name}, logged by the cleaning droid: "hold my helmet."',
   '{name} said "what is the worst that could happen?" The ship was happy to answer.',
+  '{name} attempted a triple backflip over the reactor. Gravity attempted a very firm no.',
+  "{name} said 'what could go wrong?' and then started a list.",
+  "{name}'s stunt helmet was found intact. The rest of the stunt was found elsewhere.",
+  '{name} tried to skateboard down the airlock ramp. The ramp was, tragically, not a ramp.',
 ];
 
 function dawnStory(dead, random = Math.random, scriptId = 'classic') {
@@ -264,6 +351,24 @@ function executionStory(name, random = Math.random, bio = '', scriptId = 'classi
 const SHIP_NAMES = [
   'The Wobbly Goose', 'The Last Biscuit', 'HMS Questionable', 'The Space Noodle', 'SS Probably Fine',
   'The Cosmic Kettle', 'The Doomed Duckling', 'The Midnight Snack', 'The Gravity Skeptic', 'The Unsinkable II',
+  'The Soggy Biscuit',
+  'HMS Oops',
+  'The Flying Colander',
+  'SS Not Today',
+  'The Reluctant Comet',
+  'The Tin of Doom',
+  'The Unlucky Teapot',
+  'The Mildly Haunted',
+  'The Rusty Pickle',
+  'SS Please Hold',
+  'The Nervous Wreck',
+  'The Wobbly Cheese',
+  'The Lost Sock',
+  'HMS Not My Fault',
+  'The Brave Little Toaster',
+  'The Void Mitten',
+  'SS Free Gravity',
+  'The Cosmic Casserole',
 ];
 
 function shipName(random = Math.random) {

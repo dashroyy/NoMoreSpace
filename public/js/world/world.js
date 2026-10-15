@@ -120,6 +120,11 @@ export class World {
     this.keys = new Set();
     this.joy = { x: 0, z: 0 };
     this.phase = 'home';
+    this.homeD = 1; // how far out the title camera is (1 = the usual distance); the start screen holds it far away
+    this.homeWant = 1;
+    this.titleMenu = true; // false on the start screen: the ship stays in the middle until the menu comes up
+    this.shiftX = 0; // the title screen slides the ship across, clear of the menu (a fraction of the screen)
+    this.shiftY = 0;
     this.myId = null;
     this.spectator = false;
     this.sendTimer = 0;
@@ -614,9 +619,11 @@ export class World {
     const z = this.zoom;
     if (this.phase === 'home') {
       // title screen: a slow orbit high above the ship, the black hole glowing below
+      this.homeD += (this.homeWant - this.homeD) * (1 - Math.exp(-dt * 0.9));
       const a = this.clock.elapsedTime * 0.04;
+      const d = this.homeD;
       target.set(0, -20, 6);
-      offset.set(Math.sin(a) * 70, 85, Math.cos(a) * 70);
+      offset.set(Math.sin(a) * 70 * d, 85 * d, Math.cos(a) * 70 * d);
     } else if (this.phase === 'night') {
       target.set(0, 0, 4);
       offset.set(Math.sin(this.clock.elapsedTime * 0.05) * 30, 70, 55);
@@ -647,6 +654,34 @@ export class World {
       this.camera.position.y += (Math.random() - 0.5) * a;
     }
     this.camera.lookAt(this.camTarget);
+    this.shiftView(dt);
+  }
+
+  // The title screen: the menu is on the left (or along the bottom on a phone), so slide the whole picture over
+  // to the empty side instead of having the ship hide behind the menu.
+  shiftView(dt) {
+    const home = this.phase === 'home' && this.titleMenu;
+    const wide = innerWidth > 820;
+    const k = 1 - Math.exp(-dt * 3);
+    this.shiftX += ((home && wide ? 0.22 : 0) - this.shiftX) * k;
+    this.shiftY += ((home && !wide ? 0.17 : 0) - this.shiftY) * k;
+    if (Math.abs(this.shiftX) + Math.abs(this.shiftY) > 0.001) {
+      const w = innerWidth;
+      const h = innerHeight;
+      this.camera.setViewOffset(w, h, -this.shiftX * w, this.shiftY * h, w, h);
+    } else if (this.camera.view?.enabled) this.camera.clearViewOffset();
+  }
+
+  // the start screen: far out over the ship...
+  titleShot() {
+    this.homeD = this.homeWant = 2.7;
+    this.titleMenu = false;
+  }
+
+  // ...and, on "Press any key", the dive in to the title view
+  swoopIn() {
+    this.homeWant = 1.12;
+    this.titleMenu = true;
   }
 
   updateAmbience(dt, t) {

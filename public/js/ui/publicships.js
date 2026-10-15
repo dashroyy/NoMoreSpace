@@ -1,7 +1,9 @@
 // 🌐 Public ships: ships whose host opened them to everyone. Join one from the
 // title screen when your own group is short of players (games already under
 // way are joined as a spectator, who becomes crew at the next rematch).
-import { $, el, problem } from '../util.js';
+import { el, problem } from '../util.js';
+import { getCallsign, setCallsign } from './callsign.js';
+import { askName } from './menu.js';
 import { send, store } from '../store.js';
 import { openModal } from './rolecard.js';
 import { sfx } from '../audio.js';
@@ -23,12 +25,10 @@ export function openPublicShips({ look } = {}) {
 }
 
 function row(s, look) {
-  const join = () => {
-    const name = $('home-name').value.trim();
-    if (!name) {
-      problem('Type your name on the title screen first.');
-      return;
-    }
+  const join = async () => {
+    const name = getCallsign() || (await askName(''));
+    if (!name) return;
+    setCallsign(name);
     send('join', { code: s.code, name, look: look?.() }).then(() => sfx('whoosh')).catch((e) => problem(e.message));
   };
   return el('div', { className: 'ship-row' },
