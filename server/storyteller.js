@@ -234,6 +234,16 @@ const TRAITORS_BANISH_LINES = [
   '{name} is banished from the Citadel by a very small majority and a very large silence.',
 ];
 
+// The Daredevil's luck runs out (told the same way in every script).
+const DAREDEVIL_LINES = [
+  '{name} tried to fly the shuttle through the reactor coolant ring. For the first time in history, it did not work.',
+  '{name} shouted "watch this!" at 03:00. Nobody was awake to watch it.',
+  '{name} bet the ship cat they could surf an airlock door. The cat now owns all of {name}\'s snacks.',
+  '{name} was found upside down in the vents, grinning, and unfortunately very dead.',
+  'The last words of {name}, logged by the cleaning droid: "hold my helmet."',
+  '{name} said "what is the worst that could happen?" The ship was happy to answer.',
+];
+
 function dawnStory(dead, random = Math.random, scriptId = 'classic') {
   const carnival = scriptId === 'carnival';
   const outbreak = scriptId === 'outbreak';
@@ -242,7 +252,7 @@ function dawnStory(dead, random = Math.random, scriptId = 'classic') {
   const lines = traitors ? TRAITORS_MURDER_LINES : outbreak ? OUTBREAK_BURST_LINES : carnival ? CARNIVAL_NIGHT_DEATH_LINES : NIGHT_DEATH_LINES;
   return dead
     .map((d) => (typeof d === 'string' ? { name: d } : d))
-    .map(({ name, bio }) => (bio && random() < 0.7 ? fillBio(pick(BIO_DEATH_LINES, random), name, bio) : fill(pick(lines, random), name)))
+    .map(({ name, bio, cause }) => (cause === 'daredevil' ? fill(pick(DAREDEVIL_LINES, random), name) : bio && random() < 0.7 ? fillBio(pick(BIO_DEATH_LINES, random), name, bio) : fill(pick(lines, random), name)))
     .join(' ');
 }
 
@@ -277,7 +287,7 @@ function losingTeam(game) {
   const deadEvil = evil.filter((p) => !p.alive).length;
   const crewPressure = (total - alive) / Math.max(1, total - 2);
   let evilPressure = deadEvil / Math.max(1, evil.length);
-  const parasite = game.players.find((p) => p.role === 'parasite');
+  const parasite = game.players.find((p) => ROLES[p.role].type === 'parasite');
   if (parasite && game.lastParasiteVotes >= Math.ceil(alive / 2)) evilPressure += 0.35;
   return crewPressure >= evilPressure ? 'crew' : 'infiltrators';
 }
@@ -311,7 +321,7 @@ function makeClue(game, random = Math.random, forced = null) {
     return { kind, team, players: chosen.map((p) => p.id), caption: 'Three comets streak past the hull. One of them carries spores.' };
   }
   if (kind === 'probe') {
-    const notParasite = living.filter((p) => p.role !== 'parasite');
+    const notParasite = living.filter((p) => ROLES[p.role].type !== 'parasite');
     const target = pick(notParasite.length ? notParasite : living, random);
     return { kind, team, players: [target.id], caption: 'A derelict probe drifts by, its beacon blinking a familiar colour. It hums: "this one is not the hunger".' };
   }
@@ -358,6 +368,7 @@ module.exports = {
   validateRoles,
   otherNumber,
   dawnStory,
+  DAREDEVIL_LINES,
   shipName,
   executionStory,
   nightDeathAnim,

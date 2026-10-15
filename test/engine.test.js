@@ -68,7 +68,7 @@ test('role lists follow the setup table for every player count and seed', () => 
     for (let seed = 1; seed <= 25; seed++) {
       const roles = st.pickRoles(n, seeded(seed));
       assert.strictEqual(st.validateRoles(roles, n), null, `n=${n} seed=${seed}: ${roles}`);
-      assert.strictEqual(roles.filter((r) => r === 'parasite').length, 1);
+      assert.strictEqual(roles.filter((r) => ROLES[r].type === 'parasite').length, 1, 'exactly one Demon (the Parasite, or sometimes the Cuckoo)');
       for (const r of roles) assert.ok(ROLES[r].minPlayers <= n, `${r} unlocked too early at ${n}`);
       const crew = roles.filter((r) => ROLES[r].type === 'crew');
       const info = crew.filter((r) => ROLES[r].tags.includes('info'));

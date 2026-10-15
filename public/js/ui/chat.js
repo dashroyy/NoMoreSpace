@@ -165,6 +165,8 @@ export function updateChatVisibility(state) {
     lastwords: 'Everyone is listening…',
     ended: 'GG! Chat with everyone…',
   }[state.phase];
-  $('chat-input').placeholder = you?.isCaptain ? 'Captain: speak to everyone…' : placeholder || 'Say something…';
+  const silenced = !!you?.silenced;
+  $('chat-input').placeholder = silenced ? '🤐 You are the Mime: no talking! Use emotes and your vote' : you?.isCaptain ? 'Captain: speak to everyone…' : placeholder || 'Say something…';
+  $('chat-input').disabled = silenced;
   $('night-evil').hidden = !(evil && state.phase === 'night');
 }

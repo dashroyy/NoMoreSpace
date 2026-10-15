@@ -181,7 +181,7 @@ function updateVolumes() {
   if (!state || !enabled) return;
   const phase = state.phase;
   const night = phase === 'night';
-  localStream?.getAudioTracks().forEach((t) => (t.enabled = !night || !!state.you?.isCaptain));
+  localStream?.getAudioTracks().forEach((t) => (t.enabled = (!night || !!state.you?.isCaptain) && !state.you?.silenced)); // (the Mime has no voice)
   const pos = world?.positions() || {};
   const mine = pos[store.me];
   const captainId = state.you?.isCaptain ? store.me : null;

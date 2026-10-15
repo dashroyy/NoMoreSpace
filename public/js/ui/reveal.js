@@ -196,7 +196,7 @@ export class Reveal {
         for (const d of ch.deaths || []) steps.push({ dur: 2.4, focus: d.id, caption: d.cause === 'burst' ? `🦠 ${name(d.id)} burst in a cloud of glowing spores.` : `💀 ${name(d.id)} did not wake up.`, enter: () => this.kill(d.id, d.anim) });
       }
       if (ch.k === 'day') {
-        const interesting = ch.events.filter((e) => ['nomination', 'execute', 'shot', 'sentinel', 'become-parasite', 'story', 'system', 'net', 'pie', 'hexed', 'spores', 'shield', 'recruited'].includes(e.k) && !(e.k === 'nomination' && e.result === 'safe' && e.votes < 2));
+        const interesting = ch.events.filter((e) => ['nomination', 'execute', 'shot', 'sentinel', 'become-parasite', 'story', 'system', 'net', 'jam', 'mastermind', 'pie', 'hexed', 'spores', 'shield', 'recruited'].includes(e.k) && !(e.k === 'nomination' && e.result === 'safe' && e.votes < 2));
         if (!interesting.length) continue;
         steps.push({ dur: 2, chapter: `DAY ${ch.n}`, caption: '', overview: true, enter: () => { sfx('dawn'); this.lighting('day'); } });
         for (const e of interesting) {
@@ -245,21 +245,22 @@ export class Reveal {
           tamed: `🦁 The Parasite (${name(e.a)}) crept out to hunt, but ${name(e.by)} the Lion Tamer cracked the whip and stopped it cold!`,
           net: `🦑 The Parasite (${name(e.a)}) struck at ${name(e.t)}... and the Acrobat's safety net caught them! 🤸`,
           shield: `🗡️ The Head Traitor (${name(e.a)}) struck at ${name(e.t)}... but a Shield held!`,
+          hop: `🪺 The Cuckoo (${name(e.a)}) laid its egg in ${name(e.to)}, and died in the hatching!`,
         }[e.result];
-        return { dur: 3, focus: e.a, beam: [e.a, e.result === 'starpass' ? e.to || e.a : e.t, 0xc77dff], caption: text, enter: () => sfx('death') };
+        return { dur: 3, focus: e.a, beam: [e.a, e.result === 'starpass' || e.result === 'hop' ? e.to || e.a : e.t, 0xc77dff], caption: text, enter: () => sfx('death') };
       }
       case 'info': {
         const r = R[e.role];
         const who = this.cast.get(e.a);
         const drunk = who?.startRole === 'drunk';
         const mirror = this.state.history.find((h) => h.k === 'setup' && Object.values(h.roles).includes('reflection'));
-        const verdict = e.truthful ? '✔ TRUE' : drunk ? '✘ FALSE (they were the Space Drunk)' : mirror && R[who?.startRole]?.type === 'crew' ? '✘ FALSE (the Reflection\'s mirror lies!)' : e.sick ? '✘ FALSE (they were infected)' : '✘ FALSE (glitched by the Hacker)';
+        const verdict = e.role === 'conspiracy' ? (e.truthful ? '✔ a lucky tip!' : '✘ a wrong tip: that is how it goes') : e.role === 'pickpocket' ? (e.truthful ? '✔ a perfect copy' : '✘ nothing but lint (glitched)') : e.truthful ? '✔ TRUE' : drunk ? '✘ FALSE (they were the Space Drunk)' : mirror && R[who?.startRole]?.type === 'crew' ? '✘ FALSE (the Reflection\'s mirror lies!)' : e.sick ? '✘ FALSE (they were infected)' : '✘ FALSE (glitched by the Hacker)';
         return { dur: 3, focus: e.a, caption: `${r.icon} ${name(e.a)} the ${r.name} learned: “${e.text}” — ${verdict}`, enter: () => sfx(e.truthful ? 'blip' : 'buzz') };
       }
       case 'blackbox':
         return { dur: 3, focus: e.a, beam: [e.a, e.t, 0xffb547], caption: `📼 ${name(e.a)}'s Black Box flickered: “${e.text}” ${e.truthful ? '✔' : '✘ (false)'}`, enter: () => sfx('blip') };
       case 'become-parasite':
-        return { dur: 3, focus: e.a, caption: e.cause === 'succession' ? `🦇 With the Head Traitor gone, ${name(e.a)} takes the cloak!` : `🥚 ${name(e.a)} became the new ${themeInfo(this.state.script).demonName.replace(/^The /, '')}!`, enter: () => this.transform(e.a) };
+        return { dur: 3, focus: e.a, caption: e.cause === 'succession' ? `🦇 With the Head Traitor gone, ${name(e.a)} takes the cloak!` : `🥚 ${name(e.a)} became the new ${(e.role && R[e.role]?.name) ? R[e.role].name.replace(/^The /, '') : themeInfo(this.state.script).demonName.replace(/^The /, '')}!`, enter: () => this.transform(e.a) };
       case 'recruit': {
         const text = {
           offered: `✉️ ${name(e.a)} the Recruiter slid a black envelope under ${name(e.t)}'s door.`,
@@ -289,18 +290,25 @@ export class Reveal {
           hazmat: `🦠 ${who} (${name(e.a)}) tried to infect ${name(e.t)}, but the Hazmat suit kept the spores out!`,
           already: `🦠 ${who} (${name(e.a)}) breathed on ${name(e.t)}, who was already sick.`,
           glitched: `🦠 ${who} (${name(e.a)}) tried to infect someone, but its systems were glitched!`,
+          immune: `🦠 ${who} (${name(e.a)}) breathed on ${name(e.t)}, an Antibody, who just shrugged it off.`,
           gone: `🦠 ${who} (${name(e.a)}) found nobody to infect.`,
         }[e.result];
         return { dur: 3, focus: e.a, beam: e.t ? [e.a, e.t, 0x7dff3a] : null, caption: text, enter: () => sfx(e.result === 'infected' ? 'death' : 'buzz') };
       }
       case 'vaccinate':
-        return { dur: 2.6, focus: e.a, beam: [e.a, e.t, 0x7dffb0], caption: `💉 ${name(e.a)} the Vaccinator jabbed ${name(e.t)}${e.works === false ? '... but the needle was jammed.' : '.'}`, enter: () => sfx('chime') };
+        return { dur: 2.6, focus: e.a, beam: [e.a, e.t, 0x7dffb0], caption: `💉 ${name(e.a)} the Vaccinator jabbed ${name(e.t)}${e.blocked ? '... but the Pharmacist had sold them a fake cure.' : e.works === false ? '... but the needle was jammed.' : '.'}`, enter: () => sfx('chime') };
       case 'cure':
         return { dur: 2.6, focus: e.t, caption: `✨ ${name(e.t)}'s fever broke: CURED!`, enter: () => sfx('fanfare') };
       case 'donate':
         return { dur: 3, focus: e.a, beam: [e.a, e.t, 0xff6b8b], caption: e.works ? `🩸 ${name(e.a)} the Blood Donor gave their blood to ${name(e.t)}... and caught the sickness in return!` : `🩸 ${name(e.a)} the Blood Donor offered blood to ${name(e.t)}... but it did nothing.`, enter: () => sfx('chime') };
       case 'fever':
         return { dur: 2.6, focus: e.a, beam: [e.a, e.t, 0xd9a0ff], caption: `🎭 ${name(e.a)} the Quack Doctor told ${name(e.t)} they had a fever${e.works === false ? '... but the thermometer was glitched.' : '. (They did not. They are very worried now.)'}`, enter: () => sfx('whisper') };
+      case 'frame':
+        return { dur: 2.8, focus: e.a, beam: [e.a, e.t, 0xff8fd8], caption: `🖼️ ${name(e.a)} the Framer made ${name(e.t)} look exactly like the Parasite${e.works === false ? '... but the frame was glitched.' : '. (They are going to have a very bad day.)'}`, enter: () => sfx('whisper') };
+      case 'sell':
+        return { dur: 2.6, focus: e.a, beam: [e.a, e.t, 0xd9a0ff], caption: `💊 ${name(e.a)} the Black-Market Pharmacist sold ${name(e.t)} a very convincing placebo${e.works === false ? '... but the shop was glitched.' : ': no vaccine will work on them tonight.'}`, enter: () => sfx('whisper') };
+      case 'daredevil':
+        return { dur: 2.8, focus: e.a, caption: `🎢 ${name(e.a)} the Daredevil said "watch this!" at 03:00. Nobody was awake to watch it.`, enter: () => sfx('death') };
       case 'revive':
         return { dur: 3, focus: e.t || e.id, beam: e.t ? [e.a, e.t, 0xfff3b0] : null, caption: e.t ? `🎩 ${name(e.a)} the Magician waved a wand over ${name(e.t)}${e.works ? '... and they came BACK from the dead!' : '... but nothing happened.'}` : `🎩 ${name(e.id)} came back from the dead!`, enter: () => { sfx(e.works === false ? 'buzz' : 'fanfare'); if (e.works) this.revive(e.t); } };
       default:
@@ -335,6 +343,10 @@ export class Reveal {
         return { dur: 3.2, focus: e.t, beam: [e.a, e.t, 0xd9a0ff], caption: e.accepted ? `🐍 ${name(e.t)} accepted the offer and became a Traitor!` : `✋ ${name(e.t)} refused the offer.`, enter: () => { sfx(e.accepted ? 'death' : 'chime'); if (e.accepted) this.transform(e.t, 'recruit'); } };
       case 'spores':
         return { dur: 3, focus: e.id, beam: [e.id, e.t, 0x7dff3a], caption: `🍄 As ${name(e.id)} the Spore Host went out of the airlock, a cloud of spores caught ${name(e.t)}!`, enter: () => sfx('death') };
+      case 'jam':
+        return { dur: 3.4, focus: e.id, beam: e.by ? [e.by, e.id, 0x9ad8ff] : null, caption: `🤝 ${name(e.id)} was airlocked... and the Peacekeeper's hatch JAMMED! They were good, and they are still here.`, enter: () => sfx('fanfare') };
+      case 'mastermind':
+        return { dur: 3.6, focus: e.a, caption: `🧠 The Parasite went out of the airlock... and ${name(e.a)} the Mastermind smiled. One more day, and the crew had to pick a Saboteur.`, enter: () => sfx('doom') };
       case 'net':
         return { dur: 3.4, focus: e.id, caption: `🤸 ${name(e.id)} was airlocked... and the Acrobat's safety net bounced them right back!`, enter: () => sfx('fanfare') };
       case 'hexed':
@@ -356,6 +368,7 @@ export class Reveal {
           spoof: `👾 ${name(e.a)} sent a fake message pretending to be ${name(e.t)}!`,
           disguise: `🎭 ${name(e.a)} disguised themself as ${name(e.t)}!`,
           blackout: `🌑 ${name(e.a)} cut the lights!`,
+          jam: `📻 ${name(e.a)} jammed ${name(e.t)}'s chat with static: they talked, and nobody heard a word.${dud}`,
         }[e.sys];
         return text ? { dur: 2.6, focus: e.a, beam: e.t ? [e.a, e.t, 0xc77dff] : null, caption: text, enter: () => sfx('chime') } : null;
       }

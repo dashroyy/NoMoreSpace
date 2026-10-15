@@ -82,7 +82,7 @@ The big idea: **every role has a moment on stage**. The roles that matter are pu
 | 🧙 Hexer | Saboteur | Witch | Each night, hex a player: if they nominate tomorrow, they die. |
 | 🪞 The Reflection | Demon | Vortox | All Crew clues are false. If a day ends with nobody airlocked, evil wins. |
 
-The script also borrows seven Crew roles from Black Hole Blues (Engineer, Scanner, Coroner, Medic, Black Box, First Officer, Gunner) and four staples (Space Drunk, Stowaway, Hacker, Incubator). That makes 13 Crew, 4 Drifters, 5 Saboteurs and 2 Demons.
+The script also borrows seven Crew roles from Black Hole Blues (Engineer, Scanner, Coroner, Medic, Black Box, First Officer, Gunner) and four staples (Space Drunk, Stowaway, Hacker, Incubator). That made 13 Crew, 4 Drifters, 5 Saboteurs and 2 Demons; the second wave (see below) added 2 Crew (Barker, Pathfinder), 3 Drifters (Daredevil, Mime, Conspiracy Theorist) and 3 Saboteurs (Signal Jammer, Framer, Pickpocket): 15, 7, 8 and 2.
 
 One of the two Demons is in play: the Parasite, or (7+ players, about 4 games in 10) the Reflection. Nobody is told which.
 
@@ -134,7 +134,7 @@ The big idea: **the Demon does not kill, it infects.** A Parasite makes a death 
 | 🍄 Spore Host | Saboteur | Psychopath | If airlocked, the player who nominated them is infected. |
 | 🦠 The Carrier | Demon | Pukka | Each night, infect a player. If it dies, evil loses. |
 
-The script also borrows eight Crew roles (Engineer, Scanner, Coroner, Black Box, First Officer, Gunner, Comms Officer, Security), two Drifters (Space Drunk, Stowaway) and two Saboteurs (Hacker, Incubator).
+The script also borrows eight Crew roles (Engineer, Scanner, Coroner, Black Box, First Officer, Gunner, Comms Officer, Security), two Drifters (Space Drunk, Stowaway) and two Saboteurs (Hacker, Incubator). The second wave added five Crew (Quartermaster, Diagnostics Tech, Pathfinder, Peacekeeper, Sniffer Dog), two Drifters (Daredevil, Antibody) and three Saboteurs (Mastermind, Pickpocket, Black-Market Pharmacist): 18 Crew, 6 Drifters, 8 Saboteurs and the Carrier.
 
 ### Why it should be fun
 
@@ -186,7 +186,7 @@ Based on the TV game show *The Traitors*. The big idea: **the show's own rules, 
 | 🐍 Recruit | Traitor | Minion | A Faithful who accepted an offer. Never dealt at the start. |
 | 🦇 The Head Traitor | Demon | Imp | Each night (not night 1), murder a player. If banished, another Traitor takes the cloak. |
 
-The script also borrows seven Faithful roles (Comms Officer, Archivist, Security, Navigator, Engineer, Coroner, Black Box), two Drifters (Space Drunk, Stowaway) and one Traitor (Hacker). It needs **7 or more players** (the show needs enough guests for a Round Table).
+The script also borrows seven Faithful roles (Comms Officer, Archivist, Security, Navigator, Engineer, Coroner, Black Box), two Drifters (Space Drunk, Stowaway) and one Traitor (Hacker). It needs **7 or more players** (the show needs enough guests for a Round Table). The second wave added three Faithful (Quartermaster, Pathfinder, Cupbearer), a Drifter (Conspiracy Theorist) and two Traitors (Framer, Pickpocket): 24 roles in all.
 
 ### Why it should be fun
 
@@ -206,6 +206,55 @@ The script also borrows seven Faithful roles (Comms Officer, Archivist, Security
 - **The outside:** the whole station sits on a jagged floating crag with gold crystals in it. Round towers with conical roofs stand at the corners, a great keep with a beacon fire rises behind the Battlements, a drawbridge runs out from the Banishment Gate to a gatehouse and then a single plank over nothing at all, and ravens circle the towers.
 - **Sounds:** choir drones, wind and ravens under the moon; a tolling bell, a ticking clock, a crackling hearth, dripping water, chains, a night garden with crickets and an owl, a slow war drum at the Gate.
 - **Characters:** 3D models for all 9 roles in the end-game reveal, and replay captions for every recruit, gag, shield, unmasking and succession.
+
+## 🆕 The second wave: 17 new roles
+
+Every script got new roles: Black Hole Blues 11, Cosmic Carnival 8, Outbreak 10 and the Citadel 6 (some are shared). That includes **six new evil roles** and a **second Demon** for Black Hole Blues. A few are cousins of Blood on the Clocktower characters (the *Inspired by* column), some were made up for this game, and five only make sense **online**.
+
+All of them live in `server/roles-extra.js`; each script lists the ones it uses in `server/scripts.js`.
+
+| Role | Type | On | Inspired by | What it does |
+|---|---|---|---|---|
+| 🗃️ Quartermaster | Crew | 🕳️ 🦠 🗡️ | Seamstress | Once per game, choose 2 players: learn if they are on the same team. |
+| 🧰 Diagnostics Tech | Crew | 🕳️ 🦠 | Mathematician | Each night, learn how many abilities malfunctioned (glitched, infected, or the Space Drunk). |
+| 👣 Pathfinder | Crew | all four | *(online only)* | Each night\*, choose a player: learn every room they walked into today. |
+| 🤝 Peacekeeper | Crew | 🕳️ 🦠 | Pacifist | If a good player is airlocked, there is a 1 in 2 chance the hatch jams and they survive. |
+| 📣 Barker | Crew | 🎪 | Town Crier | Each night\*, learn if a Saboteur nominated today. |
+| 🐕 Sniffer Dog | Crew | 🦠 | *(original)* | Each night, learn how many of your 2 living neighbours are infected. |
+| 🍷 Cupbearer | Crew | 🗡️ | *(original)* | Each night, learn how many Traitors sit among the 3 guests across the Round Table. |
+| 🎢 Daredevil | Drifter | 🕳️ 🎪 🦠 | Tinker | You might die at any time (a small chance each night after the first, through any protection). |
+| 📌 Conspiracy Theorist | Drifter | 🕳️ 🎪 🗡️ | *(original)* | Each night, a tip about who the Demon is. Right one time in three. |
+| 🤐 Mime | Drifter | 🕳️ 🎪 | *(online only)* | You cannot speak while the ship is awake: no chat, no voice, no written claim note. |
+| 🧬 Antibody | Drifter | 🦠 | *(original)* | Cannot be infected, but Contact Tracers, Sniffer Dogs and Sensors see you as infected. |
+| 🧠 Mastermind | Saboteur | 🕳️ 🦠 | Mastermind | If the Parasite is airlocked, play on one more day: the crew must airlock a Saboteur, or evil wins. |
+| 📻 Signal Jammer | Saboteur | 🕳️ 🎪 | *(online only)* | Once per game, by day: for 75 seconds nothing a player types reaches anyone but them. They are not told. |
+| 🖼️ Framer | Saboteur | 🕳️ 🎪 🗡️ | *(original)* | Each night, a player looks like the Parasite to every scan, check and shot until the next night. |
+| 🧤 Pickpocket | Saboteur | 🎪 🦠 🗡️ | *(online only)* | Each night, read a copy of the message a player was sent (or learn they got none). |
+| 💊 Black-Market Pharmacist | Saboteur | 🦠 | *(original)* | Each night, no vaccine works on a player of your choice: cures and shields both fail. |
+| 🪺 The Cuckoo | Demon | 🕳️ | Fang Gu | Kills like the Parasite. Once per game, if it picks a Drifter, it dies and THEY become the Cuckoo. |
+
+### Online-only ideas
+
+These need a live ship, so they would not work on a table:
+
+- **Pathfinder** reads the same door sensors as the Archivist, but per *player* and every night: `recordVisit` notes every room each player enters while the ship is explored, and the Pathfinder asks about one player. A Blackout leaves no footprints. A glitched Pathfinder is shown rooms the player never entered.
+- **Mime** is a Drifter whose drawback is enforced by the server: the chat handler refuses their messages, `setClaim` drops their note, and the client locks their chat box and mutes their microphone. Robots obey the same rule. A dead Mime talks again as a ghost.
+- **Signal Jammer** is a *shadow mute*. `deliver` (the one place all public chat passes through) sends a jammed player's words back to them and to the Captain only. Nobody tells them; they just notice nobody answers.
+- **Pickpocket** copies the *actual* night message. On a table a Storyteller could do it, but never fairly or invisibly.
+- **Framer** works through registration (`reg`): while framed, a player is a Parasite to every check that asks, including the Gunner's shot. A framed player who gets airlocked looks like the Parasite to the Coroner too.
+
+### How the trickier ones work
+
+- **Mastermind.** When the Parasite is airlocked and a living, unglitched Mastermind is aboard, the win is held back (`checkWin`) and the game records `mastermind = { day }`. On a later day the next airlocking decides the game: a Saboteur and the crew wins, anyone else and evil wins. Nobody airlocked that day also loses. A jam or a safety net on that day does not save the crew (it is judged on who was airlocked, not on whether they died). If the Mastermind dies first, the crew wins at once.
+- **The Cuckoo.** Uses the Parasite's own "jump" machinery: the Cuckoo dies as `starpass` (so the Incubator does not take over), and the Drifter's role becomes `cuckoo`. The new Cuckoo is told who the Saboteurs are, and the Saboteurs are told who the new Cuckoo is. A Medic's protection stops the jump. It happens once per game (`cuckooHopped`).
+- **Peacekeeper.** In `execute`: a jam leaves the player alive (`dusk.survived`, cause `jam`), does not count as an airlocking (so the Coroner learns nothing) and works on the Ambassador. It never helps evil players.
+- **Daredevil.** 15% a night from night 2, rolled after every other death is known, ignoring protection. The dawn story has a Daredevil line of its own.
+- **Pharmacist.** Blocks both the Vaccinator's cure and shield, and the Blood Donor's swap, for that player that night. The Vaccinator is not told.
+- **Antibody.** `looksInfected` includes them (so the Tracer, Sniffer and Sensor count them); the Carrier and the Spore Host cannot infect them.
+
+### Robots and tests
+
+Robots know every new role: they compare a suspect with someone trusted (Quartermaster), frame whoever the crew listens to (Framer), read an info role's mail (Pickpocket), lay the egg in a Drifter (Cuckoo), jam an outsider (Signal Jammer), and the Mime stays silent. `test/newroles.test.js` covers every role's rules, plays about 100 whole games with each new role forced into a real cast, and plays a robot game for every role and script. `test/characters.test.js` checks that no two roles on one script share a 3D model.
 
 ## Making a new script
 

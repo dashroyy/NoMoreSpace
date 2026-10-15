@@ -309,6 +309,13 @@ function hearersOf(room, g, speakerId) {
 // Send a public (non-secret-channel) message, handling disguises, blackouts and eavesdroppers.
 function deliver(room, g, speakerId, message, { spoofedBy = null } = {}) {
   const now = Date.now();
+  if (!spoofedBy && g.shadowMuted(speakerId, now)) {
+    // static: they see their own words go out, and nobody else hears a thing (the Captain sees it all)
+    message.channel = hearersOf(room, g, speakerId).channel;
+    personSocket(room, speakerId)?.emit('chat', message);
+    if (g.captain) personSocket(room, g.captain.id)?.emit('chat', { ...message, name: `${message.name} (jammed)` });
+    return 0;
+  }
   const { channel, ids, room: where } = hearersOf(room, g, spoofedBy || speakerId);
   message.channel = channel;
   if (channel === 'near') {
@@ -604,6 +611,7 @@ io.on('connection', (socket) => {
       return { heard: ids.length - 1, channel: 'ghost' };
     }
     if (g.phase === 'night') throw new Error('Shh... everyone is asleep. (Draw something instead!)');
+    if (g.isSilent(me)) throw new Error('You are the Mime: you cannot speak. Use emotes, your claim and your vote!');
     g.noteChat(me);
     if (g.phase === 'lastwords' && g.lastWords?.id === me) {
       message.lastWords = true;
@@ -752,6 +760,7 @@ io.on('connection', (socket) => {
   }, { update: false });
   on('voice', ({ on: value }) => {
     if (!room) return;
+    if (value && room.game.isSilent(me)) return; // the Mime has no voice
     socket.to(room.code).emit('voice', { id: me, on: !!value });
   }, { update: false });
 
@@ -833,7 +842,7 @@ function botApi(room) {
   return {
     // proximity chat while exploring (only people nearby hear it)
     sayNear(p, text) {
-      if (room.game.phase !== 'roam') return;
+      if (room.game.phase !== 'roam' || room.game.isSilent(p.id)) return;
       room.game.noteChat(p.id);
       deliver(room, room.game, p.id, { from: p.id, name: p.name, text, at: Date.now(), ghost: !p.alive });
     },
@@ -848,6 +857,7 @@ function botApi(room) {
     say(p, text, extra = {}) {
       const g = room.game;
       if (!['dawn', 'meeting', 'nominations', 'lastwords', 'dusk', 'lobby', 'ended'].includes(g.phase)) return;
+      if (g.isSilent(p.id) || g.shadowMuted(p.id)) return; // a Mime says nothing, and a jammed robot is not heard
       const message = { from: p.id, name: p.name, text, at: Date.now(), ghost: !p.alive, channel: 'all', ...extra };
       g.noteChat(p.id);
       if (extra.lastWords) g.noteLastWords(p.id, text);

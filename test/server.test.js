@@ -74,7 +74,7 @@ test('serves the page, game data and Three.js, and blocks path tricks', async ()
   }));
   assert.strictEqual((await get('/')).status, 200);
   const data = JSON.parse((await get('/game-data.json')).body);
-  assert.strictEqual(Object.keys(data.roles).length, 55);
+  assert.strictEqual(Object.keys(data.roles).length, Object.keys(require('../server/roles').ROLES).length);
   assert.strictEqual((await get('/vendor/three/three.module.min.js')).status, 200);
   assert.notStrictEqual((await get('/..%2fpackage.json')).status, 200);
   assert.notStrictEqual((await get('/vendor/three/..%2f..%2f..%2fpackage.json')).status, 200);
@@ -113,7 +113,7 @@ test('the infiltrator channel only reaches infiltrators (7+ players)', async () 
   assert.ok((await call(host, 'start')).ok);
   await waitFor(() => latest(host).phase === 'night');
   const byId = (id) => players.find((c) => latest(c).you.id === id);
-  const evilIds = room.game.players.filter((p) => ['parasite', 'hacker', 'mimic', 'incubator', 'smuggler', 'jester'].includes(p.role)).map((p) => p.id);
+  const evilIds = room.game.players.filter((p) => require('../server/roles').teamOf(p.role) === 'infiltrators').map((p) => p.id); // whoever is on the evil team, whatever the deal
   const sender = byId(evilIds[0]);
   assert.ok((await call(sender, 'chat', { text: 'secret plan', channel: 'evil' })).ok);
   await waitFor(() => evilIds.every((id) => byId(id).chats.some((m) => m.text === 'secret plan')));
@@ -432,4 +432,42 @@ test('ships are isolated: emotes and bubbles never leak to another ship', async 
   await seen;
   await wait(150);
   assert.strictEqual(leaked, false);
+});
+
+test('the Mime cannot speak by day, and the Signal Jammer\'s static hides a player\'s words (they are not told)', async () => {
+  const { host, players, room } = await makeShip(8);
+  assert.ok((await call(host, 'start', { deal: ['comms', 'engineer', 'scanner', 'coroner', 'medic', 'mime', 'jammer', 'parasite'] })).ok);
+  room.game.resolveNight(Date.now());
+  room.game.applyDraft(Date.now());
+  room.game.beginRoam(Date.now());
+  const [comms, engineer, , , , mime, jammer] = players;
+  const id = (c) => latest(c).you.id;
+  for (const c of players) c.emit('pos', { x: 0, z: 0, r: 0, m: 0, room: 'bridge' });
+  await waitFor(() => Object.keys(room.positions).length === 8);
+
+  // the Mime is refused, and nobody hears anything
+  const refused = await call(mime, 'chat', { text: 'psst' });
+  assert.ok(!refused.ok);
+  assert.match(refused.error || '', /Mime/);
+  await wait(150);
+  assert.ok(!engineer.chats.some((m) => m.text === 'psst'));
+  // everyone else is heard as usual
+  assert.ok((await call(engineer, 'chat', { text: 'hello all' })).ok);
+  await waitFor(() => comms.chats.some((m) => m.text === 'hello all'));
+
+  // static: the jammed player talks, and only they hear it
+  assert.ok((await call(jammer, 'system', { target: id(comms) })).ok);
+  assert.ok((await call(comms, 'chat', { text: 'is anybody there?' })).ok, 'they are not told');
+  await waitFor(() => comms.chats.some((m) => m.text === 'is anybody there?'));
+  await wait(150);
+  assert.ok(!engineer.chats.some((m) => m.text === 'is anybody there?'));
+  assert.ok(!jammer.chats.some((m) => m.text === 'is anybody there?'));
+  // the jam does not hide anyone else
+  await wait(650); // (chat has a short cool-down)
+  assert.ok((await call(engineer, 'chat', { text: 'I can talk' })).ok);
+  await waitFor(() => jammer.chats.some((m) => m.text === 'I can talk'));
+
+  // a dead Mime is a ghost, and ghosts can talk
+  room.game.kill(room.game.get(id(mime)), 'parasite');
+  assert.ok((await call(mime, 'chat', { text: 'boo' })).ok);
 });

@@ -171,7 +171,7 @@ function roles() {
   const refreshCards = () => {
     const q = roleSearch.trim().toLowerCase();
     const onScript = new Set(scriptInfo(scriptId).roles);
-    const list = Object.entries(data.roles).filter(([id, r]) => onScript.has(id) && (roleFilter === 'all' || r.type === roleFilter) && (!q || `${r.name} ${r.ability} ${r.tb}`.toLowerCase().includes(q)));
+    const list = Object.entries(data.roles).filter(([id, r]) => onScript.has(id) && (roleFilter === 'all' || r.type === roleFilter) && (!q || `${r.name} ${r.ability} ${r.tb || ''}`.toLowerCase().includes(q)));
     clear(grid, ...list.map(([id, r]) => roleCard(id, r)));
     if (!list.length) grid.append(el('p', { className: 'hint' }, 'No roles match.'));
   };
@@ -211,7 +211,7 @@ function roleCard(id, r) {
       el('span', { className: 'wiki-role-icon' }, r.icon),
       el('div', {},
         el('b', {}, r.name),
-        el('div', { className: 'wiki-role-meta' }, el('span', { style: { color: t.color } }, t.name), ` · ${r.minPlayers}+ players · like BotC's ${r.tb}`, store.data.scripts?.classic.roles.includes(id) ? '' : ' · 🎪 Carnival only'),
+        el('div', { className: 'wiki-role-meta' }, el('span', { style: { color: t.color } }, t.name), ` · ${r.minPlayers}+ players · ${r.tb ? `like BotC's ${r.tb}` : 'an original role'} · ${Object.values(store.data.scripts || {}).filter((sc) => sc.roles.includes(id)).map((sc) => sc.icon).join(' ')}`),
       ),
     ),
     el('p', {}, r.ability),

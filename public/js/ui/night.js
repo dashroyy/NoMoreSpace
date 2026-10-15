@@ -28,6 +28,12 @@ const INSTRUCTIONS = {
   donor: () => 'Once per game: choose an INFECTED player. They are cured, and you catch it instead. Or save your blood for later.',
   bioterrorist: () => 'Once per game: choose a player. They are infected too, as if the Carrier had picked them. Or save it for later.',
   quack: () => 'Choose a player. They are told they have a fever, but they are NOT infected.',
+  quartermaster: () => 'Once per game: choose 2 players. You learn if they are on the same team. Or save your one look for later.',
+  pathfinder: () => 'Choose a player (not yourself): you learn every room they walked into today.',
+  framer: () => 'Choose a player (not yourself). Until the next night, every scan, check and shot sees them as the Parasite.',
+  pickpocket: () => 'Choose a player (not yourself). You get a copy of the message they are sent tonight, or learn that they got none.',
+  pharmacist: () => 'Choose a player. No vaccine works on them tonight: a cure fails, and a shield fails.',
+  cuckoo: () => 'Choose a victim. (Once per game, if you choose a Drifter, you die instead and THEY become the Cuckoo.)',
 };
 
 let chosen = [];

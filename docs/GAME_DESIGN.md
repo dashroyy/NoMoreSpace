@@ -23,9 +23,9 @@ No More Space is a spooky, slightly silly space version of **Blood on the Clockt
 **Good wins** when the Parasite is dead.
 **Evil wins** when only 2 players are left alive. The ship falls into the black hole: no more space.
 
-## 2. The 23 Black Hole Blues roles
+## 2. The 34 Black Hole Blues roles
 
-Each role does exactly what its Trouble Brewing counterpart does. *Night\** means every night except the first.
+The first 23 do exactly what their Trouble Brewing counterparts do (*Night\** means every night except the first). Eleven more were added in a second wave (marked 🆕, and described in [SCRIPTS.md](SCRIPTS.md#-the-second-wave-17-new-roles)): they are shared with the other scripts where it makes sense.
 
 ### Crew (good)
 | Role | BotC | Unlocks at | Ability |
@@ -43,6 +43,10 @@ Each role does exactly what its Trouble Brewing counterpart does. *Night\** mean
 | 🔫 Gunner | Slayer | 5+ | Once per game, publicly shoot a player. If they're the Parasite, they die |
 | 🪖 Marine | Soldier | 5+ | Safe from the Parasite |
 | 🎖️ First Officer | Mayor | 5+ | 3 alive with no airlocking: good wins. Night kills might bounce to someone else |
+| 🗃️ Quartermaster 🆕 | Seamstress | 5+ | Once per game, choose 2 players: learn if they are on the same team |
+| 🧰 Diagnostics Tech 🆕 | Mathematician | 5+ | Each night, learn how many abilities malfunctioned (glitched, infected, the Space Drunk) |
+| 👣 Pathfinder 🆕 | *(online)* | 5+ | Each night\*, learn every room a player walked into today |
+| 🤝 Peacekeeper 🆕 | Pacifist | 5+ | A good player who is airlocked survives one time in two (the hatch jams) |
 
 ### Drifters (good, but awkward)
 | Role | BotC | Unlocks at | Ability |
@@ -51,6 +55,9 @@ Each role does exactly what its Trouble Brewing counterpart does. *Night\** mean
 | 🍾 Space Drunk | Drunk | 5+ | Thinks they're a Crew role, but their ability does nothing and their info is fake |
 | 📦 Stowaway | Recluse | 5+ | Might register as evil, even as a Saboteur or the Parasite |
 | 🕊️ Ambassador | Saint | 5+ | If airlocked, good loses |
+| 🎢 Daredevil 🆕 | Tinker | 5+ | Might die at any time (about 15% a night from night 2), whatever protects them |
+| 📌 Conspiracy Theorist 🆕 | *(original)* | 5+ | Each night, a tip about who the Parasite is, right one time in three |
+| 🤐 Mime 🆕 | *(online)* | 5+ | Cannot speak while the ship is awake: no chat, no voice, no written claim note |
 
 ### Saboteurs (evil)
 | Role | BotC | Unlocks at | Ability |
@@ -60,16 +67,21 @@ Each role does exactly what its Trouble Brewing counterpart does. *Night\** mean
 | 🥚 Incubator | Scarlet Woman | 5+ | If the Parasite dies with 5+ alive, becomes the new Parasite |
 | 🧳 Smuggler | Baron | **7+** | +2 Drifters in the game (2 fewer Crew) |
 | 🤡 Holo-Jester | *(new, no BotC equivalent)* | 5+ | Each night, choose a player: all tomorrow they **hallucinate** (see below) |
+| 🧠 Mastermind 🆕 | Mastermind | **7+** | If the Parasite is airlocked, one more day: the crew must airlock a Saboteur, or evil wins |
+| 📻 Signal Jammer 🆕 | *(online)* | 5+ | Once per game, by day: shadow-mute a player for 75 s (they are not told) |
+| 🖼️ Framer 🆕 | *(original)* | 5+ | Each night, a player looks like the Parasite to every scan, check and shot until the next night |
 
 ### The Parasite (evil)
 | Role | BotC | Ability |
 |---|---|---|
 | 🦑 The Parasite | Imp | Each night\*, kill a player. Kill yourself to jump into a Saboteur, who becomes the new Parasite |
+| 🪺 The Cuckoo 🆕 (6+, about 3 games in 10) | Fang Gu | Kills like the Parasite. Once per game, choose a **Drifter** and the Cuckoo dies instead: the Drifter wakes up as the new Cuckoo |
 
+A game has one Demon: the Parasite, or sometimes the Cuckoo. Nobody is told which. If the crew airlocks the Parasite and a Mastermind is aboard, the game goes on.
 Every role card (press **R**) shows the ability, when it wakes, flavour text, **3–4 strategy tips** and everything you've learned so far.
 
 ### ⚡ Ship systems: abilities that only work online
-Eight roles also get a **once-per-game ship system**, an extra ability that uses what a website can do and a table can't: live rooms, private chat and the 3D ship. Press the ⚡ button in the action bar (or **X**). Like every ability, they are **duds for the Space Drunk and for glitched players**, who are told it worked. Dead players can't use them. Every use shows up in the end-of-game replay.
+Ten roles also get a **once-per-game ship system**, an extra ability that uses what a website can do and a table can't: live rooms, private chat and the 3D ship. Press the ⚡ button in the action bar (or **X**). Like every ability, they are **duds for the Space Drunk and for glitched players**, who are told it worked. Dead players can't use them. Every use shows up in the end-of-game replay.
 
 | Role | System | What it does |
 |---|---|---|
@@ -80,7 +92,8 @@ Eight roles also get a **once-per-game ship system**, an extra ability that uses
 | 💉 Medic | 🩺 **Med-scan** | By day: learn whether a player's systems are glitched (hacked) right now |
 | 💻 Hacker | 👾 **Spoof** | By day: send a chat message that looks like it came from another player. Whoever can hear you sees it (everyone, during the meeting) |
 | 🎭 Mimic | 🎭 **Disguise** | While exploring: look exactly like another player for 60 s: suit, hat, name tag, map dot and chat name |
-| 🦑 The Parasite | 🌑 **Blackout** | While exploring: cut the lights for 45 s. Name tags, the map, the Rooms list, door logs and sensors go dark, and nearby chat names show as ??? |
+| 🦑 The Parasite, 🪺 The Cuckoo | 🌑 **Blackout** | While exploring: cut the lights for 45 s. Name tags, the map, the Rooms list, door logs and sensors go dark, and nearby chat names show as ??? |
+| 📻 Signal Jammer | 📻 **Static** | By day: for 75 s everything a chosen player types reaches nobody but them. They are not told |
 
 The good systems give the crew more ways to find information; the evil ones muddy exactly that information (a blackout blinds door logs and sensors, a spoof or disguise makes chat lie). Everything timed ends when the emergency meeting is called. The Captain sees through every trick in their chat.
 

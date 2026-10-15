@@ -300,6 +300,8 @@ Object.assign(ROLES, require('./roles-carnival').CARNIVAL_ROLES);
 Object.assign(ROLES, require('./roles-outbreak').OUTBREAK_ROLES);
 // The Citadel of Traitors script's extra roles.
 Object.assign(ROLES, require('./roles-traitors').TRAITORS_ROLES);
+// New roles for every script (Pathfinder, Mime, Signal Jammer, Mastermind, the Cuckoo...).
+Object.assign(ROLES, require('./roles-extra').EXTRA_ROLES);
 
 // Blood on the Clocktower's setup table, extended down to 3 players ("Short Haul").
 //               crew drifters saboteurs parasite

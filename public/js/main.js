@@ -378,7 +378,7 @@ function onPhaseChange(state, prev, world, reveal) {
       if (dusk?.survived) {
         // the Acrobat's safety net: airlocked, and bounced right back
         sfx('fanfare');
-        showStory(dusk.story, ['🤸 The net holds!'], 9000);
+        showStory(dusk.story, [dusk.cause === 'jam' ? '🤝 The hatch jams!' : '🤸 The net holds!'], 9000);
       } else if (dusk?.id) {
         sfx('airlock');
         world.playDeaths([{ id: dusk.id, anim: dusk.anim || 'airlock' }]);
@@ -386,7 +386,7 @@ function onPhaseChange(state, prev, world, reveal) {
       } else {
         showStory(dusk?.story || `Nobody is ${themeInfo(state.script).banishedVerb} today.`, [], 5000);
       }
-      phaseBanner(dusk?.survived ? '🤸 The net holds!' : '🌇 Dusk', dusk?.survived ? `${player(dusk.id)?.name} survives ${themeInfo(state.script).banishPlace}` : dusk?.id ? `${player(dusk.id)?.name} is ${themeInfo(state.script).banishedVerb}` : `Nobody is ${themeInfo(state.script).banishedVerb}`);
+      phaseBanner(dusk?.survived ? (dusk.cause === 'jam' ? '🤝 The hatch jams!' : '🤸 The net holds!') : '🌇 Dusk', dusk?.survived ? `${player(dusk.id)?.name} survives ${themeInfo(state.script).banishPlace}` : dusk?.id ? `${player(dusk.id)?.name} is ${themeInfo(state.script).banishedVerb}` : `Nobody is ${themeInfo(state.script).banishedVerb}`);
       break;
     }
     case 'ended': {

@@ -60,7 +60,7 @@ function teammates(g, p) {
   return new Set(team ? team.map((t) => t.id) : [p.id]);
 }
 
-const EVIL_ROLE = /(Hacker|Mimic|Incubator|Smuggler|Holo-Jester|The Parasite|The Reflection|Knife Thrower|Stage Double|Hexer|The Carrier|Bioterrorist|Quack Doctor|Spore Host|Recruiter|Mole|Blackmailer|The Head Traitor|Recruit)/;
+const EVIL_ROLE = /(Hacker|Mimic|Incubator|Smuggler|Holo-Jester|The Parasite|The Reflection|Knife Thrower|Stage Double|Hexer|The Carrier|Bioterrorist|Quack Doctor|Spore Host|Recruiter|Mole|Blackmailer|The Head Traitor|Recruit|Mastermind|Signal Jammer|Framer|Pickpocket|Black-Market Pharmacist|The Cuckoo)/;
 
 // What a clue (a role's private info, or one shared at the meeting) says about
 // one player: positive = suspicious, negative = probably good.
@@ -70,6 +70,8 @@ function readClue(text, name) {
   if (text.startsWith('Scan of ')) return /YES, a Parasite signal/.test(text) ? 0.45 : -0.3;
   if ((m = text.match(/^(\d) of your living neighbours/))) return { 0: -0.35, 1: 0.2, 2: 0.6 }[m[1]] ?? 0;
   if (text.startsWith('Black Box data:')) return EVIL_ROLE.test(text) ? 1.2 : -0.6;
+  if (/ are on DIFFERENT teams\.$/.test(text)) return 0.3; // one of the two is evil
+  if (/ are on the SAME team\.$/.test(text)) return -0.1;
   if ((m = text.match(/^One of .+ is the (.+)\.$/))) return EVIL_ROLE.test(m[1]) ? 0.35 : -0.12;
   if ((m = text.match(/ is (a TRAITOR|FAITHFUL)\.$/))) return m[1] === 'FAITHFUL' ? -0.9 : 1.3; // the Seer's look
   return 0;
@@ -199,6 +201,31 @@ function nightTargets(g, p, prompt, brain) {
       break;
     case 'magician':
       list = ranked(others, (t) => -suspicion(g, p, t, brain) + infoClaim(t)); // bring back someone trusted
+      break;
+    case 'quartermaster': {
+      // compare someone suspicious with someone trusted: a split answer exposes a liar
+      const sorted = ranked(others, (t) => suspicion(g, p, t, brain));
+      list = sorted.length >= 2 ? [sorted[0], sorted[sorted.length - 1]] : sorted;
+      break;
+    }
+    case 'pathfinder':
+      list = ranked(others, (t) => suspicion(g, p, t, brain)); // follow the footprints of the most suspicious
+      break;
+    case 'framer':
+      list = ranked(others.filter((t) => !team.has(t.id)), (t) => infoClaim(t) * 2 + (g.stats.yesReceived[t.id] || 0) * 0.1); // frame whoever the crew listens to
+      break;
+    case 'pickpocket':
+      list = ranked(others.filter((t) => !team.has(t.id)), infoClaim); // read an info role's mail
+      break;
+    case 'pharmacist': {
+      const sick = others.filter((t) => t.infected != null && !team.has(t.id));
+      list = sick.length ? ranked(sick, () => 0) : ranked(others.filter((t) => !team.has(t.id)), infoClaim);
+      break;
+    }
+    case 'cuckoo':
+      // hunt like the Parasite, but happily lay the egg in a Drifter (once)
+      list = ranked(others.filter((t) => !team.has(t.id)), (t) => infoClaim(t) + (!g.cuckooHopped && ROLES[t.role].type === 'drifter' ? 0.8 : 0));
+      break;
     case 'medic':
       list = ranked(others, (t) => infoClaim(t) - suspicion(g, p, t, brain)); // protect trusted info roles
       break;
@@ -245,7 +272,7 @@ function systemArgs(g, room, p, b, sys) {
     case 'here':
       return here && here !== 'corridor' ? { here, occupants: occupantsOf(room, here) } : null;
     case 'player': {
-      const pool = sys.id === 'disguise' ? living.filter((t) => !team.has(t.id)) : living;
+      const pool = sys.id === 'disguise' || sys.id === 'jam' ? living.filter((t) => !team.has(t.id)) : living;
       const t = sys.id === 'medscan' ? mostSuspicious(g, p, b, pool)?.[0] : pick(pool);
       return t ? { target: t.id } : null;
     }

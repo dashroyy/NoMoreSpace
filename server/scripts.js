@@ -19,22 +19,28 @@
 const CLASSIC_ROLES = [
   // crew
   'comms', 'archivist', 'security', 'navigator', 'engineer', 'scanner', 'coroner', 'medic', 'blackbox', 'sentinel', 'gunner', 'marine', 'firstofficer',
+  'quartermaster', 'diagnostics', 'pathfinder', 'peacekeeper',
   // drifters
   'droid', 'drunk', 'stowaway', 'ambassador',
+  'daredevil', 'conspiracy', 'mime',
   // saboteurs
   'hacker', 'mimic', 'incubator', 'smuggler', 'jester',
-  // the Parasite
-  'parasite',
+  'mastermind', 'jammer', 'framer',
+  // the Parasite (and, sometimes, the Cuckoo)
+  'parasite', 'cuckoo',
 ];
 
 const CARNIVAL_ROLE_IDS = [
   // crew
   'engineer', 'scanner', 'coroner', 'medic', 'blackbox', 'firstofficer', 'gunner',
   'liontamer', 'acrobat', 'palmreader', 'tickettaker', 'stagehand', 'magician',
+  'barker', 'pathfinder',
   // drifters
   'drunk', 'stowaway', 'clown', 'actor',
+  'daredevil', 'mime', 'conspiracy',
   // saboteurs
   'hacker', 'incubator', 'knifethrower', 'stagedouble', 'hexer',
+  'jammer', 'framer', 'pickpocket',
   // the Demon: one of these two is in play
   'parasite', 'reflection',
 ];
@@ -43,10 +49,13 @@ const OUTBREAK_ROLE_IDS = [
   // crew
   'engineer', 'scanner', 'coroner', 'blackbox', 'firstofficer', 'gunner', 'comms', 'security',
   'vaccinator', 'tracer', 'hazmat', 'donor', 'sensor',
+  'quartermaster', 'diagnostics', 'pathfinder', 'peacekeeper', 'sniffer',
   // drifters
   'drunk', 'stowaway', 'patientzero', 'hypochondriac',
+  'daredevil', 'antibody',
   // saboteurs
   'hacker', 'incubator', 'bioterrorist', 'quack', 'sporehost',
+  'mastermind', 'pickpocket', 'pharmacist',
   // the Demon
   'carrier',
 ];
@@ -55,10 +64,12 @@ const TRAITORS_ROLE_IDS = [
   // the Faithful
   'comms', 'archivist', 'security', 'navigator', 'engineer', 'coroner', 'blackbox',
   'seer', 'daggerbearer', 'guardian', 'loyalist',
+  'quartermaster', 'pathfinder', 'cupbearer',
   // drifters
-  'drunk', 'stowaway',
+  'drunk', 'stowaway', 'conspiracy',
   // the Traitors
   'recruiter', 'mole', 'blackmailer', 'hacker',
+  'framer', 'pickpocket',
   // the Head Traitor
   'headtraitor',
 ];
@@ -74,9 +85,13 @@ const SCRIPTS = {
     rules: [
       'The crew wins by airlocking the Parasite.',
       'Evil wins when only 2 players are left alive.',
+      'Sometimes (6+ players) the Demon is the Cuckoo instead: once per game it can jump into a Drifter, who wakes up evil.',
+      'A Mastermind aboard (7+ players) means airlocking the Parasite is not the end: the crew gets one more day, and must airlock a Saboteur in it.',
     ],
     roles: CLASSIC_ROLES,
-    demons: ['parasite'],
+    demons: ['parasite', 'cuckoo'],
+    // the Cuckoo only shows up in bigger games, and not every time
+    demonChance: { cuckoo: 0.3 },
     narrator: 'ARIA, ship AI',
     // the disaster the story is about, and the words every screen uses for it
     theme: {
@@ -181,7 +196,7 @@ const SCRIPTS = {
       'The crew wins by airlocking the Carrier. Evil wins when only 2 players are left alive.',
       'The Carrier does not kill. It infects a player each night. An infected player is told at once, and bursts (dies) when the NEXT night ends, unless cured.',
       'While infected, a player\'s abilities malfunction: their information is false and their protections fail.',
-      'The Vaccinator cures the infected, or shields a healthy player. Find the sick in time: but beware the Quack Doctor, whose fake fevers sound just like the real thing.',
+      'The Vaccinator cures the infected, or shields a healthy player. Find the sick in time: but beware the Quack Doctor, whose fake fevers sound just like the real thing, and the Black-Market Pharmacist, whose fake cures do nothing at all.',
     ],
     roles: OUTBREAK_ROLE_IDS,
     demons: ['carrier'],

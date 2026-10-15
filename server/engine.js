@@ -28,6 +28,7 @@ const TARGET_RULE = { hacker: 'alive', jester: 'alive', medic: 'alive', parasite
 const DEATH_ANIMS = ['airlock', ...st.NIGHT_ANIMS, 'fainted', 'shot'];
 // What a player is told when they are infected (really, or by a Quack Doctor, or if they are a Hypochondriac).
 const FEVER_TEXT = '🤒 You wake up burning with fever: you are INFECTED! When the coming night ends you will burst, unless a Vaccinator cures you. Until then, your abilities malfunction.';
+const DAREDEVIL_CHANCE = 0.15; // each night after the first, the Daredevil's luck might run out
 const HAUNTS = ['flicker', 'crate', 'cackle']; // a ghost's harmless pranks
 const HAUNTS_PER_DAY = 3;
 const HAUNT_COOLDOWN_MS = 6000;
@@ -142,6 +143,10 @@ class Game {
     this.pot = 0; // the Prize Pot (Citadel of Traitors): grows with every mission
     this.offer = null; // a Recruiter's offer waiting for an answer: { id, from, until }
     this.gagged = null; // the Blackmailer's victim for today: { id }
+    this.decoy = null; // the Framer's victim: looks like the Parasite until the next night: { id, night }
+    this.mastermind = null; // the Mastermind's extra day after the Parasite is airlocked: { id, day }
+    this.mastermindDone = false; // it only happens once
+    this.cuckooHopped = false; // the Cuckoo has used its one jump
     this.shipEvent = null; // the Captain's fun: { kind, until }
     this.awards = null;
     this.startedAt = null;
@@ -209,7 +214,19 @@ class Game {
 
   // What the Contact Tracer sees: the infected, and the Hypochondriac who only thinks so.
   looksInfected(p) {
-    return p.infected != null || p.role === 'hypochondriac';
+    return p.infected != null || p.role === 'hypochondriac' || p.role === 'antibody';
+  }
+
+  // The Mime cannot speak while the ship is awake (the dead can, as ghosts).
+  isSilent(pid) {
+    const p = this.get(pid);
+    return !!p && p.alive && !!ROLES[p.role]?.silent && this.phase !== 'lobby' && this.phase !== 'ended';
+  }
+
+  // The Signal Jammer's static: this player's words reach nobody but themselves (they are not told).
+  shadowMuted(pid, now = Date.now()) {
+    const j = this.systems?.jams?.[pid];
+    return !!j && j.works && now < j.until && !!this.get(pid)?.alive;
   }
 
   // The Demon is "the Parasite" in every script, but some scripts have more than one kind (the Reflection).
@@ -275,7 +292,7 @@ class Game {
 
   // Ship systems and door locks only last while exploring: everything starts afresh.
   resetSystems() {
-    this.systems = { intercepts: [], lockdowns: [], disguises: {}, blackoutUntil: 0, lockReady: {}, knocked: {} };
+    this.systems = { intercepts: [], lockdowns: [], disguises: {}, blackoutUntil: 0, lockReady: {}, knocked: {}, jams: {} };
   }
 
   // How long each part of the day lasts. Tuned so a 10-player game runs about
@@ -538,6 +555,7 @@ class Game {
     this.executedYesterday = this.executedToday;
     this.executedToday = null;
     this.glitch = null; // last night's glitch wore off at dusk
+    this.decoy = null; // and so did the Framer's frame-up
     this.hallucination = null; // and so did the hallucinations
     this.choices = {};
     this.draft = null;
@@ -708,6 +726,13 @@ class Game {
       r.role = st.pick(options.length ? options : this.rolesOf('crew'), this.random);
       r.type = ROLES[r.role].type;
     }
+    if (this.decoy && this.decoy.id === p.id) {
+      // framed: looks like the Parasite to every scan, check and shot, until the next night
+      r.evil = true;
+      r.demon = true;
+      r.type = 'parasite';
+      r.role = this.demonRole();
+    }
     this.regCache[key] = r;
     return r;
   }
@@ -788,6 +813,28 @@ class Game {
       d.events.push({ k: 'hex', a: hexer.id, t, works });
     }
 
+    // The Framer makes a good player look like the Parasite until the next night.
+    const framer = aliveRole('framer');
+    if (framer && choice(framer)) {
+      const t = choice(framer)[0];
+      const works = !broken(framer);
+      if (works && t) {
+        this.decoy = { id: t, night: N };
+        delete this.regCache[`${N}:${t}`]; // so every check tonight and tomorrow sees the frame-up
+      }
+      d.events.push({ k: 'frame', a: framer.id, t, works });
+    }
+
+    // The Black-Market Pharmacist's fake cures: no vaccine works on their pick tonight.
+    d.noCure = [];
+    for (const p of this.players.filter((x) => x.alive && x.role === 'pharmacist')) {
+      const [t] = choice(p) || [];
+      if (!t) continue;
+      const works = !broken(p);
+      if (works) d.noCure.push(t);
+      d.events.push({ k: 'sell', a: p.id, t, works });
+    }
+
     // First night information roles.
     if (N === 1) {
       for (const p of believers('comms')) {
@@ -862,16 +909,17 @@ class Game {
     for (const p of believers('vaccinator')) {
       const [t] = choice(p) || [];
       if (!t) continue;
-      const works = !broken(p);
+      const blocked = d.noCure.includes(t);
+      const works = !broken(p) && !blocked;
       if (works) vaccinated.push(t);
-      d.events.push({ k: 'vaccinate', a: p.id, t, works });
+      d.events.push({ k: 'vaccinate', a: p.id, t, works, blocked });
     }
     // the Blood Donor swaps places with an infected player (once per game)
     for (const p of believers('donor')) {
       const [t] = choice(p) || [];
       if (!t) continue;
       const target = this.get(t);
-      const works = !broken(p) && !!target && target.alive && target.infected != null && t !== p.id;
+      const works = !broken(p) && !!target && target.alive && target.infected != null && t !== p.id && !d.noCure.includes(t);
       if (works) {
         vaccinated.push(t);
         d.donor = p.id;
@@ -888,7 +936,8 @@ class Game {
           (d.hazmatWarned ||= []).push(target.id);
           say(target, 'hazmat', 'Something tried to infect you in the night... but your hazmat suit held. Someone is spreading a sickness through this station.', true);
         }
-      } else if (vaccinated.includes(target.id)) result = 'shielded';
+      } else if (target.role === 'antibody') result = 'immune';
+      else if (vaccinated.includes(target.id)) result = 'shielded';
       else if (target.infected != null || d.infect.includes(target.id)) result = 'already';
       else {
         d.infect.push(target.id);
@@ -961,6 +1010,11 @@ class Game {
         (d.netUsed ||= []).push(target.id);
         say(target, 'acrobat', 'Something struck at you in the night... and your safety net caught you! The net is used up now.', true);
         kill(null, 'net');
+      } else if (parasite.role === 'cuckoo' && !this.cuckooHopped && target.alive && ROLES[target.role].type === 'drifter') {
+        // the Cuckoo lays its egg in a Drifter: the Cuckoo dies, and THEY hatch into the new Cuckoo
+        d.deaths.push({ id: parasite.id, cause: 'starpass' });
+        d.starpass = { from: parasite.id, to: target.id, role: 'cuckoo', hop: true };
+        kill(parasite, 'hop', { to: target.id });
       } else if (target.role === 'firstofficer' && !broken(target) && this.random() < 0.5) {
         // The First Officer might be saved, with someone else dying instead.
         const others = this.alive().filter((p) => p !== parasite && p !== target);
@@ -1025,6 +1079,13 @@ class Game {
       const works = !broken(p) && !!target && !target.alive && ROLES[target.role].type === 'crew';
       if (works) d.revive = t;
       d.events.push({ k: 'revive', a: p.id, t, works });
+    }
+
+    // The Daredevil might die at any time: a small chance each night after the first, whatever protects them.
+    for (const p of this.players.filter((x) => x.alive && x.role === 'daredevil')) {
+      if (N < 2 || d.deaths.some((x) => x.id === p.id) || this.random() >= DAREDEVIL_CHANCE) continue;
+      d.deaths.push({ id: p.id, cause: 'daredevil' });
+      d.events.push({ k: 'daredevil', a: p.id });
     }
 
     const dying = d.deaths.map((x) => x.id);
@@ -1111,6 +1172,87 @@ class Game {
       say(p, 'scanner', `Scan of ${targets[0].name} & ${targets[1].name}: ${value ? 'YES, a Parasite signal!' : 'no Parasite signal.'}`, !lies(p), { value, players: targets.map((t) => t.id) });
     }
 
+    // The Quartermaster's once-a-game check: are these two on the same team?
+    for (const p of believers('quartermaster')) {
+      if (dying.includes(p.id)) continue;
+      const picked = (choice(p) || []).map((id) => this.get(id));
+      if (picked.length < 2) continue;
+      const truth = this.reg(picked[0]).evil === this.reg(picked[1]).evil;
+      const value = lies(p) ? !truth : truth;
+      say(p, 'quartermaster', `${picked[0].name} and ${picked[1].name} are on ${value ? 'the SAME team' : 'DIFFERENT teams'}.`, !lies(p), { value, players: picked.map((o) => o.id) });
+    }
+
+    // The Diagnostics Tech counts the abilities that malfunctioned tonight.
+    for (const p of believers('diagnostics')) {
+      if (dying.includes(p.id)) continue;
+      const truth = this.players.filter((o) => o.alive && o.id !== p.id && !dying.includes(o.id) && broken(o)).length;
+      const value = lies(p) ? st.otherNumber(truth, Math.max(2, truth + 1), this.random) : truth;
+      say(p, 'diagnostics', `${value} ${value === 1 ? 'ability' : 'abilities'} malfunctioned tonight.`, !lies(p), { value });
+    }
+
+    // The Pathfinder follows a player's footprints: every room they entered today (from the live ship).
+    if (N > 1) {
+      for (const p of believers('pathfinder')) {
+        if (dying.includes(p.id)) continue;
+        const [t] = choice(p) || [];
+        if (!t) continue;
+        const target = this.get(t);
+        const seen = Object.keys(ROOM_NAMES).filter((room) => this.visits[room]?.has(t));
+        let shown = seen;
+        if (lies(p)) {
+          const others = Object.keys(ROOM_NAMES).filter((room) => !seen.includes(room));
+          shown = st.sample(others, Math.floor(this.random() * 3) + (seen.length ? 0 : 1), this.random);
+        }
+        const names = shown.map((room) => this.roomName(room));
+        say(p, 'pathfinder', names.length ? `${target.name} walked into: ${names.join(', ')}.` : `${target.name} did not set foot in any room today.`, !lies(p), { rooms: shown, players: [t] });
+      }
+    }
+
+    // The Barker learns whether a Saboteur nominated today.
+    if (N > 1) {
+      for (const p of believers('barker')) {
+        if (dying.includes(p.id)) continue;
+        const truth = this.votesToday.some((v) => this.reg(this.get(v.nominator)).type === 'saboteur');
+        const value = lies(p) ? !truth : truth;
+        say(p, 'barker', value ? 'A Saboteur NOMINATED today.' : 'No Saboteur nominated today.', !lies(p), { value });
+      }
+    }
+
+    // Who is sick right now (counting tonight's new infections and cures)? For the Sniffer Dog.
+    const sickNow = (o) => d.infect.includes(o.id) || (this.looksInfected(o) && !d.cures.includes(o.id));
+    for (const p of believers('sniffer')) {
+      if (dying.includes(p.id)) continue;
+      const near = this.aliveNeighbours(p, dying);
+      const truth = near.filter(sickNow).length;
+      const value = lies(p) ? st.otherNumber(truth, 2, this.random) : truth;
+      say(p, 'sniffer', `Woof! ${value} of your living neighbours (${near.map((o) => o.name).join(' & ')}) ${value === 1 ? 'smells' : 'smell'} sick.`, !lies(p), { value });
+    }
+
+    // The Cupbearer counts Traitors among the three guests across the Round Table.
+    for (const p of believers('cupbearer')) {
+      if (dying.includes(p.id)) continue;
+      const ring = this.players.filter((o) => o.alive && !dying.includes(o.id));
+      const i = ring.indexOf(p);
+      if (i < 0 || ring.length < 2) continue;
+      const mid = (i + Math.floor(ring.length / 2)) % ring.length;
+      const across = [...new Set([mid, (mid + 1) % ring.length, (mid + ring.length - 1) % ring.length])].map((k) => ring[k]).filter((o) => o !== p);
+      const truth = across.filter((o) => this.reg(o).evil).length;
+      const value = lies(p) ? st.otherNumber(truth, across.length, this.random) : truth;
+      say(p, 'cupbearer', `Across the Round Table (${across.map((o) => o.name).join(', ')}): ${value} ${value === 1 ? 'is a TRAITOR' : 'are TRAITORS'}.`, !lies(p), { value, players: across.map((o) => o.id) });
+    }
+
+    // The Conspiracy Theorist hears a tip about who the Demon is: right one time in three.
+    for (const p of believers('conspiracy')) {
+      if (dying.includes(p.id)) continue;
+      const demon = this.players.find((o) => o.alive && this.isDemon(o) && !dying.includes(o.id) && o.id !== p.id);
+      const others = this.players.filter((o) => o.alive && o.id !== p.id && !dying.includes(o.id));
+      const wrong = others.filter((o) => o !== demon);
+      const right = !lies(p) && !!demon && this.random() < 1 / 3;
+      const tip = right ? demon : st.pick(wrong.length ? wrong : others, this.random);
+      const who = themeOf(this.script).demonName.replace(/^The /, 'the ');
+      say(p, 'conspiracy', `You are certain of it: ${tip.name} is ${who}. You would bet your corkboard on it.`, right, { players: [tip.id], tip: true });
+    }
+
     // Service Droid picks tomorrow's master.
     for (const p of this.players.filter((x) => x.alive && x.role === 'droid')) {
       const [t] = choice(p) || [];
@@ -1118,6 +1260,17 @@ class Game {
         d.masters[p.id] = t;
         d.events.push({ k: 'master', a: p.id, t });
       }
+    }
+
+    // The Pickpocket reads over a shoulder: a copy of whatever message the target was sent tonight.
+    for (const p of this.players.filter((x) => x.alive && x.role === 'pickpocket')) {
+      const [t] = choice(p) || [];
+      if (!t) continue;
+      const target = this.get(t);
+      const works = !broken(p);
+      const theirs = works ? d.messages.filter((m) => m.to === t && m.role !== 'pickpocket') : [];
+      if (!theirs.length) say(p, 'pickpocket', `You pat down ${target.name}'s pockets: nothing. No message came for them tonight.`, works, { players: [t] });
+      for (const m of theirs) say(p, 'pickpocket', `You read over ${target.name}'s shoulder: "${m.text}"`, works && m.truthful !== false, { players: [t] });
     }
 
     d.messages.sort((a, b) => (ROLES[a.role]?.night?.order ?? 99) - (ROLES[b.role]?.night?.order ?? 99));
@@ -1194,8 +1347,15 @@ class Game {
       const heir = this.get(d.starpass.to);
       heir.role = d.starpass.role || 'parasite';
       heir.believed = heir.role;
-      this.tell(heir, 'The Parasite abandoned its old host and crawled into YOU. You are now the Parasite!', { kind: 'evil' });
-      this.ev({ k: 'become-parasite', a: heir.id, cause: 'starpass' });
+      if (d.starpass.hop) {
+        // the Cuckoo's egg: the Drifter wakes up evil, and learns who their Saboteurs are
+        this.cuckooHopped = true;
+        heir.systemUsed = false;
+        const team = this.players.filter((o) => o.alive && ROLES[o.role].type === 'saboteur');
+        this.tell(heir, `🪺 The Cuckoo laid its egg in YOU, and it has hatched. You are now THE CUCKOO: you kill each night, and evil wins if the crew cannot stop you.${team.length ? ` Your Saboteurs: ${team.map((o) => o.name).join(', ')}.` : ''} Everyone still thinks you are good. (You can no longer jump.)`, { kind: 'evil' });
+        for (const o of team) this.tell(o, `🪺 The Cuckoo hopped into ${heir.name}. They are the Cuckoo now.`, { kind: 'evil' });
+      } else this.tell(heir, 'The Parasite abandoned its old host and crawled into YOU. You are now the Parasite!', { kind: 'evil' });
+      this.ev({ k: 'become-parasite', a: heir.id, cause: 'starpass', role: heir.role });
     }
 
     // the Magician's trick (a dead Crew member comes back)
@@ -1510,7 +1670,7 @@ class Game {
     if (!this.get(pid)) throw new Error('Only players can claim.');
     if (this.phase === 'lobby') throw new Error('Wait for the game to start.');
     if (role && !ROLES[role]) throw new Error('Unknown role.');
-    const clean = String(text || '').replace(/\s+/g, ' ').trim().slice(0, 60);
+    const clean = this.isSilent(pid) ? '' : String(text || '').replace(/\s+/g, ' ').trim().slice(0, 60);
     const before = this.claims[pid];
     if (!role && !clean) delete this.claims[pid];
     else this.claims[pid] = { role: role || null, text: clean, at: Date.now() };
@@ -1549,7 +1709,9 @@ class Game {
     }
     const alive = this.alive();
     const demonDead = !alive.some((p) => this.isDemon(p));
-    if (demonDead && !this.twinsAlive()) {
+    // a living Mastermind turns the Parasite's airlocking into one more day (see execute)
+    const mastermindHolds = !!this.mastermind && !!this.get(this.mastermind.id)?.alive;
+    if (demonDead && !mastermindHolds && !this.twinsAlive()) {
       return this.finish('crew', themeOf(this.script).crewReason);
     }
     if (alive.length <= 2) {
@@ -1825,6 +1987,9 @@ class Game {
     if (this.aliveCount() === 3 && fo && !this.isGlitched(fo)) {
       this.finish('crew', themeOf(this.script).officerReason.replace('{name}', fo.name));
     }
+    if (!this.winner && this.mastermind && this.day > this.mastermind.day && this.get(this.mastermind.id)?.alive) {
+      this.finish('infiltrators', `Nobody was airlocked on the Mastermind's day. The plan comes together: the crew ran out the clock, and the ship is lost.`);
+    }
     this.dusk = { id: null, cause: null, story: 'The crew stares at each other in silence as the lights go down.' };
     if (!this.winner && this.reflectionAlive()) {
       this.finish('infiltrators', 'A whole day passed and nobody was airlocked. The Reflection smiles in every mirror: the show goes on without the crew.');
@@ -1841,6 +2006,12 @@ class Game {
   }
 
   execute(p, now, cause) {
+    // The Mastermind's extra day: whoever the crew airlocks now decides the game.
+    const mastermindDay = !!this.mastermind && this.day > this.mastermind.day && !!this.get(this.mastermind.id)?.alive;
+    const mmWinner = mastermindDay ? (teamOf(p.role) === 'infiltrators' ? 'crew' : 'infiltrators') : null;
+    const mmReason = mmWinner === 'crew'
+      ? `${p.name} was one of the Saboteurs! The Mastermind's last plan falls apart, and the crew wins at last.`
+      : `${p.name} was innocent! It is exactly what the Mastermind planned for: the crew airlocked the wrong player, and evil takes the ship.`;
     // The Acrobat's safety net catches them the first time (unless the net has a hole in it).
     if (p.role === 'acrobat' && !p.netUsed && !this.broken(p) && cause !== 'sentinel') {
       p.netUsed = true;
@@ -1850,6 +2021,19 @@ class Game {
       this.announce(`${p.name} is airlocked... but a safety net catches them! ${p.name} is the Acrobat, and still alive!`, 'vote');
       this.logEvent({ k: 'net', id: p.id, votes: this.block?.votes || 0 });
       this.dusk = { id: p.id, cause: 'net', anim: null, survived: true, story: saved };
+      if (mmWinner) this.finish(mmWinner, mmReason);
+      this.setPhase('dusk', this.dur('dusk'), now);
+      return;
+    }
+    // The Peacekeeper: the airlock jams for a good player, one time in two.
+    const keeper = cause === 'airlock' && teamOf(p.role) === 'crew' ? this.players.find((o) => o.alive && o.role === 'peacekeeper' && !this.broken(o)) : null;
+    if (keeper && this.random() < 0.5) {
+      const jammed = `${p.name} is walked into the airlock... and the door JAMS! The hatch refuses to open, the lights flicker, and ${p.name} is still very much alive.`;
+      this.ev({ k: 'jam', id: p.id, by: keeper.id, votes: this.block?.votes || 0, story: jammed });
+      this.announce(`${p.name} is airlocked... but the hatch jams! ${p.name} was a good player, and is still alive!`, 'vote');
+      this.logEvent({ k: 'jam', id: p.id, votes: this.block?.votes || 0 });
+      this.dusk = { id: p.id, cause: 'jam', anim: null, survived: true, story: jammed };
+      if (mmWinner) this.finish(mmWinner, mmReason);
       this.setPhase('dusk', this.dur('dusk'), now);
       return;
     }
@@ -1867,7 +2051,7 @@ class Game {
       const last = [...this.votesToday].reverse().find((v) => v.nominee === p.id);
       const nominator = last && this.get(last.nominator);
       const suited = nominator && nominator.role === 'hazmat' && !this.broken(nominator);
-      if (nominator?.alive && nominator.infected == null && !suited) {
+      if (nominator?.alive && nominator.infected == null && !suited && nominator.role !== 'antibody') {
         nominator.infected = this.night;
         this.tell(nominator, `🍄 A cloud of spores puffs out of the airlock as ${p.name} goes. ${FEVER_TEXT.slice(2)}`, { kind: 'fever' });
         this.ev({ k: 'spores', id: p.id, t: nominator.id });
@@ -1881,6 +2065,19 @@ class Game {
       const double = this.get(this.twin.evil);
       if (double?.alive && !this.isGlitched(double)) {
         this.finish('infiltrators', `${p.name} was the Good Twin! The crew airlocked the wrong twin, and the Stage Double takes over the show.`);
+      }
+    }
+    if (mmWinner) this.finish(mmWinner, mmReason);
+    // The Mastermind: the Parasite was airlocked, but there is more to this game (one extra day)
+    if (!this.winner && !this.mastermindDone && cause === 'airlock' && this.isDemon(p)) {
+      const mm = this.players.find((o) => o.alive && o.role === 'mastermind' && !this.broken(o));
+      if (mm && !this.players.some((o) => o.alive && this.isDemon(o))) {
+        this.mastermind = { id: mm.id, day: this.day };
+        this.mastermindDone = true;
+        story += ' ...But the show is NOT over. Somebody aboard planned for this: a Mastermind.';
+        this.ev({ k: 'mastermind', a: mm.id });
+        this.logEvent({ k: 'mastermind' });
+        this.announce('🧠 The Parasite is dead... and the game goes on! There is a Mastermind aboard. One more day: the crew must airlock a Saboteur, or evil wins.', 'death');
       }
     }
     this.checkWin();
@@ -2080,6 +2277,10 @@ class Game {
       case 'disguise':
         this.systems.disguises[pid] = { as: target.id, until };
         this.tell(p, `🎭 You look exactly like ${target.name} for ${sys.seconds} seconds. Your chat shows their name too.`, { kind: 'system' });
+        break;
+      case 'jam':
+        this.systems.jams[target.id] = { until, by: pid, works };
+        this.tell(p, `📻 ${target.name} is jammed for up to ${sys.seconds} seconds: nothing they type reaches anyone but them. They are not told.`, { kind: 'system' });
         break;
       case 'blackout':
         this.systems.blackoutUntil = until;
@@ -2752,6 +2953,7 @@ class Game {
       wish: this.wish && this.wish.id === pid ? { role: this.wish.role, until: this.wish.until } : null,
       offer: this.offer && this.offer.id === pid ? { until: this.offer.until } : null,
       gagged: !!(this.gagged && this.gagged.id === pid && p.alive),
+      silenced: this.isSilent(pid), // the Mime: no talking by day
       infected: p.alive && p.infected != null ? { since: p.infected, bursts: p.infected + 1 } : null,
       manifest: p.role === 'mimic' && p.alive ? this.mimicManifest : null,
       master: p.role === 'droid' && p.alive ? p.master : null,

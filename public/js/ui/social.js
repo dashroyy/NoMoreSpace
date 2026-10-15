@@ -150,6 +150,8 @@ function describe(e) {
     case 'claim': return `📣 ${name(e.id)} claims to be the ${role(e.role)?.name || '?'} ${role(e.role)?.icon || ''}`;
     case 'hex': return `💥 ${name(e.id)} nominated and was HEXED: there is a Hexer aboard!`;
     case 'net': return `🤸 ${name(e.id)} was airlocked, but a safety net caught them: they are the Acrobat!`;
+    case 'jam': return `🤝 ${name(e.id)} was airlocked, but the hatch jammed: they are good, and a Peacekeeper is aboard!`;
+    case 'mastermind': return '🧠 The Parasite was airlocked, but the game goes on: a Mastermind is aboard. One more day, and the crew must airlock a Saboteur.';
     case 'pie': return `🥧 ${name(e.a)} the Clown threw a pie at ${name(e.t)}${e.evil ? ' (an infiltrator: the crew loses!)' : ' (a good player)'}.`;
     case 'revive': return `✨ ${name(e.id)} came back from the dead!`;
     case 'spores': return `🍄 As ${name(e.id)} went out of the airlock, a cloud of spores puffed out: ${name(e.t)} breathed it in!`;

@@ -107,8 +107,8 @@
     const { cloneSkinned, loadModels, clipsOf } = await import('/repo/public/js/world/assets.js');
     let files = (await fetch('/list?dir=repo/public/assets/models/characters').then((r) => r.json())).filter((f) => f.endsWith('.glb') && f !== 'anims.glb').map((f) => f.slice(0, -4));
     if (q.get('files')) files = q.get('files').split(',');
-    await loadModels(['characters/anims']);
-    const mixers = [];
+    await loadModels(['characters/anims', 'characters/anims_large']);
+    const LARGE = ['blackknight', 'clanker', 'frostgolem', 'monstrosity', 'robot_gtn', 'orcbrute'];
     for (const f of files) {
       const g = new THREE.Group();
       const c = await cloneSkinned(`characters/${f}`);
@@ -118,7 +118,7 @@
         c.scale.setScalar(k);
         c.position.y = -box.min.y * k;
         g.add(c);
-        const idle = THREE.AnimationClip.findByName(clipsOf('characters/anims'), 'Idle_A');
+        const idle = THREE.AnimationClip.findByName(clipsOf(LARGE.includes(f) ? 'characters/anims_large' : 'characters/anims'), 'Idle_A');
         if (idle) {
           const mixer = new THREE.AnimationMixer(c);
           mixer.clipAction(idle).play();

@@ -572,7 +572,7 @@ test('a Cosmic Carnival game survives a restart with its twin, hex and pending p
   back.chooseWish(back.players[5].id, back.players[3].id, 7000);
   assert.strictEqual(back.wish, null);
   assert.ok(back.twinsAlive() || !back.get(back.twin.good).alive);
-  assert.strictEqual(back.rolesOf('crew').length, 13, 'its script still decides the roles');
+  assert.strictEqual(back.rolesOf('crew').length, SCRIPTS.carnival.roles.filter((r) => ROLES[r].type === 'crew').length, 'its script still decides the roles');
 });
 
 test('Palm Reader visions are false (neither is real) when the Hacker glitches them', () => {
