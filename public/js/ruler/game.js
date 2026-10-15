@@ -5,7 +5,9 @@ import { el, problem } from '../util.js';
 import { store, send, contender, card, anomaly, evolution, player, colorOf } from './net.js';
 import { DiceTray } from './dice.js';
 import { faceSvg, faceIcon } from './faces.js';
-import { sfx, soundEnabled, musicEnabled, setSound, setMusic, unlock } from './sound.js';
+import { sfx } from './sound.js';
+import { settings, toggleMute, onSettings, openSettings } from './settings.js';
+import { icon, menuList, onEscape, keyHints } from './ui.js';
 import { processLog } from './fx.js';
 import { applyPrompts } from './prompts.js';
 import { openRules } from './codex.js';
@@ -37,19 +39,16 @@ export function buildGame(root, { onLeave, world: w }) {
     bazaarHead: el('div', { className: 'bazaar-head' }),
     chat: el('div', { className: 'chat' }),
   };
-  const sound = iconBtn(soundEnabled() ? '🔊' : '🔇', 'Sound on/off', () => {
-    unlock();
-    setSound(!soundEnabled());
-    sound.textContent = soundEnabled() ? '🔊' : '🔇';
-  });
-  const music = iconBtn('🎵', 'Music on/off', () => {
-    unlock();
-    setMusic(!musicEnabled());
-    music.classList.toggle('off', !musicEnabled());
-  });
-  music.classList.toggle('off', !musicEnabled());
-  const chatToggle = iconBtn('💬', 'Chat and log', () => document.body.classList.toggle('chat-open'));
-  const bazaarToggle = iconBtn('🛒', 'Xenotech Bazaar', () => document.body.classList.toggle('bazaar-open'), 'bazaar-toggle');
+  const sound = iconBtn(icon('sound'), 'Mute or unmute everything', () => toggleMute());
+  const drawSound = () => {
+    sound.replaceChildren(icon(settings.muted ? 'mute' : 'sound'));
+    sound.classList.toggle('off', settings.muted);
+  };
+  onSettings(drawSound);
+  drawSound();
+  const chatToggle = iconBtn(icon('chat'), 'Chat and battle log', () => document.body.classList.toggle('chat-open'));
+  const bazaarToggle = iconBtn(icon('bag'), 'Xenotech Bazaar', () => document.body.classList.toggle('bazaar-open'), 'bazaar-toggle');
+  const menuBtn = iconBtn(icon('menu'), 'Menu (Esc)', () => openPause(onLeave), 'menu-btn');
   mountChat(refs.chat);
 
   root.replaceChildren(
@@ -58,7 +57,7 @@ export function buildGame(root, { onLeave, world: w }) {
       { className: 'topbar' },
       el('div', { className: 'brand' }, el('span', { className: 'logo' }, 'RULER OF THE GALAXY'), refs.code),
       el('div', { className: 'top-mid' }, refs.round, refs.anomaly, refs.goal),
-      el('div', { className: 'top-right' }, iconBtn('📖', 'How to play', () => openRules()), bazaarToggle, chatToggle, sound, music, iconBtn('⏏', 'Leave the galaxy', onLeave)),
+      el('div', { className: 'top-right' }, bazaarToggle, chatToggle, sound, menuBtn),
     ),
     el('aside', { className: 'left-col' }, refs.plates, refs.ticker),
     el('aside', { className: 'bazaar panel' }, refs.bazaarHead, refs.bazaar, refs.bazaarFoot),
@@ -78,8 +77,14 @@ export function buildGame(root, { onLeave, world: w }) {
     },
   });
   if (window.__rotg) window.__rotg.tray = tray; // (for debugging)
+  // Escape opens the menu (unless it closed something else, or a decision is waiting)
   document.addEventListener('keydown', (e) => {
-    if (e.target.matches('input, textarea') || !store.state || document.getElementById('screen-game').hidden) return;
+    if (e.key !== 'Escape' || e.defaultPrevented || document.getElementById('screen-game').hidden) return;
+    if (document.querySelector('.dialog-wrap, .alert-wrap, .end-wrap:not(.peek), #layer-modal:not([hidden])')) return;
+    openPause(onLeave);
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.target.matches?.('input, textarea') || !store.state || document.getElementById('screen-game').hidden) return;
     const st = store.state;
     if (e.key === ' ' || e.key === 'r') {
       e.preventDefault();
@@ -88,6 +93,40 @@ export function buildGame(root, { onLeave, world: w }) {
     if (e.key === 'Enter' && myPrompt(st, 'dice') && st.turn.rolled) resolve(st);
     if (/^[1-7]$/.test(e.key) && myPrompt(st, 'dice') && st.turn.rolled) tray.onToggle(Number(e.key) - 1);
   });
+}
+
+// ---------------------------------------------------------------------------
+// The menu: the battle does not stop for it (it is a game with friends), so it only offers the way out
+// ---------------------------------------------------------------------------
+
+let pause = null;
+let popPause = null;
+
+function closePause() {
+  pause?.classList.add('closing');
+  const gone = pause;
+  setTimeout(() => gone?.remove(), 180);
+  pause = null;
+  popPause?.();
+  popPause = null;
+}
+
+function openPause(onLeave) {
+  if (pause) return closePause();
+  const menu = menuList([
+    { label: 'Resume', sub: 'Back to the battle', onClick: closePause, sound: 'back' },
+    { label: 'How to play', sub: 'The rules, the contenders, the cards', onClick: () => openRules() },
+    { label: 'Settings', sub: 'Sound, music and graphics', onClick: () => openSettings() },
+    { label: 'Leave the galaxy', sub: 'A robot takes over your ship', onClick: () => (closePause(), onLeave()), className: 'danger', sound: 'back' },
+  ]);
+  pause = el(
+    'div',
+    { className: 'pause', onpointerdown: (e) => e.target === pause && closePause() },
+    el('div', { className: 'pause-panel panel' }, el('div', { className: 'eyebrow' }, 'Menu'), el('h2', {}, 'The battle goes on'), menu, el('div', { className: 'pause-keys' }, keyHints([[['↑', '↓'], 'Choose'], [['Enter'], 'Select'], [['Esc'], 'Resume']]))),
+  );
+  document.body.append(pause);
+  popPause = onEscape(() => (sfx('back'), closePause()));
+  setTimeout(() => menu.focusSelected(), 30);
 }
 
 // ---------------------------------------------------------------------------

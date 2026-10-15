@@ -14,8 +14,12 @@ import { sfx } from './sound.js';
 
 // the whole table, seen from high enough that the dice console does not hide the ships at the front
 const OVERVIEW = { target: new THREE.Vector3(0, -0.5, 4.5), radius: 37, theta: 0, phi: 0.86 };
-// the title screen: the galaxy shifted right, clear of the panel on the left (on a phone the panel is at the bottom)
+// the title screen: the galaxy shifted right, clear of the menu on the left (on a phone the menu is at the bottom)
 const homeView = () => (innerWidth > 820 ? { target: new THREE.Vector3(-10, 0.5, 1), radius: 36, theta: 0.15, phi: 0.95 } : { target: new THREE.Vector3(0, -4, 2), radius: 40, theta: 0, phi: 0.8 });
+// the lobby: the whole ring in the middle, between the squad on the left and the rules on the right
+const lobbyView = () => (innerWidth > 820 ? { target: new THREE.Vector3(0, -1.5, 1), radius: 38, theta: 0.12, phi: 0.92 } : { target: new THREE.Vector3(0, -6, 2), radius: 42, theta: 0, phi: 0.8 });
+// the opening shot behind the start screen: far out over both galaxies
+const TITLE_SHOT = { target: new THREE.Vector3(0, -60, 0), radius: 250, theta: -0.7, phi: 0.5 };
 
 export class World {
   constructor() {
@@ -27,7 +31,7 @@ export class World {
     this.mode = null;
     this.focusUntil = 0;
     this.trailClock = 0;
-    preloadShips();
+    this.ready = preloadShips(); // resolves when the contenders' 3D models are in (the loading screen waits for it)
     this.stage.onFrame((dt) => this.update(dt));
     this.stage.fly(OVERVIEW, 0.01);
   }
@@ -35,8 +39,11 @@ export class World {
   // ---------------------------------------------------------------------------
   // The showcase: every contender on show (title screen and lobby)
   // ---------------------------------------------------------------------------
-  showcase(selected = null, taken = {}) {
-    if (this.mode !== 'showcase') {
+  // selected: the contender to light up; focus: one to fly the camera to (the contender select screen);
+  // view: 'home' (the galaxy to the right of the menu) or 'lobby' (the ring in the middle)
+  showcase(selected = null, taken = {}, { focus = null, view = 'home' } = {}) {
+    const first = this.mode !== 'showcase';
+    if (first) {
       this.clearShips();
       this.mode = 'showcase';
       const list = store.data.contenders;
@@ -50,7 +57,6 @@ export class World {
       this.arena.setPulsar(false);
       this.arena.setCoreHeld(false);
       this.arena.setMood(null);
-      this.stage.fly(homeView(), 1.2);
     }
     for (const [id, rec] of this.ships) {
       const c = contender(id);
@@ -59,19 +65,39 @@ export class World {
       rec.label.querySelector('.tag-name').textContent = taken[id] ? `${c.name.split(' ')[0]} · ${taken[id]}` : c.name;
       rec.label.querySelector('.tag-stats').textContent = c.title;
     }
-    // the camera swings round to whoever you picked
-    if (selected && selected !== this.showFocus) {
-      this.showFocus = selected;
-      const i = store.data.contenders.findIndex((c) => c.id === selected);
-      const p = rimPosition(i, store.data.contenders.length);
-      const theta = Math.atan2(p.x, p.z);
-      this.stage.fly({ target: p.clone().setY(1.6), radius: 11, theta, phi: 1.2 }, 1.6);
-      this.stage.drift = 0.3;
-    } else if (!selected && this.showFocus !== null) {
-      this.showFocus = null;
-      this.stage.fly(homeView(), 1.6);
-      this.stage.drift = 1;
+    // the camera swings round to the contender in focus, or pulls back to the whole ring
+    const shot = focus ? `focus:${focus}` : `view:${view}`;
+    if (shot !== this.shot) {
+      this.shot = shot;
+      this.stage.spin = 0;
+      if (focus) {
+        const i = store.data.contenders.findIndex((c) => c.id === focus);
+        const p = rimPosition(i, store.data.contenders.length);
+        const theta = Math.atan2(p.x, p.z);
+        // on a wide screen, aim a little to the ship's right so it stands left of the info panel
+        const side = innerWidth > 1000 ? 2.2 : 0;
+        const target = p.clone().setY(innerWidth > 820 ? 1.2 : -3.2).add(new THREE.Vector3(Math.cos(theta), 0, -Math.sin(theta)).multiplyScalar(side));
+        this.stage.fly({ target, radius: innerWidth > 820 ? 14.5 : 17, theta, phi: 1.2 }, first ? 1.2 : 1.4);
+        this.stage.drift = 0.3;
+      } else {
+        this.stage.fly(view === 'lobby' ? lobbyView() : homeView(), first ? 1.2 : 1.6);
+        this.stage.drift = 1;
+      }
     }
+  }
+
+  // the start screen: a slow turn far out over the galaxies...
+  titleShot() {
+    this.stage.fly(TITLE_SHOT, 0.01);
+    this.stage.spin = 0.035;
+    this.stage.drift = 0.4;
+  }
+
+  // ...and, on Press Start, the dive down to the contenders
+  swoopIn() {
+    this.stage.spin = 0;
+    this.stage.drift = 1;
+    this.stage.fly(homeView(), 3.4);
   }
 
   // ---------------------------------------------------------------------------
@@ -81,7 +107,7 @@ export class World {
     if (this.mode !== 'game') {
       this.clearShips();
       this.mode = 'game';
-      this.showFocus = undefined;
+      this.shot = null;
       this.stage.fly(OVERVIEW, 1.4);
       this.stage.drift = 1;
     }

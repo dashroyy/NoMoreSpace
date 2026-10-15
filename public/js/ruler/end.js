@@ -60,7 +60,7 @@ function show(state, onLeave) {
       el(
         'div',
         { className: 'end-btns' },
-        host ? el('button', { className: 'big primary', onclick: () => send('rematch').catch((e) => problem(e.message)) }, '🔁 Play again') : el('span', { className: 'muted' }, 'Waiting for the host to start another round…'),
+        host ? el('button', { className: 'big gold', onclick: () => send('rematch').catch((e) => problem(e.message)) }, '🔁 Play again') : el('span', { className: 'muted' }, 'Waiting for the host to start another round…'),
         el('button', { className: 'big', onclick: () => box.classList.toggle('peek') }, '👁 See the galaxy'),
         el('button', { className: 'big', onclick: onLeave }, 'Leave'),
       ),

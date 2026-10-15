@@ -60,6 +60,23 @@ With 5 or 6 players a second seat opens: the **Binary Pulsar**. It works like th
 
 The card text is what the engine runs: an Augment names a `hook` the engine checks at the right moment, and a Directive is a list of steps, e.g. `[['stars', 2], ['hurtOthers', 1]]`. See `server/ruler/data.js`.
 
+## The menus
+
+The whole front of the game is built to feel like a console game: you can drive every menu with the arrow keys and Enter, or with the mouse or your thumb, and everything makes a small sound.
+
+- **Start screen.** The logo and a loading bar over the 3D galaxy while the contenders' models load, a tip, then **Press any key** (or **Tap to start** on a phone). That first press is also what lets the browser play sound. The camera dives from far above both galaxies down to the contenders. It shows once per visit; reloading in the middle of a game goes straight back to it.
+- **Main menu.** Play online, Join a galaxy, Practice, Contenders, How to play, Settings, as big items with a line of explanation. Up top: your **callsign and contender** (tap to rename) and Settings; at the bottom, how many people are playing right now. No name yet? A window asks for one and offers a random callsign (*Quantum Corsair*, *Nova Ranger*...).
+- **Join.** Four letter boxes: type, paste or let autocorrect fill them. An invite link (`/ruler?join=ABCD`) opens this screen with the code in.
+- **Practice.** One to five robots and the Stars needed to win.
+- **Contender select.** Like a fighting game's: a roster along the bottom, the camera flies to whoever is highlighted, and a panel shows their role (*Tank*, *Aggro*...), a difficulty, four stat bars (Firepower, Armour, Economy, Dice control), their power and their three Evolutions. A dice tile picks one at random. In the lobby, contenders your friends already hold show a padlock, live. The stats and difficulty live in `server/ruler/data.js` and are only for show: the rules never read them.
+- **Lobby.** Six seats (open ones show, with an Add robot button), the galaxy code with a copy-link button and a QR code, your contender with a **Change** button, the match rules (the host edits them; everyone else sees them locked) and a Launch button. Leaving asks first, in a window of the game's own.
+- **In a battle.** The top bar has the Bazaar and chat buttons (on a phone), a mute button and **Menu**. Menu, or **Esc**, opens a small menu (Resume, How to play, Settings, Leave): the battle does not stop for it, because it is a game with friends. Leaving hands your ship to a robot.
+- **Settings** (from the title menu, the lobby and the battle menu, remembered in the browser): master, music and effects volume, mute, graphics quality (High, Balanced, Low: lower pixel density, and Low also turns the glow off) and camera shake.
+- **Transitions and sound.** A flash of light between the title, the lobby and the battle. Sounds for moving over a menu item, choosing, going back, opening a window and launching (all made on the fly, like the rest).
+- **On a phone** the menu sits along the bottom, the contender panel scrolls with Confirm always in reach, and the lobby is one scrolling column with a sticky Launch bar.
+
+`ui.js` holds the shared pieces (`menuList`, `dialog`, `confirmDialog`, `askName`, `icon`, `keyHints` and the Escape key's stack, where whatever opened last closes first), and every button in the game shares one style in `ruler-menus.css`. `test/ruler.test.js` checks that every import and every icon used by the client really exists.
+
 ## Where things are
 
 ```
@@ -69,7 +86,7 @@ server/ruler/
   bots.js      the robots: they answer the very same questions a person does
   index.js     the "/ruler" Socket.IO namespace: tables, seats, answers, chat
 public/
-  ruler.html, css/ruler.css
+  ruler.html, css/ruler.css (the game), css/ruler-menus.css (the menus and the button style)
   js/ruler/
     main.js      screens, the socket, the store
     world.js     the 3D world: places every flagship at its seat, flies them in and out, moves the camera
@@ -79,7 +96,8 @@ public/
     fx.js        reads the game log and turns each line into 3D effects, sounds, pop-ups and banners
     dice.js      the 3D dice tray (its own small renderer); faces.js draws the faces
     game.js      the table: player plates, the dice console with a preview of what you will get, the Bazaar
-    home.js, lobby.js, prompts.js (yield / evolve / grapple), codex.js (How to play), chat.js, end.js, sound.js
+    splash.js (start screen), home.js (title menu), select.js (contender select), lobby.js, settings.js, ui.js (menus, dialogs, icons, key hints),
+    prompts.js (yield / evolve / grapple), codex.js (How to play), chat.js, end.js, sound.js
   assets/models/ruler/   the 3D models (see ASSETS.md)
 test/ruler.test.js    data, every rule, 70 robot-only games, a full live game over sockets and the routes
 ```

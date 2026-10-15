@@ -2,28 +2,16 @@
 // explosions, dice clatter, chimes for Stars, a warp whoosh, and a slow cosmic drone for music.
 let ctx = null;
 let master = null;
+let sfxBus = null;
 let musicGain = null;
 let musicNodes = null;
 
-const KEY_SOUND = 'rotg-sound';
-const KEY_MUSIC = 'rotg-music';
-const read = (k, def) => {
-  try {
-    const v = localStorage.getItem(k);
-    return v == null ? def : v === '1';
-  } catch {
-    return def;
-  }
-};
-const write = (k, on) => {
-  try {
-    localStorage.setItem(k, on ? '1' : '0');
-  } catch {}
-};
-let soundOn = read(KEY_SOUND, true);
-let musicOn = read(KEY_MUSIC, true);
-export const soundEnabled = () => soundOn;
-export const musicEnabled = () => musicOn;
+// volumes 0..100 and a mute switch; settings.js owns them (and remembers them) and passes them in here
+const vol = { master: 80, music: 50, effects: 80, muted: false };
+const MUSIC_LEVEL = 0.35;
+const musicTarget = () => (vol.muted ? 0 : (vol.music / 100) * MUSIC_LEVEL);
+export const soundEnabled = () => !vol.muted && vol.effects > 0;
+export const musicEnabled = () => !vol.muted && vol.music > 0;
 
 export function unlock() {
   if (!ctx) {
@@ -31,25 +19,32 @@ export function unlock() {
     if (!AC) return;
     ctx = new AC();
     master = ctx.createGain();
-    master.gain.value = 0.55;
     master.connect(ctx.destination);
+    sfxBus = ctx.createGain();
+    sfxBus.connect(master);
     musicGain = ctx.createGain();
     musicGain.gain.value = 0;
     musicGain.connect(master);
+    applyVolumes();
   }
   if (ctx.state === 'suspended') ctx.resume();
-  if (musicOn) startMusic();
+  if (musicEnabled()) startMusic();
 }
 
-export function setSound(on) {
-  soundOn = on;
-  write(KEY_SOUND, on);
+export function setVolumes(v) {
+  Object.assign(vol, v);
+  applyVolumes();
 }
-export function setMusic(on) {
-  musicOn = on;
-  write(KEY_MUSIC, on);
-  if (on) startMusic();
-  else stopMusic();
+
+function applyVolumes() {
+  if (!ctx) return;
+  const t = ctx.currentTime;
+  master.gain.setTargetAtTime((vol.master / 100) * 0.7, t, 0.05);
+  sfxBus.gain.setTargetAtTime(vol.muted ? 0 : vol.effects / 100, t, 0.05);
+  if (musicEnabled()) {
+    startMusic();
+    if (musicNodes) musicGain.gain.setTargetAtTime(musicTarget(), t, 0.3);
+  } else stopMusic();
 }
 
 function tone({ type = 'sine', from, to = from, dur = 0.2, vol = 0.2, at = 0, attack = 0.005 }) {
@@ -62,7 +57,7 @@ function tone({ type = 'sine', from, to = from, dur = 0.2, vol = 0.2, at = 0, at
   g.gain.setValueAtTime(0.0001, t0);
   g.gain.exponentialRampToValueAtTime(vol, t0 + attack);
   g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
-  o.connect(g).connect(master);
+  o.connect(g).connect(sfxBus);
   o.start(t0);
   o.stop(t0 + dur + 0.05);
 }
@@ -83,12 +78,26 @@ function noise({ dur = 0.4, vol = 0.3, at = 0, from = 2000, to = 200, q = 0.8 })
   const g = ctx.createGain();
   g.gain.setValueAtTime(vol, t0);
   g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
-  src.connect(f).connect(g).connect(master);
+  src.connect(f).connect(g).connect(sfxBus);
   src.start(t0);
 }
 
 const SOUNDS = {
   click: () => tone({ type: 'triangle', from: 900, to: 700, dur: 0.06, vol: 0.12 }),
+  // the menus: a soft tick when the highlight moves, a bright blip to confirm, a lower one to go back
+  hover: () => tone({ type: 'triangle', from: 2100, to: 1900, dur: 0.035, vol: 0.035 }),
+  select: () => {
+    tone({ type: 'square', from: 1046, to: 1046, dur: 0.05, vol: 0.05 });
+    tone({ type: 'triangle', from: 1568, to: 1760, dur: 0.12, vol: 0.08, at: 0.045 });
+  },
+  back: () => tone({ type: 'triangle', from: 740, to: 440, dur: 0.12, vol: 0.08 }),
+  open: () => noise({ dur: 0.28, vol: 0.09, from: 600, to: 4200, q: 3 }),
+  start: () => {
+    noise({ dur: 1.6, vol: 0.22, from: 180, to: 5200, q: 5 });
+    [0, 0.12, 0.24, 0.36].forEach((at, i) => tone({ type: 'triangle', from: [262, 392, 523, 784][i], dur: 1.6, vol: 0.09, at, attack: 0.04 }));
+    tone({ type: 'sine', from: 65, to: 130, dur: 1.8, vol: 0.18, attack: 0.2 });
+  },
+  error: () => tone({ type: 'square', from: 196, to: 160, dur: 0.18, vol: 0.06 }),
   keep: () => tone({ type: 'sine', from: 660, to: 990, dur: 0.1, vol: 0.14 }),
   dice: () => {
     for (let i = 0; i < 7; i++) noise({ dur: 0.05, vol: 0.18, at: i * 0.07 + Math.random() * 0.03, from: 5000, to: 1500, q: 2 });
@@ -125,7 +134,7 @@ const SOUNDS = {
 };
 
 export function sfx(name) {
-  if (!soundOn || !ctx || ctx.state !== 'running') return;
+  if (!soundEnabled() || !ctx || ctx.state !== 'running') return;
   try {
     SOUNDS[name]?.();
   } catch {}
@@ -157,7 +166,7 @@ function startMusic() {
   });
   musicNodes = { oscs, lfo, filter };
   musicGain.gain.cancelScheduledValues(ctx.currentTime);
-  musicGain.gain.linearRampToValueAtTime(0.35, ctx.currentTime + 3);
+  musicGain.gain.linearRampToValueAtTime(musicTarget(), ctx.currentTime + 3);
 }
 
 function stopMusic() {

@@ -338,3 +338,76 @@ test('the page, its data and a live practice galaxy over the socket', async () =
 test.after(() => {
   server.close();
 });
+
+// ---------------------------------------------------------------------------
+// The menus: the start screen, main menu, contender select, lobby and settings
+// ---------------------------------------------------------------------------
+
+const CLIENT = path.join(ROOT, 'public/js/ruler');
+const clientFiles = () => {
+  const out = [];
+  const walk = (dir) => {
+    for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
+      if (e.isDirectory()) walk(path.join(dir, e.name));
+      else if (e.name.endsWith('.js')) out.push(path.join(dir, e.name));
+    }
+  };
+  walk(CLIENT);
+  return out;
+};
+
+test('the contender select has what it shows: four stats from 1 to 5 and a difficulty for every contender', () => {
+  for (const c of data.CONTENDERS) {
+    for (const k of ['firepower', 'armour', 'economy', 'control']) assert.ok(c.stats[k] >= 1 && c.stats[k] <= 5, `${c.id} ${k}`);
+    assert.ok([1, 2, 3].includes(c.difficulty), `${c.id} difficulty`);
+  }
+  assert.ok(data.CLIENT_DATA.contenders.every((c) => c.stats && c.difficulty), 'the stats reach the browser');
+});
+
+test('the client is wired together: every import resolves to a real file and a real export', () => {
+  const exportsOf = (file) => {
+    const src = fs.readFileSync(file, 'utf8');
+    const names = new Set([...src.matchAll(/export\s+(?:async\s+)?(?:const|let|function|class)\s+([\w$]+)/g)].map((m) => m[1]));
+    for (const m of src.matchAll(/export\s*\{([^}]*)\}/g)) for (const part of m[1].split(',')) names.add(part.trim().split(/\s+as\s+/).pop());
+    return names;
+  };
+  for (const file of clientFiles()) {
+    const src = fs.readFileSync(file, 'utf8');
+    for (const m of src.matchAll(/import\s*\{([^}]*)\}\s*from\s*'(\.{1,2}\/[^']+)'/g)) {
+      const target = path.join(path.dirname(file), m[2]);
+      assert.ok(fs.existsSync(target), `${path.relative(ROOT, file)} imports ${m[2]}, which does not exist`);
+      const have = exportsOf(target);
+      for (const raw of m[1].split(',').map((x) => x.trim()).filter(Boolean)) {
+        const name = raw.split(/\s+as\s+/)[0];
+        assert.ok(have.has(name), `${path.relative(ROOT, file)} imports { ${name} } from ${m[2]}, which does not export it`);
+      }
+    }
+  }
+});
+
+test('every icon the screens ask for is drawn in ui.js', () => {
+  const ui = fs.readFileSync(path.join(CLIENT, 'ui.js'), 'utf8');
+  const drawn = new Set([...ui.slice(ui.indexOf('const ICONS'), ui.indexOf('export function icon')).matchAll(/^\s+(\w+):\s*'/gm)].map((m) => m[1]));
+  assert.ok(drawn.size >= 20);
+  for (const file of clientFiles()) {
+    for (const m of fs.readFileSync(file, 'utf8').matchAll(/\bicon\('(\w+)'/g)) assert.ok(drawn.has(m[1]), `${path.relative(ROOT, file)} uses the icon "${m[1]}", which is not drawn`);
+  }
+});
+
+test('the page has the start screen and both stylesheets, and the logo is shared by the title menu', () => {
+  const html = fs.readFileSync(path.join(ROOT, 'public/ruler.html'), 'utf8');
+  for (const css of ['/css/ruler.css', '/css/ruler-menus.css']) {
+    assert.ok(html.includes(css), `${css} is linked`);
+    assert.ok(fs.existsSync(path.join(ROOT, 'public', css)), `${css} exists`);
+  }
+  const splash = fs.readFileSync(path.join(CLIENT, 'splash.js'), 'utf8');
+  for (const id of [...splash.matchAll(/\$\('([\w-]+)'\)/g)].map((m) => m[1])) assert.ok(html.includes(`id="${id}"`), `ruler.html has #${id}`);
+  assert.ok(html.includes('id="warp"') && html.includes('class="logo-lockup"'));
+});
+
+test('the settings are remembered and bounded, and old sound switches are carried over', () => {
+  const src = fs.readFileSync(path.join(CLIENT, 'settings.js'), 'utf8');
+  assert.match(src, /rotg-settings/);
+  for (const key of ['master', 'music', 'effects', 'muted', 'quality', 'shake']) assert.match(src, new RegExp(`${key}:`), `${key} has a default`);
+  assert.match(src, /rotg-sound/, 'the first version\'s sound switch is still read');
+});

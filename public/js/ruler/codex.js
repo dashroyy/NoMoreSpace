@@ -2,10 +2,16 @@
 import { el } from '../util.js';
 import { store } from './net.js';
 import { faceIcon, faceSvg } from './faces.js';
+import { sfx } from './sound.js';
+import { onEscape } from './ui.js';
 
 const modalLayer = () => document.getElementById('layer-modal');
 
+let popEscape = null;
+
 export function openModal(body, { title = '', wide = false } = {}) {
+  closeModal();
+  sfx('open');
   const box = modalLayer();
   const close = () => closeModal();
   box.replaceChildren(
@@ -16,13 +22,12 @@ export function openModal(body, { title = '', wide = false } = {}) {
     ),
   );
   box.hidden = false;
-  const onKey = (e) => {
-    if (e.key === 'Escape') close();
-  };
-  document.addEventListener('keydown', onKey, { once: true });
+  popEscape = onEscape(() => (sfx('back'), closeModal())); // (Escape closes the top-most thing first)
 }
 
 export function closeModal() {
+  popEscape?.();
+  popEscape = null;
   const box = modalLayer();
   box.hidden = true;
   box.replaceChildren();

@@ -38,6 +38,8 @@ export class Stage {
     this.tween = null;
     this.drift = 1; // idle sway, 0..1
     this.shakeAmp = 0;
+    this.shakeScale = 1; // 0 turns camera shake off (Settings)
+    this.spin = 0; // a slow turn round the target, in radians a second (the title screen)
     this.frameFns = new Set();
     this.labels = new Set();
     this.clock = new THREE.Clock();
@@ -89,7 +91,18 @@ export class Stage {
   }
 
   shake(power = 0.5) {
-    this.shakeAmp = Math.min(1.5, this.shakeAmp + power);
+    this.shakeAmp = Math.min(1.5, this.shakeAmp + power * this.shakeScale);
+  }
+
+  // graphics quality (Settings): high, balanced or low. Low turns the glow off and draws fewer pixels.
+  setQuality(q) {
+    this.quality = q;
+    const cap = { high: this.small ? 1.5 : 1.75, balanced: 1.25, low: 1 }[q] || 1.5;
+    const ratio = Math.min(devicePixelRatio || 1, cap);
+    this.renderer.setPixelRatio(ratio);
+    this.composer.setPixelRatio(ratio);
+    this.bloom.enabled = q !== 'low';
+    this.resize();
   }
 
   // an HTML element that follows a 3D object (offset: world units above it)
@@ -120,7 +133,7 @@ export class Stage {
       r.theta = tw.from.theta + (tw.goal.theta - tw.from.theta) * k;
       r.phi = tw.from.phi + (tw.goal.phi - tw.from.phi) * k;
       if (tw.t >= 1) this.tween = null;
-    }
+    } else if (this.spin) r.theta += this.spin * dt;
     const sway = this.drift * Math.sin(this.time * 0.07) * 0.16;
     const bob = this.drift * Math.sin(this.time * 0.11) * 0.03;
     const theta = r.theta + sway;
