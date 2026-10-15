@@ -43,6 +43,11 @@ export class Effects {
     stage.onFrame((dt) => this.update(dt));
   }
 
+  // the soft round glow used by points and sprites (for other files that draw their own particles)
+  dotTexture() {
+    return dot();
+  }
+
   add(obj, update, after = 0) {
     const fx = { obj, update, t: -after, started: after <= 0 };
     if (fx.started) this.root.add(obj);
@@ -350,5 +355,331 @@ export class Effects {
       this.burst(p, c, 60, 6, i * 0.35, 1.6, 0.35);
       this.flash(p, c, 4, i * 0.35);
     }
+  }
+
+  // ---------------------------------------------------------------------------
+  // The newer effects (see moves.js, which uses them for attacks and entrances)
+  // ---------------------------------------------------------------------------
+
+  // a thick beam that holds, pulsing, then fades: the Star-Eater's solar lance
+  beam(a, b, color, { life = 0.9, width = 0.5, delay = 0, pulse = 14 } = {}) {
+    const g = new THREE.Group();
+    const dir = b.clone().sub(a);
+    const len = dir.length();
+    const mid = a.clone().add(b).multiplyScalar(0.5);
+    const q = new THREE.Quaternion().setFromUnitVectors(UP, dir.clone().normalize());
+    const layers = [
+      [width * 2.8, color, 0.3],
+      [width * 1.4, color, 0.7],
+      [width * 0.55, 0xffffff, 1],
+    ];
+    const meshes = layers.map(([w, c, o]) => {
+      const m = new THREE.Mesh(BEAM_GEO, new THREE.MeshBasicMaterial(additive({ color: c, opacity: o })));
+      m.position.copy(mid);
+      m.quaternion.copy(q);
+      m.scale.set(w, len, w);
+      g.add(m);
+      return m;
+    });
+    const head = new THREE.Sprite(new THREE.SpriteMaterial(additive({ map: starTexture(), color })));
+    head.position.copy(a);
+    const tail = new THREE.Sprite(new THREE.SpriteMaterial(additive({ map: dot(), color })));
+    tail.position.copy(b);
+    g.add(head, tail);
+    this.add(
+      g,
+      (t) => {
+        const k = t / life;
+        if (k >= 1) return false;
+        const env = k < 0.12 ? k / 0.12 : k > 0.72 ? 1 - (k - 0.72) / 0.28 : 1;
+        const wob = 1 + Math.sin(t * pulse) * 0.14;
+        meshes.forEach((m, i) => {
+          m.scale.x = m.scale.z = layers[i][0] * wob * (0.35 + 0.65 * env);
+          m.material.opacity = layers[i][2] * env;
+        });
+        head.scale.setScalar(width * 9 * (0.6 + 0.4 * env) * wob);
+        head.material.rotation = t * 4;
+        head.material.opacity = env;
+        tail.scale.setScalar(width * 12 * (0.7 + 0.3 * env) * wob);
+        tail.material.opacity = env;
+        return true;
+      },
+      delay,
+    );
+  }
+
+  // a glowing tendril that whips out along these points and snaps back (the Kraken's lash)
+  tube(points, color, radius = 0.13, life = 0.75, delay = 0) {
+    const curve = new THREE.CatmullRomCurve3(points);
+    const radial = 6;
+    const geo = new THREE.TubeGeometry(curve, 32, radius, radial, false);
+    const per = radial * 6;
+    const segments = Math.floor(geo.index.count / per);
+    const core = new THREE.Mesh(geo, new THREE.MeshBasicMaterial(additive({ color, opacity: 0.95 })));
+    const geo2 = new THREE.TubeGeometry(curve, 32, radius * 0.4, radial, false);
+    const white = new THREE.Mesh(geo2, new THREE.MeshBasicMaterial(additive({ color: 0xffffff, opacity: 0.9 })));
+    const g = new THREE.Group();
+    g.add(core, white);
+    const ease = (x) => 1 - Math.pow(1 - Math.min(1, Math.max(0, x)), 3);
+    this.add(
+      g,
+      (t) => {
+        const k = t / life;
+        if (k >= 1) return false;
+        const end = Math.floor(segments * ease(k / 0.4));
+        const start = k > 0.6 ? Math.floor(segments * ease((k - 0.6) / 0.4)) : 0;
+        for (const m of [core, white]) m.geometry.setDrawRange(start * per, Math.max(0, end - start) * per);
+        const fade = k > 0.85 ? 1 - (k - 0.85) / 0.15 : 1;
+        core.material.opacity = 0.95 * fade;
+        white.material.opacity = 0.9 * fade;
+        return true;
+      },
+      delay,
+    );
+  }
+
+  // soft grey smoke puffing up and spreading (after an explosion or a landing)
+  smoke(at, count = 10, color = 0x3a3a4a, life = 1.8, spread = 1.6, delay = 0) {
+    for (let i = 0; i < count; i++) {
+      const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: dot(), color, transparent: true, opacity: 0.5, depthWrite: false }));
+      const v = new THREE.Vector3((Math.random() - 0.5) * spread, 0.5 + Math.random() * 1.4, (Math.random() - 0.5) * spread);
+      const start = at.clone();
+      this.add(
+        s,
+        (t) => {
+          const k = t / life;
+          if (k >= 1) return false;
+          s.position.copy(start).addScaledVector(v, 1 - Math.pow(1 - k, 2));
+          s.scale.setScalar(0.8 + k * 3.2);
+          s.material.opacity = 0.5 * (1 - k);
+          return true;
+        },
+        delay + Math.random() * 0.2,
+      );
+    }
+  }
+
+  // dust thrown out along the ground (a landing)
+  dust(at, size = 5, delay = 0) {
+    const count = 26;
+    for (let i = 0; i < count; i++) {
+      const a = (i / count) * Math.PI * 2 + Math.random() * 0.2;
+      const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: dot(), color: 0x8a7a6a, transparent: true, opacity: 0.45, depthWrite: false }));
+      const start = at.clone();
+      const reach = size * (0.55 + Math.random() * 0.45);
+      this.add(
+        s,
+        (t) => {
+          const k = t / 1.3;
+          if (k >= 1) return false;
+          const e = 1 - Math.pow(1 - k, 2.5);
+          s.position.set(start.x + Math.cos(a) * reach * e, start.y + 0.25 + k * 0.6, start.z + Math.sin(a) * reach * e);
+          s.scale.setScalar(1 + k * 2.6);
+          s.material.opacity = 0.45 * (1 - k);
+          return true;
+        },
+        delay,
+      );
+    }
+  }
+
+  // particles rush in from a sphere and gather at a point (a weapon charging, a swarm forming)
+  converge(at, color, { count = 40, radius = 3, life = 0.5, delay = 0, size = 0.24 } = {}) {
+    const pos = new Float32Array(count * 3);
+    const dirs = Array.from({ length: count }, () => new THREE.Vector3(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5).normalize().multiplyScalar(radius * (0.6 + Math.random() * 0.4)));
+    const geo = new THREE.BufferGeometry().setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    const pts = new THREE.Points(geo, new THREE.PointsMaterial(additive({ map: dot(), color, size, sizeAttenuation: true })));
+    this.add(
+      pts,
+      (t) => {
+        const k = t / life;
+        if (k >= 1) return false;
+        const e = k * k; // they accelerate towards the middle
+        for (let i = 0; i < count; i++) {
+          const d = dirs[i];
+          pos.set([at.x + d.x * (1 - e), at.y + d.y * (1 - e), at.z + d.z * (1 - e)], i * 3);
+        }
+        geo.attributes.position.needsUpdate = true;
+        pts.material.opacity = k < 0.8 ? 1 : 1 - (k - 0.8) / 0.2;
+        return true;
+      },
+      delay,
+    );
+  }
+
+  // an orb of light swelling at a point (a weapon charging up)
+  chargeOrb(at, color, life = 0.45, size = 2.4, delay = 0) {
+    const s = new THREE.Sprite(new THREE.SpriteMaterial(additive({ map: dot(), color })));
+    const core = new THREE.Sprite(new THREE.SpriteMaterial(additive({ map: dot(), color: 0xffffff })));
+    s.position.copy(at);
+    core.position.copy(at);
+    const g = new THREE.Group();
+    g.add(s, core);
+    this.add(
+      g,
+      (t) => {
+        const k = t / life;
+        if (k >= 1) return false;
+        const grow = 0.15 + k * k;
+        s.scale.setScalar(size * grow * (1 + Math.sin(t * 40) * 0.05));
+        core.scale.setScalar(size * grow * 0.45);
+        s.material.opacity = k < 0.85 ? 0.9 : 1 - (k - 0.85) / 0.15;
+        core.material.opacity = s.material.opacity;
+        return true;
+      },
+      delay,
+    );
+  }
+
+  // a ring facing a direction, growing as it goes (it can also travel: `to`)
+  ringFacing(at, dir, color, from = 0.4, to = 2.4, life = 0.4, delay = 0, travelTo = null) {
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(1, 0.07, 8, 48), new THREE.MeshBasicMaterial(additive({ color })));
+    ring.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), dir.clone().normalize());
+    ring.position.copy(at);
+    const start = at.clone();
+    this.add(
+      ring,
+      (t) => {
+        const k = t / life;
+        if (k >= 1) return false;
+        if (travelTo) ring.position.lerpVectors(start, travelTo, k);
+        ring.scale.setScalar(from + (to - from) * Math.pow(k, 0.7));
+        ring.material.opacity = k < 0.7 ? 1 : 1 - (k - 0.7) / 0.3;
+        return true;
+      },
+      delay,
+    );
+  }
+
+  // a clock face spinning open and fading: the Chronos Syndicate's hit
+  clockFlash(at, color, delay = 0) {
+    const g = new THREE.Group();
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(1, 0.05, 8, 48), new THREE.MeshBasicMaterial(additive({ color })));
+    ring.rotation.x = Math.PI / 2;
+    g.add(ring);
+    const ticks = new THREE.Group();
+    for (let i = 0; i < 12; i++) {
+      const m = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.06, i % 3 ? 0.22 : 0.4), new THREE.MeshBasicMaterial(additive({ color: 0xffffff })));
+      const a = (i / 12) * Math.PI * 2;
+      m.position.set(Math.cos(a) * 0.86, 0, Math.sin(a) * 0.86);
+      m.rotation.y = -a;
+      ticks.add(m);
+    }
+    g.add(ticks);
+    const hand = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.05, 0.8), new THREE.MeshBasicMaterial(additive({ color: 0xffffff })));
+    hand.position.z = 0.4;
+    const handG = new THREE.Group();
+    handG.add(hand);
+    g.add(handG);
+    g.position.copy(at);
+    this.add(
+      g,
+      (t) => {
+        const k = t / 0.8;
+        if (k >= 1) return false;
+        const e = 1 - Math.pow(1 - k, 3);
+        g.scale.setScalar(0.5 + e * 2.8);
+        ticks.rotation.y = -t * 6;
+        handG.rotation.y = t * 22;
+        const o = k < 0.6 ? 1 : 1 - (k - 0.6) / 0.4;
+        for (const m of [ring, ...ticks.children, hand]) m.material.opacity = o;
+        return true;
+      },
+      delay,
+    );
+  }
+
+  // chunks of rock or metal thrown out and falling back (they bounce on the ground plane)
+  chunks(at, color, count = 14, speed = 6, size = 0.3, life = 1.8, delay = 0) {
+    const g = new THREE.Group();
+    const bits = [];
+    for (let i = 0; i < count; i++) {
+      const m = new THREE.Mesh(new THREE.DodecahedronGeometry(size * (0.5 + Math.random()), 0), new THREE.MeshStandardMaterial({ color: i % 2 ? 0x4a3f3a : color, emissive: i % 3 ? 0x000000 : color, emissiveIntensity: 1.2, roughness: 0.7 }));
+      m.position.copy(at);
+      m.userData.v = new THREE.Vector3((Math.random() - 0.5) * speed, 3 + Math.random() * speed, (Math.random() - 0.5) * speed);
+      m.userData.r = new THREE.Vector3(Math.random() * 6, Math.random() * 6, Math.random() * 6);
+      g.add(m);
+      bits.push(m);
+    }
+    this.add(
+      g,
+      (t, dt) => {
+        if (t > life) {
+          for (const b of bits) b.geometry.dispose();
+          return false;
+        }
+        for (const b of bits) {
+          b.userData.v.y -= 14 * dt;
+          b.position.addScaledVector(b.userData.v, dt);
+          if (b.position.y < at.y - 0.4) {
+            b.position.y = at.y - 0.4;
+            b.userData.v.y *= -0.35;
+            b.userData.v.x *= 0.7;
+            b.userData.v.z *= 0.7;
+          }
+          b.rotation.x += b.userData.r.x * dt;
+          b.rotation.y += b.userData.r.y * dt;
+          b.scale.setScalar(t > life * 0.7 ? Math.max(0.01, 1 - (t - life * 0.7) / (life * 0.3)) : 1);
+        }
+        return true;
+      },
+      delay,
+    );
+  }
+
+  // a glowing scar on the ground that cools and fades (a crater)
+  crater(at, color, size = 2.4, life = 3.2, delay = 0) {
+    const m = new THREE.Mesh(new THREE.RingGeometry(size * 0.35, size, 40), new THREE.MeshBasicMaterial(additive({ color, opacity: 0.8, side: THREE.DoubleSide })));
+    m.rotation.x = -Math.PI / 2;
+    m.position.copy(at).setY(at.y - 0.3);
+    this.add(
+      m,
+      (t) => {
+        const k = t / life;
+        if (k >= 1) return false;
+        m.scale.setScalar(1 + Math.min(1, k * 4) * 0.3);
+        m.material.opacity = 0.8 * (1 - k) * (1 - k);
+        return true;
+      },
+      delay,
+    );
+  }
+
+  // a thin bright streak between two points that lingers a moment (a warp jump)
+  streak(a, b, color, life = 0.55, width = 0.22, delay = 0) {
+    this.beam(a, b, color, { life, width, delay, pulse: 0 });
+  }
+
+  // a ball of fire flying along a straight line with a long tail (a meteor)
+  fireball(from, to, color, life = 0.9, size = 2.4, delay = 0) {
+    const head = new THREE.Sprite(new THREE.SpriteMaterial(additive({ map: dot(), color: 0xfff1c4 })));
+    const glow = new THREE.Sprite(new THREE.SpriteMaterial(additive({ map: dot(), color })));
+    const g = new THREE.Group();
+    g.add(glow, head);
+    const dir = to.clone().sub(from);
+    const tailLen = 14;
+    const tail = new THREE.Mesh(BEAM_GEO, new THREE.MeshBasicMaterial(additive({ color, opacity: 0.6 })));
+    const q = new THREE.Quaternion().setFromUnitVectors(UP, dir.clone().normalize());
+    tail.quaternion.copy(q);
+    g.add(tail);
+    this.add(
+      g,
+      (t) => {
+        const k = t / life;
+        if (k >= 1) return false;
+        const e = k * k;
+        const p = from.clone().lerp(to, e);
+        head.position.copy(p);
+        glow.position.copy(p);
+        head.scale.setScalar(size * 0.8);
+        glow.scale.setScalar(size * (1.6 + Math.sin(t * 50) * 0.15));
+        const len = tailLen * (0.4 + e);
+        tail.position.copy(p).addScaledVector(dir.clone().normalize(), -len / 2);
+        tail.scale.set(size * 0.9, len, size * 0.9);
+        tail.material.opacity = 0.6;
+        return true;
+      },
+      delay,
+    );
   }
 }

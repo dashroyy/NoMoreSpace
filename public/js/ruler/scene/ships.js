@@ -14,6 +14,8 @@ import { outlineSkinned, outlineEach } from '../../world/outline.js';
 import { plasmaMaterial, glowRing } from './arena.js';
 import { glowTexture } from './galaxy.js';
 
+const UP = new THREE.Vector3(0, 1, 0);
+
 const HEIGHT = 2.6;
 const std = (color, o = {}) => new THREE.MeshStandardMaterial({ color, roughness: 0.45, metalness: 0.4, ...o });
 const glowMat = (color) => new THREE.MeshBasicMaterial({ color, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false });
@@ -413,6 +415,23 @@ function buildGoliath(color) {
   };
 }
 
+// a cone of light from the sky down to the floor, bright at the bottom and fading to nothing at the top
+function makeSpotlight(color) {
+  const h = 15;
+  const geo = new THREE.ConeGeometry(2.6, h, 36, 1, true);
+  const pos = geo.attributes.position;
+  const colors = new Float32Array(pos.count * 3);
+  for (let i = 0; i < pos.count; i++) {
+    const k = 1 - (pos.getY(i) + h / 2) / h; // 1 at the floor, 0 at the top
+    const v = Math.pow(k, 1.6);
+    colors.set([v, v, v], i * 3);
+  }
+  geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+  const m = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color, vertexColors: true, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide }));
+  m.position.y = h / 2;
+  return m;
+}
+
 const BUILDERS = { mechanova: buildMecha, kraken: buildKraken, hive: buildHive, stareater: buildStarEater, chronos: buildChronos, goliath: buildGoliath };
 
 // ---------------------------------------------------------------------------
@@ -448,6 +467,24 @@ export class Flagship {
     this.anchor = new THREE.Object3D(); // where labels and lasers come from
     this.anchor.position.y = 2.9;
     this.root.add(this.anchor);
+    // a shaft of light while it is this ship's turn, and a red shell flashed when it is hurt
+    this.spot = makeSpotlight(color);
+    this.root.add(this.spot);
+    this.hurt = new THREE.Mesh(new THREE.SphereGeometry(1.95, 24, 16), new THREE.MeshBasicMaterial({ color: 0xff2a4a, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false }));
+    this.hurt.position.y = 1.35;
+    this.root.add(this.hurt);
+    this.modelBase = { pos: this.model.position.clone(), scale: this.model.scale.clone() };
+    this.spotLevel = 0;
+    this.hurtFlash = 0;
+    this.kp = new THREE.Vector3(); // knocked back by a hit: a little springy push (position and speed)
+    this.kv = new THREE.Vector3();
+    this.chargeT = 0; // a weapon charging
+    this.chargeDur = 1;
+    this.entrance = null; // { style, t, dur }: how it arrives
+    this.ghostTimer = 0; // it turns into a ghost once this runs out
+    this.dying = null; // { t, dur }: shaking and sparking before it blows
+    this.stutterT = 0; // flickering, as if time skipped
+    this.hopT = 0; // a little hop at the start of its turn
     this.flash = 0;
     this.shieldFlash = 0;
     this.active = false;
@@ -483,8 +520,17 @@ export class Flagship {
     this.facing = p.clone();
   }
 
-  hit() {
+  // struck: a red flash, a shake, and a springy shove away from whoever hit it
+  hit(power = 1, from = null) {
     this.flash = 1;
+    this.hurtFlash = Math.min(1, 0.55 + power * 0.2);
+    if (from) {
+      const d = this.root.position.clone().sub(from).setY(0);
+      if (d.lengthSq() > 0.001) {
+        d.normalize().applyAxisAngle(UP, -this.root.rotation.y);
+        this.kv.addScaledVector(d, 4 + power * 2.2);
+      }
+    } else this.kv.y += 2;
   }
 
   block() {
@@ -492,18 +538,118 @@ export class Flagship {
   }
 
   setActive(on) {
+    if (on && !this.active) this.hopT = 0.55; // it is your turn: a little hop
     this.active = on;
   }
 
-  setGhost(on) {
-    if (on === this.ghost) return;
-    this.ghost = on;
-    if (on) {
-      this.model.traverse((o) => {
-        if (o.isMesh || o.isSkinnedMesh || o.isPoints) o.material = GHOST;
-        if (o.isSprite) o.visible = false;
-      });
-      this.pedestal.material.opacity = 0.25;
+  // a weapon charging: the body swells and shivers, then kicks back when it fires
+  charge(seconds) {
+    this.chargeT = this.chargeDur = seconds;
+  }
+
+  // as if time skipped (the Chronos Syndicate's victims)
+  stutter(seconds = 0.4) {
+    this.stutterT = seconds;
+  }
+
+  // how it arrives (see moves.js): the model is hidden or moved while the effects play
+  beginEntrance(style, dur) {
+    this.root.visible = true;
+    this.entrance = { style, t: 0, dur };
+  }
+
+  // shaking and sparking, then (the caller blows it up)
+  startDying(seconds = 0.7) {
+    this.dying = { t: 0, dur: seconds };
+  }
+
+  // dead ships come back as ghosts, after a delay so the explosion can play first (repeat calls leave a pending delay alone)
+  setGhost(on, delay = 0) {
+    if (!on) {
+      this.ghostTimer = 0;
+      return;
+    }
+    if (this.ghost || this.ghostTimer > 0) return;
+    if (delay > 0) this.ghostTimer = delay;
+    else this.becomeGhost();
+  }
+
+  becomeGhost() {
+    this.ghost = true;
+    this.ghostTimer = 0;
+    this.dying = null;
+    this.model.visible = true;
+    this.model.position.copy(this.modelBase.pos);
+    this.model.scale.copy(this.modelBase.scale);
+    this.model.traverse((o) => {
+      if (o.isMesh || o.isSkinnedMesh || o.isPoints) o.material = GHOST;
+      if (o.isSprite) o.visible = false;
+    });
+    this.pedestal.material.opacity = 0.25;
+  }
+
+  // the model's own transform while it arrives
+  applyEntrance(dt) {
+    const e = this.entrance;
+    e.t += dt;
+    const k = Math.min(1, e.t / e.dur);
+    const m = this.model;
+    const ease = (x) => 1 - Math.pow(1 - Math.min(1, Math.max(0, x)), 3);
+    const back = (x) => {
+      const c1 = 1.9;
+      const c3 = c1 + 1;
+      const y = Math.min(1, Math.max(0, x)) - 1;
+      return 1 + c3 * y * y * y + c1 * y * y;
+    };
+    m.position.copy(this.modelBase.pos);
+    m.scale.copy(this.modelBase.scale);
+    m.visible = true;
+    switch (e.style) {
+      case 'mechanova': {
+        const f = Math.min(1, k / 0.74);
+        m.position.y += Math.pow(1 - ease(f), 2) * 30;
+        m.visible = k > 0.05;
+        if (k > 0.74) m.position.y += Math.max(0, Math.sin(((k - 0.74) / 0.26) * Math.PI)) * 0.35 * (1 - (k - 0.74) / 0.26);
+        break;
+      }
+      case 'kraken': {
+        m.visible = k > 0.28;
+        m.position.y += -3.2 * (1 - ease((k - 0.28) / 0.62));
+        m.scale.multiplyScalar(0.75 + 0.25 * ease((k - 0.28) / 0.5));
+        break;
+      }
+      case 'hive': {
+        const f = (k - 0.55) / 0.45;
+        m.visible = k > 0.55 && (k > 0.85 || Math.sin(e.t * 75) > -0.4);
+        m.scale.multiplyScalar(0.35 + 0.65 * ease(f));
+        break;
+      }
+      case 'stareater': {
+        const f = (k - 0.4) / 0.5;
+        m.visible = k > 0.4;
+        m.scale.multiplyScalar(Math.max(0.001, back(f)));
+        break;
+      }
+      case 'chronos': {
+        m.visible = k > 0.78 || (k > 0.35 && Math.random() > 0.62 - k * 0.5);
+        m.position.x += (Math.random() - 0.5) * 0.6 * (1 - k);
+        break;
+      }
+      case 'goliath': {
+        const f = (k - 0.64) / 0.3;
+        m.visible = k > 0.64;
+        m.scale.multiplyScalar(Math.max(0.001, 1 + 0.45 * (1 - ease(f))));
+        m.position.y += Math.max(0, 1 - ease(f)) * 0.9;
+        break;
+      }
+      default:
+        break;
+    }
+    if (k >= 1) {
+      this.entrance = null;
+      m.visible = true;
+      m.position.copy(this.modelBase.pos);
+      m.scale.copy(this.modelBase.scale);
     }
   }
 
@@ -528,11 +674,62 @@ export class Flagship {
     this.root.rotation.y += diff * Math.min(1, dt * 3);
 
     this.body.position.y = 0.25 + Math.sin(t * 1.2 + this.bobPhase) * 0.12;
+    // a hop at the start of a turn
+    if (this.hopT > 0) {
+      this.hopT = Math.max(0, this.hopT - dt);
+      this.body.position.y += Math.sin(Math.PI * (1 - this.hopT / 0.55)) * 0.55;
+    }
+    // knocked back and settling: a damped spring
+    this.kv.addScaledVector(this.kp, -70 * dt).multiplyScalar(Math.max(0, 1 - 7 * dt));
+    this.kp.addScaledVector(this.kv, dt);
+    this.body.position.x = this.kp.x;
+    this.body.position.z = this.kp.z;
+    this.body.position.y += this.kp.y * 0.5;
+    this.body.rotation.z = -this.kp.x * 0.18;
+    this.body.rotation.x = this.kp.z * 0.18;
     if (this.flash > 0) {
       this.flash = Math.max(0, this.flash - dt * 2.5);
-      this.body.position.x = (Math.random() - 0.5) * this.flash * 0.35;
-      this.body.position.z = (Math.random() - 0.5) * this.flash * 0.35;
-    } else this.body.position.x = this.body.position.z = 0;
+      this.body.position.x += (Math.random() - 0.5) * this.flash * 0.35;
+      this.body.position.z += (Math.random() - 0.5) * this.flash * 0.35;
+    }
+    // a weapon charging: the body swells and shivers, then it kicks back
+    if (this.chargeT > 0) {
+      const k = 1 - this.chargeT / this.chargeDur;
+      this.body.scale.setScalar(1 + k * 0.07 + Math.sin(t * 60) * 0.01 * k);
+      this.chargeT -= dt;
+      if (this.chargeT <= 0) {
+        this.body.scale.setScalar(1);
+        this.kv.z -= 3.2; // the recoil
+      }
+    }
+    // the red shell of a hit, and the shaft of light on whoever's turn it is
+    this.hurtFlash = Math.max(0, this.hurtFlash - dt * 3);
+    this.hurt.material.opacity = this.hurtFlash * 0.45;
+    this.hurt.scale.setScalar(1 + (1 - this.hurtFlash) * 0.12);
+    this.spotLevel += ((this.active && !this.ghost ? 0.2 : 0) - this.spotLevel) * Math.min(1, dt * 5);
+    this.spot.material.opacity = this.spotLevel;
+    // about to blow up: shaking harder and harder, flickering
+    if (this.dying) {
+      const d = this.dying;
+      d.t += dt;
+      const k = Math.min(1, d.t / d.dur);
+      this.body.position.x += (Math.random() - 0.5) * k * 0.7;
+      this.body.position.z += (Math.random() - 0.5) * k * 0.7;
+      this.model.visible = k < 0.5 || Math.random() > k * 0.6;
+      this.hurt.material.opacity = Math.max(this.hurt.material.opacity, (0.25 + 0.3 * Math.sin(d.t * 40)) * k);
+    }
+    // time skipping
+    if (this.stutterT > 0) {
+      this.stutterT -= dt;
+      this.model.visible = Math.random() > 0.4;
+      this.body.position.x += (Math.random() - 0.5) * 0.4;
+      if (this.stutterT <= 0) this.model.visible = true;
+    }
+    if (this.entrance) this.applyEntrance(dt);
+    if (this.ghostTimer > 0) {
+      this.ghostTimer -= dt;
+      if (this.ghostTimer <= 0) this.becomeGhost();
+    }
     this.shieldFlash = Math.max(0, this.shieldFlash - dt * 1.8);
     this.shield.material.opacity = this.shieldFlash * 0.35;
     this.shield.scale.setScalar(1 + (1 - this.shieldFlash) * 0.15);

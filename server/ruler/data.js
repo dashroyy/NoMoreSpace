@@ -19,7 +19,9 @@ const FACE_INFO = {
 
 // The contenders: everyone plays a different one. A perk works all game; an evolution is earned by rolling
 // three Nanite Repairs (you choose one you have not had yet).
-// stats (1-5) and difficulty (1 easy - 3 hard) are for the contender select screen only; the rules never read them
+// stats (1-5) and difficulty (1 easy - 3 hard) are for the contender select screen only; the rules never read them.
+// strike (seconds): how its weapon looks on screen. From starting to charge until the first shot lands, and the gap
+// between shots. The game waits that long after a volley so the animation finishes before the damage arrives.
 const contender = (id, o) => ({ id, ...o });
 const CONTENDERS = [
   contender('mechanova', {
@@ -30,6 +32,7 @@ const CONTENDERS = [
     style: 'Tank: built to hold the Core',
     stats: { firepower: 2, armour: 5, economy: 2, control: 3 },
     difficulty: 1,
+    strike: { charge: 0.35, flight: 0.22, gap: 0.14 },
     lore: 'A fifty-kilometre combiner dreadnought forged from the hull plates of a hundred fallen fleets.',
     perk: { key: 'aegis', name: 'Aegis Protocol', text: 'Starts with 11 Hull instead of 10.' },
     evolutions: [
@@ -46,6 +49,7 @@ const CONTENDERS = [
     style: 'Aggro: feeds on reactors',
     stats: { firepower: 5, armour: 3, economy: 2, control: 3 },
     difficulty: 2,
+    strike: { charge: 0.4, flight: 0.35, gap: 0.15 },
     lore: 'A bioluminescent horror that swims through hyperspace rifts and feeds on starship reactor cores.',
     perk: { key: 'hunger', name: 'Abyssal Hunger', text: 'When you make a rival yield the Core, steal 1 Dark Matter from them.' },
     evolutions: [
@@ -62,6 +66,7 @@ const CONTENDERS = [
     style: 'Economy: buys the Bazaar out',
     stats: { firepower: 2, armour: 3, economy: 5, control: 2 },
     difficulty: 2,
+    strike: { charge: 0.4, flight: 0.55, gap: 0.1 },
     lore: 'A technorganic insect fleet that strip-mines asteroids and rebuilds its carapace from stolen tech.',
     perk: { key: 'scrap', name: 'Scrap Assimilation', text: 'Flushing the Bazaar costs you 1 Dark Matter instead of 2.' },
     evolutions: [
@@ -78,6 +83,7 @@ const CONTENDERS = [
     style: 'Glass cannon: big bursts',
     stats: { firepower: 5, armour: 1, economy: 4, control: 2 },
     difficulty: 3,
+    strike: { charge: 0.55, flight: 0.28, gap: 0.18 },
     lore: 'A plasma elemental in magnetic containment rings. It burns its own stability to throw solar flares.',
     perk: { key: 'fusion', name: 'Fusion Core', text: 'Starts the game with 2 Dark Matter.' },
     evolutions: [
@@ -94,6 +100,7 @@ const CONTENDERS = [
     style: 'Control: bends the dice',
     stats: { firepower: 2, armour: 3, economy: 3, control: 5 },
     difficulty: 3,
+    strike: { charge: 0.45, flight: 0.5, gap: 0.12 },
     lore: 'Time pirates in a phase-shifting battlecruiser, powered by a captured naked singularity.',
     perk: { key: 'slip', name: 'Temporal Slip', text: 'One extra roll on your first turn, and again on the first turn after each time you enter the Core.' },
     evolutions: [
@@ -110,6 +117,7 @@ const CONTENDERS = [
     style: 'Juggernaut: hard to hurt',
     stats: { firepower: 3, armour: 4, economy: 1, control: 2 },
     difficulty: 1,
+    strike: { charge: 0.5, flight: 0.85, gap: 0.2 },
     lore: 'A hollowed-out planetoid on plasma thrusters, with planetary defence lasers welded to its plates.',
     perk: { key: 'tectonic', name: 'Tectonic Mass', text: 'Rivals and cards can never take your Stars away.' },
     evolutions: [

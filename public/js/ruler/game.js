@@ -17,6 +17,7 @@ let built = null;
 let tray = null;
 let world = null;
 const ui = { keep: new Set(), rollKey: null, busy: false };
+const hullSeen = new Map(); // each ship's Hull when the plates were last drawn (the pips just lost flash)
 
 const myPrompt = (state, type) => state.you.prompts.find((p) => p.type === type) || null;
 const iconBtn = (label, title, onClick, className = '') => el('button', { className: `icon-btn ${className}`, title, 'aria-label': title, onclick: onClick }, label);
@@ -173,15 +174,17 @@ function renderPlates(state) {
       const turn = state.turn?.pid === p.id;
       const where = !p.alive ? 'GHOST' : p.where === 'core' ? 'CORE' : p.where === 'pulsar' ? 'PULSAR' : 'RIM';
       const pct = Math.min(100, (p.stars / state.target) * 100);
+      const before = hullSeen.get(p.id) ?? p.hull;
+      hullSeen.set(p.id, p.hull);
       return el(
         'div',
-        { className: `plate ${turn ? 'turn' : ''} ${p.alive ? '' : 'dead'} where-${where.toLowerCase()} ${p.id === state.you.id ? 'me' : ''}`, style: { '--c': c?.color || '#8fb2ff' } },
+        { className: `plate ${turn ? 'turn' : ''} ${p.alive ? '' : 'dead'} where-${where.toLowerCase()} ${p.id === state.you.id ? 'me' : ''}`, style: { '--c': c?.color || '#8fb2ff' }, dataset: { pid: p.id } },
         el('div', { className: 'plate-head' }, el('span', { className: 'av' }, p.avatar), el('div', { className: 'who' }, el('b', {}, p.name, p.id === state.you.id ? el('small', { className: 'you' }, ' YOU') : null), el('small', {}, c?.name || '')), el('span', { className: `where w-${where.toLowerCase()}` }, where)),
         p.alive
           ? el(
               'div',
               { className: 'plate-stats' },
-              el('div', { className: `hull-bar ${p.hull <= 3 ? 'low' : ''}`, title: `${p.hull} of ${p.maxHull} Hull` }, ...Array.from({ length: p.maxHull }, (_, k) => el('i', { className: k < p.hull ? 'on' : '' })), el('span', { className: 'hull-n' }, `${p.hull}`)),
+              el('div', { className: `hull-bar ${p.hull <= 3 ? 'low' : ''}`, title: `${p.hull} of ${p.maxHull} Hull` }, ...Array.from({ length: p.maxHull }, (_, k) => el('i', { className: k < p.hull ? 'on' : k < before ? 'lost' : '' })), el('span', { className: 'hull-n' }, `${p.hull}`)),
               el('div', { className: 'star-row', title: `${p.stars} of ${state.target} Stars` }, el('span', { className: 'star-n', innerHTML: `${faceSvg('star', '1.1em')} ${p.stars}` }), el('div', { className: 'star-track' }, el('i', { style: { width: `${pct}%` } })), el('span', { className: 'shard-n', innerHTML: `${faceSvg('shard', '1em')} ${p.shards}` })),
             )
           : el('div', { className: 'plate-stats ghost-line' }, '👻 Haunting the galaxy'),

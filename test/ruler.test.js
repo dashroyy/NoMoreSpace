@@ -436,3 +436,62 @@ test('no screen calls a shared helper it forgot to import (a missing import only
     }
   }
 });
+
+// ---------------------------------------------------------------------------
+// The battle animations: they only draw things, but the game's pauses are timed to them
+// ---------------------------------------------------------------------------
+
+test('every weapon has its timing, and the game waits for a volley to land before the damage arrives', async () => {
+  const ids = data.CONTENDERS.map((c) => c.id);
+  for (const c of data.CONTENDERS) {
+    const s = c.strike;
+    assert.ok(s && s.charge > 0 && s.flight > 0 && s.gap > 0, `${c.id} needs strike: { charge, flight, gap } in seconds`);
+    assert.ok(s.charge + s.flight < 2, `${c.id}: a shot that takes two seconds would stall the game`);
+    const g = galaxy(3, { contenders: [c.id, ...ids.filter((x) => x !== c.id).slice(0, 2)] });
+    const waits = [];
+    g.wait = async (ms) => {
+      waits.push(ms);
+    };
+    g.turn = { damage: 0 };
+    await g.attack(g.players[0], g.players.slice(1), 2);
+    assert.ok(waits[0] >= Math.round((s.charge + s.flight + s.gap) * 1000), `${c.id}: the damage must not land before its two shots have`);
+    assert.ok(waits[0] >= 900, 'and never faster than the pause the game always had');
+  }
+});
+
+test('the opening: the server waits at least as long as the flagships take to arrive on screen', async () => {
+  const src = fs.readFileSync(path.join(CLIENT, 'scene/moves.js'), 'utf8');
+  const intro = /INTRO = \{ lead: ([\d.]+), step: ([\d.]+) \}/.exec(src);
+  const entrance = /ENTRANCE = \{([^}]*)\}/.exec(src);
+  const tail = /introTime = \(n\) => INTRO\.lead \+ INTRO\.step \* \(n - 1\) \+ ([\d.]+)/.exec(src);
+  assert.ok(intro && entrance && tail, 'moves.js has INTRO, ENTRANCE and introTime');
+  const longest = Math.max(...[...entrance[1].matchAll(/: ([\d.]+)/g)].map((m) => Number(m[1])));
+  assert.ok(Number(tail[1]) >= longest, 'introTime leaves room for the slowest entrance');
+  for (const n of [2, 3, 4, 5, 6]) {
+    const g = galaxy(n);
+    const waits = [];
+    g.wait = async (ms) => {
+      waits.push(ms);
+    };
+    g.stopped = true; // run() waits for the opening, then sees it should stop
+    await g.run();
+    const client = (Number(intro[1]) + Number(intro[2]) * (n - 1) + Number(tail[1])) * 1000;
+    assert.ok(waits[0] >= client, `${n} players: the first turn starts after ${waits[0]} ms but the opening takes ${client} ms`);
+  }
+});
+
+test('every sound the screens ask for exists in sound.js', () => {
+  const sounds = fs.readFileSync(path.join(CLIENT, 'sound.js'), 'utf8');
+  const body = sounds.slice(sounds.indexOf('const SOUNDS = {'), sounds.indexOf('export function sfx'));
+  const known = new Set([...body.matchAll(/^ {2}(\w+): /gm)].map((m) => m[1]));
+  const asked = new Map();
+  for (const file of clientFiles()) {
+    const src = fs.readFileSync(file, 'utf8');
+    for (const m of src.matchAll(/\bsfx\('([\w-]+)'\)/g)) asked.set(m[1], path.relative(ROOT, file));
+  }
+  const moves = fs.readFileSync(path.join(CLIENT, 'scene/moves.js'), 'utf8');
+  const shot = /SHOT = \{([^}]*)\}/.exec(moves);
+  for (const m of shot[1].matchAll(/'(\w+)'/g)) asked.set(m[1], 'scene/moves.js (SHOT)');
+  for (const [name, where] of asked) assert.ok(known.has(name), `${where} plays the sound "${name}", which sound.js does not make`);
+  assert.ok(asked.size > 20, 'the check found the sounds');
+});

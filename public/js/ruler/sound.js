@@ -130,6 +130,61 @@ const SOUNDS = {
   buy: () => [0, 0.07].forEach((at, i) => tone({ type: 'square', from: [1200, 1600][i], dur: 0.1, vol: 0.06, at })),
   block: () => tone({ type: 'sine', from: 1400, to: 900, dur: 0.3, vol: 0.12 }),
   ghost: () => tone({ type: 'sine', from: 440, to: 220, dur: 1.2, vol: 0.08, attack: 0.3 }),
+  // the battle animations: a weapon gathering power, one weapon sound per contender, a heavy landing, the arrivals
+  charge: () => {
+    tone({ type: 'sawtooth', from: 120, to: 760, dur: 0.45, vol: 0.07, attack: 0.1 });
+    noise({ dur: 0.45, vol: 0.1, from: 400, to: 5000, q: 4 });
+  },
+  tendril: () => {
+    noise({ dur: 0.5, vol: 0.2, from: 600, to: 2400, q: 7 });
+    tone({ type: 'sine', from: 180, to: 520, dur: 0.4, vol: 0.12, attack: 0.1 });
+  },
+  buzz: () => {
+    for (let i = 0; i < 8; i++) tone({ type: 'sawtooth', from: 420 + Math.random() * 300, to: 260, dur: 0.1, vol: 0.035, at: i * 0.06 });
+  },
+  beam: () => {
+    tone({ type: 'sawtooth', from: 220, to: 880, dur: 0.8, vol: 0.12, attack: 0.1 });
+    noise({ dur: 0.8, vol: 0.2, from: 4000, to: 600, q: 2 });
+  },
+  tick: () => [0, 0.07, 0.14, 0.21].forEach((at, i) => tone({ type: 'square', from: 1500 - i * 150, dur: 0.04, vol: 0.06, at })),
+  lob: () => {
+    noise({ dur: 0.3, vol: 0.25, from: 900, to: 200 });
+    tone({ type: 'sine', from: 420, to: 90, dur: 0.7, vol: 0.12 });
+  },
+  thud: () => {
+    tone({ type: 'sine', from: 120, to: 34, dur: 0.5, vol: 0.45 });
+    noise({ dur: 0.35, vol: 0.3, from: 700, to: 60, q: 0.7 });
+  },
+  drop: () => {
+    noise({ dur: 1.0, vol: 0.16, from: 4200, to: 300, q: 3 });
+    tone({ type: 'sawtooth', from: 1400, to: 180, dur: 0.95, vol: 0.05 });
+  },
+  portal: () => {
+    tone({ type: 'sine', from: 70, to: 260, dur: 1.4, vol: 0.2, attack: 0.3 });
+    tone({ type: 'triangle', from: 140, to: 520, dur: 1.4, vol: 0.08, attack: 0.4 });
+    noise({ dur: 1.4, vol: 0.14, from: 200, to: 2600, q: 6 });
+  },
+  swarm: () => {
+    for (let i = 0; i < 14; i++) tone({ type: 'sawtooth', from: 380 + Math.random() * 260, to: 220, dur: 0.12, vol: 0.03, at: i * 0.07 });
+    noise({ dur: 1.0, vol: 0.12, from: 500, to: 3600, q: 8 });
+  },
+  ignite: () => {
+    noise({ dur: 0.7, vol: 0.4, from: 300, to: 5200, q: 2 });
+    tone({ type: 'sine', from: 60, to: 240, dur: 0.6, vol: 0.3 });
+  },
+  phase: () => {
+    [0, 0.06, 0.13, 0.2, 0.3, 0.42].forEach((at, i) => tone({ type: 'square', from: [1800, 600, 2400, 500, 1200, 880][i], dur: 0.05, vol: 0.05, at }));
+    tone({ type: 'sine', from: 90, to: 440, dur: 0.9, vol: 0.14, attack: 0.15 });
+  },
+  meteor: () => {
+    noise({ dur: 1.0, vol: 0.4, from: 3000, to: 120, q: 1.2 });
+    tone({ type: 'sawtooth', from: 900, to: 70, dur: 0.95, vol: 0.08 });
+  },
+  // the opening of a game: a rising sweep and a deep note
+  intro: () => {
+    noise({ dur: 1.8, vol: 0.18, from: 150, to: 4800, q: 5 });
+    tone({ type: 'sine', from: 55, to: 110, dur: 2.2, vol: 0.25, attack: 0.5 });
+  },
   win: () => [0, 0.15, 0.3, 0.45, 0.7].forEach((at, i) => tone({ type: 'triangle', from: [523, 659, 784, 1047, 1319][i], dur: 0.7, vol: 0.13, at })),
 };
 

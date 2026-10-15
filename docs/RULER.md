@@ -77,6 +77,18 @@ The whole front of the game is built to feel like a console game: you can drive 
 
 `ui.js` holds the shared pieces (`menuList`, `dialog`, `confirmDialog`, `askName`, `icon`, `keyHints` and the Escape key's stack, where whatever opened last closes first), and every button in the game shares one style in `ruler-menus.css`. `test/ruler.test.js` checks that every import and every icon used by the client really exists.
 
+## The battle animations
+
+Everything on screen comes from the game log, so everyone sees the same thing at the same moment. The animations only draw: the rules never wait for the screen, except that the server pauses long enough for a shot to land before the damage arrives.
+
+- **The opening.** When a game starts the camera sweeps down over the ring, the table and the dice console stay out of the way, and the flagships arrive one after another, each in its own style: **Mecha-Nova** drops out of orbit on a column of light and lands with a thump and a shock of dust, the **Void Kraken** climbs out of a spinning rift in the floor, the **Cyber-Hive** is built out of a cloud of drones rushing together, the **Star-Eater** ignites like a star being born, the **Chronos Syndicate** phases in through collapsing clock-rings and the **Goliath** falls from the sky as a meteor and stands up out of its crater. A click or any key skips ahead. The server waits for the opening (about 2.3 seconds plus 0.7 per extra player) before the first turn, so nobody is rolling while the ships are still arriving; `test/ruler.test.js` checks that the two agree. Reduced-motion browsers skip it.
+- **Attacking.** The weapon gathers power first (energy streaming in, the ship swelling and shivering, a kick back when it fires), then each contender fires its own kind of shot: Mecha-Nova twin plasma bolts and a ring of light at the muzzle, the Kraken lashing tendrils that snake out and snap back with an ink burst, the Hive a swarm of drones, the Star-Eater a fat beam of sunlight that holds for a moment, the Chronos Syndicate rings of stopped time flying one after another with a clock face opening where they land, and the Goliath a burning rock lobbed in a high arc that cracks the ground.
+- **Being hit.** The ship is shoved back, away from whoever fired, and springs into place, with a red flash, sparks and a quick zoom of the camera. Your own screen flashes red at the edges, the ship's plate on the left shakes and the Hull pips you lost flare up. Chronos hits make their victims flicker, as if time skipped.
+- **Destroyed.** The camera closes in, time slows, the ship shakes itself apart and flickers, then blows up in a shockwave with flying debris and smoke, and comes back as a ghost.
+- **Everything else.** A shaft of light and a little hop mark whose turn it is. Taking the Core brings a column of light down on the throne. The winner is circled slowly by the camera under the fireworks.
+
+How long each weapon takes lives next to the contender in `server/ruler/data.js` as `strike: { charge, flight, gap }` (seconds). The engine waits that long after a volley and the client plays the same numbers (`scene/moves.js`), so the damage never lands before the shot does. `moves.js` holds every attack and entrance; `effects.js` has the building blocks (beams, tendrils, drone swarms, clock rings, craters, fireballs...); `stage.js` has the camera tricks (`orbitBy`, `slowmo`, `punch`).
+
 ## Where things are
 
 ```
@@ -92,7 +104,8 @@ public/
     world.js     the 3D world: places every flagship at its seat, flies them in and out, moves the camera
     scene/       stage.js (renderer, bloom, the camera rig), galaxy.js (the sky, the spiral galaxies, nebulas, planets),
                  arena.js (the star, Dyson lattice, Omni-Throne, Pulsar, asteroid belt), ships.js (the six contenders),
-                 effects.js (lasers, explosions, shockwaves, floating Stars and shards, fireworks)
+                 effects.js (lasers, explosions, shockwaves, floating Stars and shards, fireworks, beams, tendrils, swarms, craters),
+                 moves.js (how each contender attacks and makes its entrance)
     fx.js        reads the game log and turns each line into 3D effects, sounds, pop-ups and banners
     dice.js      the 3D dice tray (its own small renderer); faces.js draws the faces
     game.js      the table: player plates, the dice console with a preview of what you will get, the Bazaar

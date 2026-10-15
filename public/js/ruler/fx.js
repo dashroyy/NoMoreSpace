@@ -3,9 +3,10 @@
 // Everyone sees the same thing at the same moment, because it all comes from the shared log.
 import * as THREE from 'three';
 import { el } from '../util.js';
-import { player, colorOf, card, evolution, anomaly } from './net.js';
+import { store, player, colorOf, card, evolution, anomaly } from './net.js';
 import { faceSvg } from './faces.js';
 import { sfx } from './sound.js';
+import { attack, charge, strikeOf, volleyTime, SHOT } from './scene/moves.js';
 
 let world = null;
 let seenFor = null;
@@ -13,6 +14,13 @@ let lastSeq = 0;
 
 export function initFx(w) {
   world = w;
+  // when the opening is over (or skipped), the game announces itself
+  w.onIntroEnd = () => {
+    const st = store.state;
+    if (!st || st.phase === 'lobby') return;
+    sfx('enter');
+    banner('Sector Zero', `First to ${st.target} Stars rules the galaxy`, 'gold');
+  };
 }
 
 const layer = () => document.getElementById('layer-fx');
@@ -65,23 +73,73 @@ const star = (n) => `${faceSvg('star', '1em')}${n > 0 ? '+' : ''}${n}`;
 
 // ---------------------------------------------------------------------------
 
-function laserVolley(from, targets, n, color, { width = 0.15, spread = 0.14 } = {}) {
+// A volley: the weapon gathers power, then each shot flies in the contender's own style (scene/moves.js). The server waits
+// as long as it takes (strike in data.js) before the damage arrives.
+function laserVolley(from, targets, n, color, { volley = false } = {}) {
   const a = shipOf(from);
   if (!a) return;
-  const bolts = Math.min(6, Math.max(1, n));
-  for (const t of targets) {
-    const b = shipOf(t);
-    if (!b) continue;
-    a.lookAtPoint(b.root.position);
-    for (let i = 0; i < bolts; i++) {
-      const jitter = new THREE.Vector3((Math.random() - 0.5) * 0.8, (Math.random() - 0.5) * 0.8, (Math.random() - 0.5) * 0.8);
-      world.fx.bolt(a.muzzle(), b.centre().add(jitter), color, i * spread, width);
-      later(i * spread * 1000, () => sfx('laser'));
+  const style = a.id;
+  const gap = strikeOf(style).gap;
+  const goals = targets.map((t) => shipOf(t)).filter(Boolean);
+  if (!goals.length) return;
+  const shots = Math.min(volley ? 3 : 6, Math.max(1, n));
+  const each = Math.min(shots, Math.ceil(12 / goals.length)); // a crowd of targets would be too much to draw
+  a.lookAtPoint(goals[0].root.position);
+  const wind = charge(world.fx, a);
+  later(wind * 1000, () => {
+    for (const b of goals) {
+      for (let i = 0; i < each; i++) {
+        const aim = b.centre().add(new THREE.Vector3((Math.random() - 0.5) * 0.8, (Math.random() - 0.5) * 0.8, (Math.random() - 0.5) * 0.8));
+        attack(world.fx, style, a.muzzle(), aim, i, color, i * gap);
+      }
     }
-  }
+    for (let i = 0; i < each; i++) later(i * gap * 1000, () => sfx(SHOT[style] || 'laser'));
+  });
   setTimeout(() => {
-    if (a) a.facing = null;
-  }, 1600);
+    a.facing = null;
+  }, (volleyTime(style, shots) + 0.8) * 1000);
+}
+
+// the screen edges flash red when it is your own ship that is hit
+function hurtVignette(power) {
+  const v = el('div', { className: 'hurt-vignette', style: { '--p': String(Math.min(1, 0.45 + power * 0.15)) } });
+  layer().append(v);
+  setTimeout(() => v.remove(), 800);
+}
+
+// the hit ship's plate in the list on the left shakes and flashes
+function flashPlate(pid) {
+  const plate = document.querySelector('.plate[data-pid="' + pid + '"]');
+  if (!plate) return;
+  plate.classList.remove('hit');
+  void plate.offsetWidth;
+  plate.classList.add('hit');
+}
+
+// A ship is destroyed: the camera closes in, time slows, the ship shakes itself apart... and then it blows up
+function destroySequence(e, ship) {
+  const color = new THREE.Color(colorOf(player(e.pid)));
+  sfx('alarm');
+  if (ship) {
+    ship.startDying(0.5);
+    world.look([ship.root.position], { radius: 13, hold: 3.6 });
+    world.stage.slowmo(0.5, 0.9);
+    world.stage.punch(0.8);
+  }
+  later(ship ? 850 : 0, () => {
+    sfx('boom');
+    if (ship) {
+      const c = ship.centre();
+      world.fx.explosion(c, color);
+      world.fx.shockwave(c, 0xffffff, 15, 0, 1.1);
+      world.fx.chunks(c, color, 22, 8, 0.36, 2.2);
+      world.fx.smoke(c, 14, 0x333344, 2.4, 2.4);
+      ship.becomeGhost();
+    }
+    world.stage.shake(1.5);
+    world.stage.punch(1.2);
+    banner(`${nameOf(e.pid)} is destroyed`, e.by ? `by ${nameOf(e.by)}` : '', 'red');
+  });
 }
 
 function handle(e, state) {
@@ -131,21 +189,28 @@ function handle(e, state) {
     case 'laser': {
       const color = new THREE.Color(colorOf(player(e.pid)));
       laserVolley(e.pid, e.targets, e.n, color);
-      if (e.n >= 3 || e.targets.length >= 2) world.look([shipOf(e.pid)?.root.position, ...e.targets.map((t) => shipOf(t)?.root.position)].filter(Boolean), { hold: 1.8 });
+      if (e.n >= 3 || e.targets.length >= 2) world.look([shipOf(e.pid)?.root.position, ...e.targets.map((t) => shipOf(t)?.root.position)].filter(Boolean), { hold: volleyTime(shipOf(e.pid)?.id, e.n) + 1.4 });
       break;
     }
     case 'volley': {
       const color = new THREE.Color(e.kind === 'acid' ? '#00ff87' : e.kind === 'ejection' ? '#ffb800' : e.kind === 'impactors' ? '#f97316' : colorOf(player(e.pid)));
       if (ship) world.fx.shockwave(ship.centre(), color, 9);
-      laserVolley(e.pid, e.targets.filter((t) => t !== e.pid), Math.min(e.n, 3), color, { width: 0.22, spread: 0.08 });
+      laserVolley(e.pid, e.targets.filter((t) => t !== e.pid), e.n, color, { volley: true });
       break;
     }
-    case 'damage':
+    case 'damage': {
       sfx('hit');
-      ship?.hit();
+      const by = e.by ? shipOf(e.by) : null;
+      ship?.hit(e.n, by ? by.root.position : null); // knocked back, away from whoever fired
+      if (by?.id === 'chronos') ship?.stutter(0.6); // time skips
+      if (ship) world.fx.burst(ship.centre(), 0xff4466, 10 + e.n * 4, 4.5, 0, 0.7, 0.2);
       world.stage.shake(Math.min(1, e.n * 0.18));
+      world.stage.punch(Math.min(1, 0.25 + e.n * 0.12));
+      if (e.pid === me) hurtVignette(e.n);
+      flashPlate(e.pid);
       pop(e.pid, `−${e.n} ${faceSvg('hull', '0.9em')}`, 'bad big');
       break;
+    }
     case 'block':
     case 'dodge':
       sfx('block');
@@ -153,13 +218,7 @@ function handle(e, state) {
       pop(e.pid, e.k === 'dodge' ? 'Dodged!' : 'Blocked!', 'cyan');
       break;
     case 'destroy':
-      sfx('boom');
-      if (ship) {
-        world.fx.explosion(ship.centre(), new THREE.Color(colorOf(player(e.pid))));
-        world.look([ship.root.position], { radius: 14, hold: 2.4 });
-      }
-      world.stage.shake(1.4);
-      banner(`${nameOf(e.pid)} is destroyed`, e.by ? `by ${nameOf(e.by)}` : '', 'red');
+      destroySequence(e, ship);
       break;
     case 'enter': {
       sfx('enter');
@@ -167,6 +226,10 @@ function handle(e, state) {
       const dock = e.slot === 'core' ? new THREE.Vector3(0, 4, 0) : new THREE.Vector3(8.6, 2.6, -6.2);
       world.fx.shockwave(dock, e.slot === 'core' ? 0xffb800 : 0x9fe8ff, 7, 0.9);
       world.fx.flash(dock, 0xffd36b, 8, 0.9);
+      // a column of light comes down onto the throne, and rings spread out from it
+      world.fx.beam(dock.clone().add(new THREE.Vector3(0, 30, 0)), dock, 0xffd36b, { life: 1.1, width: 0.45, pulse: 0 });
+      for (let k = 0; k < 3; k++) world.fx.ringFacing(dock, new THREE.Vector3(0, 1, 0), 0xffd36b, 1, 10, 0.9, 0.15 + k * 0.18);
+      world.stage.punch(0.7);
       world.look([dock], { radius: 15, hold: 2.2, phi: 1.1 });
       banner(e.pid === me ? 'You take the Core!' : `${nameOf(e.pid)} takes the ${e.slot === 'core' ? 'Core' : 'Pulsar'}`, e.slot === 'core' ? 'Everyone outside will be shooting at it' : 'The Binary Pulsar: a second throne', 'gold');
       break;
@@ -240,6 +303,10 @@ function handle(e, state) {
     case 'paradox':
     case 'critical':
     case 'slip':
+      if (e.k === 'slip' && ship) {
+        ship.stutter(0.7); // time skips
+        world.fx.clockFlash(ship.centre(), ship.color);
+      }
     case 'impactors':
     case 'ejection':
       pop(e.pid, e.text.replace(/^\S+\s/, '').split(/[:!]/)[0], 'gold');
@@ -258,7 +325,7 @@ function handle(e, state) {
       const w = shipOf(e.pid);
       if (w) {
         world.fx.fireworks(w.root.position, [0xffb800, 0x00f0ff, 0xff2a6d, 0x00ff87, 0xb537f2]);
-        world.look([w.root.position], { radius: 12, hold: 9, phi: 1.15 });
+        world.coronation(w);
       }
       break;
     }

@@ -39,6 +39,9 @@ export class Stage {
     this.drift = 1; // idle sway, 0..1
     this.shakeAmp = 0;
     this.shakeScale = 1; // 0 turns camera shake off (Settings)
+    this.baseFov = 46;
+    this.punchV = 0; // a quick zoom-in on an impact, fading away
+    this.slow = null; // slow motion: { scale, left }
     this.spin = 0; // a slow turn round the target, in radians a second (the title screen)
     this.frameFns = new Set();
     this.labels = new Set();
@@ -66,7 +69,8 @@ export class Stage {
     this.bloom.resolution.set(w / 2, h / 2);
     this.camera.aspect = w / h;
     // portrait screens need to stand further back to see the whole ring
-    this.camera.fov = w / h < 0.8 ? 62 : 46;
+    this.baseFov = w / h < 0.8 ? 62 : 46;
+    this.camera.fov = this.baseFov;
     this.camera.updateProjectionMatrix();
   }
 
@@ -75,8 +79,9 @@ export class Stage {
     return () => this.frameFns.delete(fn);
   }
 
-  // Fly the camera somewhere: { target: Vector3, radius, theta, phi, duration (s) }
-  fly(to, duration = 1.6) {
+  // Fly the camera somewhere: { target: Vector3, radius, theta, phi, duration (s) }.
+  // exact: go to exactly this theta (a full orbit is allowed) instead of turning the short way round
+  fly(to, duration = 1.6, { exact = false } = {}) {
     const from = { target: this.rig.target.clone(), radius: this.rig.radius, theta: this.rig.theta, phi: this.rig.phi };
     const goal = {
       target: to.target ? to.target.clone() : from.target.clone(),
@@ -85,9 +90,27 @@ export class Stage {
       phi: to.phi ?? from.phi,
     };
     // turn the short way round
-    while (goal.theta - from.theta > Math.PI) goal.theta -= Math.PI * 2;
-    while (goal.theta - from.theta < -Math.PI) goal.theta += Math.PI * 2;
+    if (!exact) {
+      while (goal.theta - from.theta > Math.PI) goal.theta -= Math.PI * 2;
+      while (goal.theta - from.theta < -Math.PI) goal.theta += Math.PI * 2;
+    }
     this.tween = { from, goal, t: 0, duration: Math.max(0.01, duration) };
+  }
+
+  // swing round whatever we are looking at, by this many radians (a full circle is 6.28), while also closing in
+  orbitBy(angle, duration = 2.4, { radius = null, phi = null } = {}) {
+    const r = this.rig;
+    this.fly({ target: r.target, radius: radius ?? r.radius, theta: r.theta + angle, phi: phi ?? r.phi }, duration, { exact: true });
+  }
+
+  // everything slows down for a moment (a big explosion): scale 0..1, for this many real seconds
+  slowmo(scale = 0.3, seconds = 0.8) {
+    this.slow = { scale, left: seconds };
+  }
+
+  // the camera lurches towards the action for an instant
+  punch(power = 1) {
+    this.punchV = Math.min(1.6, this.punchV + power);
   }
 
   shake(power = 0.5) {
@@ -122,6 +145,12 @@ export class Stage {
   }
 
   update(dt) {
+    // slow motion
+    if (this.slow) {
+      this.slow.left -= dt;
+      if (this.slow.left <= 0) this.slow = null;
+      else dt *= this.slow.scale;
+    }
     // camera
     const r = this.rig;
     if (this.tween) {
@@ -147,6 +176,15 @@ export class Stage {
       this.shakeAmp *= Math.pow(0.02, dt);
     }
     cam.lookAt(r.target);
+    if (this.punchV > 0.001) {
+      this.punchV *= Math.pow(0.0004, dt);
+      cam.fov = this.baseFov - this.punchV * 5;
+      cam.updateProjectionMatrix();
+    } else if (cam.fov !== this.baseFov) {
+      cam.fov = this.baseFov;
+      this.punchV = 0;
+      cam.updateProjectionMatrix();
+    }
 
     for (const fn of this.frameFns) fn(dt, this.time);
     this.composer.render(dt);

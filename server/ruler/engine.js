@@ -29,6 +29,17 @@ const AVATARS = ['🧑‍🚀', '👩‍🚀', '🐱', '🐶', '🦊', '🐸', '
 
 const sleepFor = (ms) => new Promise((r) => setTimeout(r, ms).unref?.());
 
+// How long a volley takes on screen (see "strike" in data.js): charging, flying, and the gaps between shots, plus a bit
+// of slack. The damage waits for it. "floor" keeps the pause the game always had.
+function strikeMs(p, shots, floor = 900) {
+  const s = contenderDef(p.contender)?.strike || { charge: 0.4, flight: 0.3, gap: 0.14 };
+  const n = Math.min(6, Math.max(1, shots));
+  return Math.max(floor, Math.round((s.charge + s.flight + (n - 1) * s.gap) * 1000) + 200);
+}
+
+// How long the opening takes: the flagships arrive one after another (the client plays the same pace, see world.js)
+const introMs = (players) => 2300 + 700 * (players - 1);
+
 function cleanName(name) {
   return String(name || '')
     .replace(/[\u0000-\u001f<>]/g, '')
@@ -489,7 +500,7 @@ class RulerGame {
   // The game
   // ---------------------------------------------------------------------------
   async run() {
-    await this.wait(900);
+    await this.wait(introMs(this.players.length));
     let i = 0;
     let first = true;
     while (!this.winner && !this.stopped) {
@@ -691,7 +702,7 @@ class RulerGame {
   async attack(p, targets, dmg) {
     this.stats.damage += dmg * targets.length;
     this.say(`🎯 ${p.name} fires ${dmg} at ${targets.map((o) => o.name).join(', ')}!`, { k: 'laser', pid: p.id, targets: targets.map((o) => o.id), n: dmg });
-    await this.wait(900);
+    await this.wait(strikeMs(p, dmg));
     const hit = [];
     for (const o of targets) {
       const before = o.hull;
@@ -768,7 +779,7 @@ class RulerGame {
   async volley(p, targets, dmg, kind) {
     if (!targets.length || dmg <= 0) return;
     this.say(`💥 ${dmg} damage to ${targets.map((o) => o.name).join(', ')}`, { k: 'volley', pid: p.id, targets: targets.map((o) => o.id), n: dmg, kind });
-    await this.wait(600);
+    await this.wait(strikeMs(p, Math.min(dmg, 3), 600));
     for (const o of targets) this.hurt(o, dmg, p, kind);
     this.checkWin();
     await this.wait(300);

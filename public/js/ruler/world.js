@@ -8,6 +8,7 @@ import { Universe } from './scene/galaxy.js';
 import { Arena, rimPosition, CORE_DOCK, PULSAR_DOCK } from './scene/arena.js';
 import { Effects } from './scene/effects.js';
 import { Flagship, preloadShips } from './scene/ships.js';
+import { entrance, introTime, INTRO } from './scene/moves.js';
 import { store, contender } from './net.js';
 import { faceSvg } from './faces.js';
 import { sfx } from './sound.js';
@@ -29,6 +30,9 @@ export class World {
     this.fx = new Effects(this.stage);
     this.ships = new Map(); // key -> { ship, label, pid, contender, where }
     this.mode = null;
+    this.opening = false; // a game has just started: the flagships are about to arrive
+    this.introRun = null; // the opening in progress: { timers, off }
+    this.onIntroEnd = null; // set by fx.js: the banner that follows the opening
     this.focusUntil = 0;
     this.trailClock = 0;
     this.ready = preloadShips(); // resolves when the contenders' 3D models are in (the loading screen waits for it)
@@ -108,8 +112,10 @@ export class World {
       this.clearShips();
       this.mode = 'game';
       this.shot = null;
-      this.stage.fly(OVERVIEW, 1.4);
       this.stage.drift = 1;
+      // a brand new game (no orbit has begun) opens with the flagships arriving one after another
+      this.opening = state.round === 0 && !state.turn && !matchMedia('(prefers-reduced-motion: reduce)').matches;
+      if (!this.opening) this.stage.fly(OVERVIEW, 1.4);
     }
     const n = state.players.length;
     const keep = new Set();
@@ -123,7 +129,11 @@ export class World {
         const ship = new Flagship(this.stage, p.contender, c?.color || '#8fb2ff');
         const label = this.makeLabel(c?.color || '#8fb2ff');
         const handle = this.stage.addLabel(ship.anchor, label, 0.5);
-        rec = { ship, label, handle, contender: p.contender, pid: p.id, where: null, seat: i };
+        rec = { ship, label, handle, contender: p.contender, pid: p.id, where: null, seat: i, wasAlive: p.alive, arrived: !this.opening };
+        if (this.opening) {
+          ship.root.visible = false; // hidden until its entrance
+          handle.visible = false;
+        }
         this.ships.set(key, rec);
       }
       rec.seat = i;
@@ -135,13 +145,16 @@ export class World {
       }
       rec.goal = goal;
       rec.where = p.where;
-      rec.ship.setGhost(!p.alive);
+      // a ship that has just been destroyed stays as it was for a moment, so its explosion can play first (fx.js)
+      rec.ship.setGhost(!p.alive, rec.wasAlive && !p.alive ? 2.4 : 0);
+      rec.wasAlive = p.alive;
       rec.ship.setActive(state.turn?.pid === p.id && p.alive);
       // ships inside face the Rim (and the camera); ships outside face the middle
       rec.ship.facing = p.where !== 'rim' ? rec.ship.root.position.clone().add(new THREE.Vector3(0, 0, 10)) : null;
       this.fillLabel(rec.label, p, state);
     });
     for (const key of [...this.ships.keys()]) if (!keep.has(key)) this.dropShip(key);
+    if (this.opening) this.beginIntro(state);
     this.arena.setPulsar(state.pulsarOpen);
     this.arena.setCoreHeld(!!state.core);
     this.arena.setMood(state.anomaly);
@@ -171,7 +184,9 @@ export class World {
       stats.textContent = 'GHOST SHIP';
       return;
     }
-    const pips = Array.from({ length: p.maxHull }, (_, k) => `<i class="${k < p.hull ? 'on' : ''}"></i>`).join('');
+    const before = Number(label.dataset.hull ?? p.hull);
+    label.dataset.hull = p.hull;
+    const pips = Array.from({ length: p.maxHull }, (_, k) => `<i class="${k < p.hull ? 'on' : k < before ? 'lost' : ''}"></i>`).join('');
     stats.innerHTML = `<span class="hull-pips ${p.hull <= 3 ? 'low' : ''}">${pips}</span><b class="tag-star">${faceSvg('star', '0.95em')} ${p.stars}</b>`;
   }
 
@@ -184,11 +199,91 @@ export class World {
   }
 
   clearShips() {
+    this.cancelIntro();
     for (const key of [...this.ships.keys()]) this.dropShip(key);
   }
 
   shipOf(pid) {
     return this.ships.get(pid)?.ship || null;
+  }
+
+  // ---------------------------------------------------------------------------
+  // The opening: the camera sweeps down over the ring while the flagships arrive one after another, each in its own
+  // style (scene/moves.js). The server waits the same time before the first turn. A click or a key skips ahead.
+  // ---------------------------------------------------------------------------
+  beginIntro(state) {
+    this.opening = false;
+    const ids = state.players.map((p) => p.id);
+    const total = introTime(ids.length);
+    const run = { timers: [], off: null, hint: el('div', { className: 'intro-skip' }, 'Click or press any key to skip') };
+    this.introRun = run;
+    document.body.classList.add('intro');
+    document.body.append(run.hint);
+    sfx('intro');
+    // start high and far away, then sweep round to the usual view
+    const r = this.stage.rig;
+    r.target.copy(OVERVIEW.target);
+    r.radius = 62;
+    r.theta = -2.7;
+    r.phi = 0.5;
+    this.stage.tween = null;
+    this.stage.fly(OVERVIEW, total, { exact: true });
+    ids.forEach((id, i) => run.timers.push(setTimeout(() => this.arrive(id), (INTRO.lead + INTRO.step * i) * 1000)));
+    run.timers.push(setTimeout(() => this.endIntro(), total * 1000));
+    const skip = () => this.endIntro(true);
+    run.timers.push(setTimeout(() => {
+      window.addEventListener('pointerdown', skip, { once: true });
+      window.addEventListener('keydown', skip, { once: true });
+      run.off = () => {
+        window.removeEventListener('pointerdown', skip);
+        window.removeEventListener('keydown', skip);
+      };
+    }, 400));
+  }
+
+  // one flagship makes its entrance
+  arrive(id) {
+    const rec = this.ships.get(id);
+    if (!rec || rec.arrived) return;
+    rec.arrived = true;
+    rec.handle.visible = true;
+    rec.label.classList.add('arrive');
+    entrance(this.fx, rec.ship);
+  }
+
+  // skipped: anyone who has not arrived appears at once
+  endIntro(skipped = false) {
+    const run = this.introRun;
+    if (!run) return;
+    this.cancelIntro();
+    for (const rec of this.ships.values()) {
+      if (rec.arrived) continue;
+      rec.arrived = true;
+      rec.ship.root.visible = true;
+      rec.handle.visible = true;
+    }
+    if (skipped) this.stage.fly(OVERVIEW, 0.9);
+    this.onIntroEnd?.();
+  }
+
+  cancelIntro() {
+    const run = this.introRun;
+    this.opening = false;
+    if (!run) return;
+    this.introRun = null;
+    run.timers.forEach(clearTimeout);
+    run.off?.();
+    run.hint.remove();
+    document.body.classList.remove('intro');
+  }
+
+  // the winner: the camera closes in and circles slowly round the new ruler
+  coronation(ship) {
+    const p = ship.root.position;
+    this.stage.fly({ target: p.clone().setY(p.y + 1.6), radius: 12, theta: this.stage.rig.theta, phi: 1.15 }, 1.2);
+    setTimeout(() => this.stage.orbitBy(Math.PI * 1.6, 8, { radius: 10, phi: 1.2 }), 1250);
+    this.focusUntil = performance.now() + 11000;
+    ship.setActive(true);
   }
 
   // ---------------------------------------------------------------------------

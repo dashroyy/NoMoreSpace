@@ -314,3 +314,20 @@ input:focus { border-color: var(--cyan); box-shadow: 0 0 0 3px rgba(0, 240, 255,
   .ship-tag .tag-stats { font-size: 11px; }
 }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 0.01ms !important; transition: none !important; } }
+
+/* ---- battle animations ---- */
+/* the opening of a game: the screen stays out of the way while the flagships arrive one after another */
+#screen-game { transition: opacity 0.7s ease; }
+body.intro #screen-game { opacity: 0; pointer-events: none; }
+.intro-skip { position: fixed; left: 50%; bottom: 26px; transform: translateX(-50%); z-index: 40; padding: 8px 18px; border-radius: 999px; background: rgba(5, 8, 20, 0.7); border: 1px solid rgba(255, 255, 255, 0.2); color: #dfe6ff; font: 600 15px var(--body); letter-spacing: 0.04em; animation: introHint 2.4s ease-in-out infinite; pointer-events: none; }
+@keyframes introHint { 50% { opacity: 0.55; } }
+.ship-tag.arrive { animation: tagArrive 0.9s ease-out; }
+@keyframes tagArrive { from { opacity: 0; filter: blur(6px) brightness(3); } }
+/* being hit: the screen edges flash red (your own ship), the plate shakes, the lost Hull pips flare up */
+.hurt-vignette { position: absolute; inset: 0; pointer-events: none; background: radial-gradient(ellipse at center, transparent 45%, rgba(255, 30, 70, calc(var(--p, 0.6) * 0.75)) 100%); animation: vignette 0.8s ease-out forwards; }
+@keyframes vignette { from { opacity: 1; } to { opacity: 0; } }
+.plate.hit { animation: plateHit 0.55s ease-out; }
+@keyframes plateHit { 0% { transform: translateX(-6px); background: rgba(255, 42, 109, 0.45); } 20% { transform: translateX(7px); } 40% { transform: translateX(-5px); } 60% { transform: translateX(3px); } 100% { transform: none; } }
+.hull-pips i.lost, .hull-bar i.lost { animation: pipLost 0.9s ease-out; }
+@keyframes pipLost { 0% { background: #fff; box-shadow: 0 0 12px #ff2a6d; transform: scale(1.7); } 40% { background: var(--crimson); } 100% { transform: none; } }
+@media (prefers-reduced-motion: reduce) { .hurt-vignette, .plate.hit, .ship-tag.arrive, .intro-skip, .hull-pips i.lost, .hull-bar i.lost { animation: none !important; } }
