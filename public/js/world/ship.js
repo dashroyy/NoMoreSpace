@@ -396,7 +396,7 @@ function buildProps(ship, room, cx, cz, parent = ship) {
     case 'observation': {
       add(g, new THREE.CylinderGeometry(0.25, 0.35, 2.2, 12), metal, -4, 1.4, -3, [0.6, 0, 0]);
       for (const s of [-1, 0, 1]) add(g, new THREE.CylinderGeometry(0.04, 0.04, 1.3, 5), metal, -4 + s * 0.4, 0.6, -2.4 + Math.abs(s) * 0.2, [0.2 * s, 0, -0.3 * s]);
-      for (const x of [-5, 0, 5]) add(g, new THREE.BoxGeometry(2.6, 0.45, 0.8), m(0x2b2440), x, 0.25, 2.5);
+      for (const x of [-5, 0, 5]) add(fb, new THREE.BoxGeometry(2.6, 0.45, 0.8), m(0x2b2440), x, 0.25, 2.5);
       break;
     }
     case 'navigation': {
@@ -414,8 +414,8 @@ function buildProps(ship, room, cx, cz, parent = ship) {
     }
     case 'medbay': {
       for (const x of [-4, 0]) {
-        add(g, new THREE.BoxGeometry(2.2, 0.6, 1.1), m(0xdfe6ee), x, 0.5, -3.5);
-        add(g, new THREE.BoxGeometry(0.7, 0.18, 0.9), m(0xffffff), x - 0.7, 0.88, -3.5);
+        add(fb, new THREE.BoxGeometry(2.2, 0.6, 1.1), m(0xdfe6ee), x, 0.5, -3.5);
+        add(fb, new THREE.BoxGeometry(0.7, 0.18, 0.9), m(0xffffff), x - 0.7, 0.88, -3.5);
       }
       add(g, new THREE.TorusGeometry(1.1, 0.12, 8, 30), glowMat(0x7dffb0, 1.2), 4, 1.1, -3, [Math.PI / 2, 0, 0]);
       add(g, new THREE.CylinderGeometry(1.1, 1.1, 0.06, 30), glowMat(0x1c4a36, 0.6), 4, 0.03, -3);
@@ -468,8 +468,8 @@ function buildProps(ship, room, cx, cz, parent = ship) {
     }
     case 'quarters': {
       for (const x of [-4, -1.5, 1]) {
-        add(g, new THREE.BoxGeometry(1.8, 0.4, 2.6), m(0x3a3150), x, 0.4, 3);
-        add(g, new THREE.BoxGeometry(1.6, 0.15, 2.4), m(0x8f7ad8), x, 0.65, 3);
+        add(fb, new THREE.BoxGeometry(1.8, 0.4, 2.6), m(0x3a3150), x, 0.4, 3);
+        add(fb, new THREE.BoxGeometry(1.6, 0.15, 2.4), m(0x8f7ad8), x, 0.65, 3);
         add(g, new THREE.CapsuleGeometry(0.75, 1.6, 4, 12), new THREE.MeshStandardMaterial({ color: 0xa8d8ff, transparent: true, opacity: 0.18 }), x, 1.2, 3, [Math.PI / 2, 0, 0]);
       }
       // the ship cat
@@ -492,8 +492,8 @@ function buildProps(ship, room, cx, cz, parent = ship) {
       break;
     }
     case 'bridge': {
-      add(g, new THREE.BoxGeometry(4, 1, 0.8), metal, 0, 0.5, -9);
-      add(g, new THREE.BoxGeometry(3.6, 0.05, 0.6), glowMat(0x7f6bff, 1.2), 0, 1.03, -9, [-0.4, 0, 0]);
+      add(fb, new THREE.BoxGeometry(4, 1, 0.8), metal, 0, 0.5, -9);
+      add(fb, new THREE.BoxGeometry(3.6, 0.05, 0.6), glowMat(0x7f6bff, 1.2), 0, 1.03, -9, [-0.4, 0, 0]);
       break;
     }
     default:

@@ -1,8 +1,10 @@
-// 🚀 The classic station's rooms, dressed with real models (KayKit Restaurant, Furniture and
-// Space Base Bits, CC0, see assets.js): a proper kitchen and dining tables in the Galley, a
-// lounge in the Crew Quarters, stacks of cargo and a water tank in the Cargo Bay, and space farms
-// in Hydroponics. Only the space station (Black Hole Blues) gets them: the other scripts have
-// rooms of their own.
+// 🚀 The classic station's rooms, dressed with real models (CC0, see assets.js). KayKit's Restaurant,
+// Furniture and Space Base Bits: a proper kitchen and dining tables in the Galley, a lounge in the Crew
+// Quarters, stacks of cargo and a water tank in the Cargo Bay, and space farms in Hydroponics. Kenney's
+// Space Station Kit and Space Kit: consoles on the Bridge, the Navigation and Comms rooms, seats and a
+// rail at the Observation Deck's window, beds in the Medbay and the Quarters, generators in the Reactor
+// and Engine Room. Only the space station (Black Hole Blues) gets them: the other scripts have rooms
+// of their own.
 //
 // The models are fetched the first time the station is shown. Until then (or if they cannot be
 // fetched) the plain boxes that used to stand in those rooms stay: ship.js keeps them in a
@@ -15,6 +17,8 @@ import { mergeStatic } from './carnival-rooms.js';
 const R = (n) => `restaurant/${n}`;
 const F = (n) => `furniture/${n}`;
 const S = (n) => `spacebase/${n}`;
+const K = (n) => `station/${n}`; // Kenney's Space Station Kit (about half a metre per model: scaled up to suit the crew)
+const X = (n) => `spacekit/${n}`; // Kenney's Space Kit
 
 const MODEL_NAMES = [
   'kitchencounter_sink_backsplash', 'kitchencounter_straight_A_backsplash', 'kitchencounter_straight_A_decorated', 'stove_multi_decorated',
@@ -23,7 +27,12 @@ const MODEL_NAMES = [
   'couch', 'armchair', 'table_low_decorated', 'lamp_standing', 'rug_rectangle_A', 'cactus_medium_A',
 ].map(F), [
   'space_farm_large_sprinkler', 'space_farm_small', 'cargo_A_stacked', 'cargo_B_stacked', 'cargo_B_packed', 'cargodepot_A', 'water_storage', 'eco_module', 'lander_A',
-].map(S));
+].map(S), [
+  'computer-wide', 'computer-system', 'computer-screen', 'computer', 'display-wall-wide', 'balcony-rail-center', 'chair-cushion-headrest', 'chair-armrest-headrest', 'chair',
+  'table-display', 'bed-single', 'container', 'container-tall', 'pipe-ring-colored',
+].map(K), [
+  'machine_generator', 'machine_generatorLarge', 'machine_barrelLarge', 'machine_wirelessCable',
+].map(X));
 
 export class ClassicRooms {
   constructor(ship) {
@@ -90,6 +99,53 @@ export class ClassicRooms {
     [-6.0, -3.0, 0.0, 3.0].forEach((x) => put('hydroponics', S('space_farm_large_sprinkler'), x, -4.0, { s: 1.4 }));
     put('hydroponics', S('space_farm_small'), 5.6, -4.0, { s: 1.2 });
     put('hydroponics', S('space_farm_small'), -6.6, 3.4, { s: 1.2 });
+
+    // ---------- Kenney's station kit. The camera looks from the south, so tall things stand along the north wall
+    // (and the east and west walls, turned to face in), the south half stays low, and every doorway is left clear ----------
+    const WEST = Math.PI / 2; // faces east, for a west wall
+    const EAST = -Math.PI / 2; // faces west, for an east wall
+    const NORTH = Math.PI; // faces north (a seat looking at a console or a window)
+    // 🧑‍✈️ Bridge: a row of consoles each side of the north gate, and screens on the side walls
+    for (const x of [-6.8, -4.8, -2.8, 2.8, 4.8, 6.8]) put('bridge', K('computer-wide'), x, -9.2, { s: 2.4 });
+    for (const z of [-3.2, 3.2]) {
+      put('bridge', K('computer-system'), -9.1, z, { s: 2.4, ry: WEST });
+      put('bridge', K('computer-system'), 9.1, z, { s: 2.4, ry: EAST });
+    }
+    // 🔭 Observation Deck: a rail along the great window, seats facing it and a hologram table
+    for (const x of [-5.2, -2.6, 0, 2.6, 5.2]) put('observation', K('balcony-rail-center'), x, -7.0, { s: 2.6 });
+    [-6, -3.6, -1.2, 1.2].forEach((x) => put('observation', K('chair-cushion-headrest'), x, 2.4, { s: 2.6, ry: NORTH }));
+    put('observation', K('table-display'), 7, 1.8, { s: 2.6 });
+    // 🧭 Navigation: consoles and chairs round the star map
+    for (const x of [-5.0, -2.9, 2.9, 5.0]) put('navigation', K('computer-wide'), x, -5.2, { s: 2.4 });
+    for (const x of [-2.9, 2.9]) put('navigation', K('chair-armrest-headrest'), x, -3.5, { s: 2.6, ry: NORTH });
+    put('navigation', K('display-wall-wide'), -7.2, 0, { s: 2.6, ry: WEST });
+    put('navigation', K('display-wall-wide'), 7.2, -4.2, { s: 2.6, ry: EAST });
+    // 📡 Comms: racks of equipment along the north wall
+    for (const x of [-5.0, -2.2, 0.6]) put('comms', K('computer-system'), x, -5.0, { s: 2.4 });
+    put('comms', X('machine_wirelessCable'), 6.2, -4.8, { s: 2.4 });
+    for (const x of [-5.0, -2.2]) put('comms', K('chair'), x, -3.2, { s: 2.6, ry: NORTH });
+    put('comms', K('display-wall-wide'), -7.2, 3.8, { s: 2.6, ry: WEST });
+    put('comms', K('display-wall-wide'), 7.2, -3.2, { s: 2.6, ry: EAST });
+    // 🩺 Medbay: three real beds, a locker and screens
+    [-5.5, -2.5, 0.5].forEach((x) => put('medbay', K('bed-single'), x, -3.9, { s: 2.6 }));
+    put('medbay', K('container-tall'), 6.6, -4.6, { s: 2.2 });
+    put('medbay', K('computer-system'), 7.1, 3.9, { s: 2.4, ry: EAST });
+    put('medbay', K('computer-screen'), -7.1, 3.0, { s: 2.4, ry: WEST });
+    // ☢️ Reactor: generators beside the core and pipes
+    put('reactor', X('machine_generatorLarge'), -5.4, -3.9, { s: 2.4 });
+    put('reactor', X('machine_generatorLarge'), 5.4, -3.9, { s: 2.4 });
+    put('reactor', K('pipe-ring-colored'), -7.0, 1.0, { s: 2.6 });
+    put('reactor', K('pipe-ring-colored'), 7.0, 1.0, { s: 2.6 });
+    // 🛠️ Engine Room: a bank of generators along the north wall, with barrels
+    for (const x of [-7.0, -4.6, 4.6, 7.0]) put('engine', X('machine_generator'), x, -5.6, { s: 2.4 });
+    put('engine', X('machine_barrelLarge'), -8.4, -3.2, { s: 2.4 });
+    put('engine', X('machine_barrelLarge'), 8.4, -3.2, { s: 2.4, ry: 1 });
+    // 🚪 Airlock: lockers and a console by the inner door
+    put('airlock', K('container'), -0.8, -4.1, { s: 2.2 });
+    put('airlock', K('container'), 1.2, -4.1, { s: 2.2, ry: 0.2 });
+    put('airlock', K('computer'), 2.7, -4.3, { s: 2.4 });
+    // 🛏️ Crew Quarters: the three bunks (the sleep pods stay round them)
+    [-4, -1.5, 1].forEach((x) => put('quarters', K('bed-single'), x, 3, { s: 2.6 }));
 
     this.group.add(mergeStatic(root));
     root.clear();

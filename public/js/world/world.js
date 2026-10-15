@@ -15,6 +15,7 @@ import { OutbreakRooms } from './outbreak-rooms.js';
 import { OutbreakExterior } from './outbreak-exterior.js';
 import { TraitorsRooms } from './traitors-rooms.js';
 import { ClassicRooms } from './classic-rooms.js';
+import { ClassicExterior } from './classic-exterior.js';
 import { preloadCharacters, CITADEL_ROLES } from './models.js';
 import { TraitorsExterior } from './traitors-exterior.js';
 import { DoomFx } from './doomfx.js';
@@ -102,6 +103,8 @@ export class World {
     this.outbreakExterior = new OutbreakExterior(this.ship.group, { lowFx: this.lowFx }); // the research complex outside (same)
     this.classicRooms = new ClassicRooms(this.ship.group); // real models in the station's rooms (Black Hole Blues only)
     this.classicRooms.setActive(true); // the station is the default: fetch its models right away
+    this.classicExterior = new ClassicExterior(this.ship.group, { lowFx: this.lowFx }); // docked ships, turrets, patrol craft and drifting rocks (same)
+    this.classicExterior.setActive(true);
     this.traitorsRooms = new TraitorsRooms(this.ship.group, { lowFx: this.lowFx }); // the castle: dressing for every room (Citadel of Traitors only)
     this.traitorsExterior = new TraitorsExterior(this.ship.group, { lowFx: this.lowFx }); // the crag, towers and drawbridge outside (same)
     this.doomFx = new DoomFx(this); // the disaster outside: underglow, vignette, lightning, laughs and shudders
@@ -436,6 +439,7 @@ export class World {
     this.carnival.update(t, dt);
     this.carnivalRooms.update(t, dt);
     this.carnivalExterior.update(t, dt);
+    this.classicExterior.update(t, dt);
     this.outbreakRooms.update(t, dt);
     this.outbreakExterior.update(t, dt);
     this.traitorsRooms.update(t, dt);
@@ -732,6 +736,7 @@ export class World {
   setScript(id) {
     this.carnival.setActive(id === 'carnival');
     this.classicRooms.setActive(!id || id === 'classic');
+    this.classicExterior.setActive(!id || id === 'classic');
     if (this.space.script === (id || 'classic')) return;
     this.space.script = id || 'classic';
     this.backdrop.setScript(id);

@@ -136,6 +136,41 @@ body:has(#nm-splash:not(.out)) #screen-home { opacity: 0; pointer-events: none; 
 .mission .ms-tag { font-size: 1.05rem; line-height: 1.4; color: #bcc7e6; }
 .mission .ms-pill { margin-top: 4px; padding: 3px 10px; font: 0.8rem var(--font-title); letter-spacing: 0.1em; text-transform: uppercase; color: var(--mc); border: 1px solid color-mix(in srgb, var(--mc) 60%, transparent); }
 
+/* ---------- the docking bay (lobby): bigger, easier to read and tap ---------- */
+#screen-lobby .lobby-left, #screen-lobby .lobby-right { width: min(400px, calc(50vw - 24px)); padding: 20px 20px 24px; scrollbar-width: thin; }
+#screen-lobby .eyebrow { font-size: 0.95rem; }
+#screen-lobby .lobby-head h2 { font-size: 1.7rem; margin: 2px 0 4px; }
+#screen-lobby .lobby-head .code { font-family: var(--font-digital); font-size: 1.15em; letter-spacing: 0.14em; color: var(--phosphor); text-shadow: 0 0 14px rgba(108, 240, 255, 0.5); }
+#screen-lobby .lobby-ship { font-size: 1rem; }
+#screen-lobby h3 { font-size: 1.1rem; margin: 18px 0 8px; }
+#screen-lobby .hint, #screen-lobby label, #screen-lobby .muted { font-size: 1.05rem; line-height: 1.35; }
+#screen-lobby .bio-field input { font-size: 1.15rem; padding: 12px 14px; }
+#screen-lobby .swatches { gap: 8px; }
+#screen-lobby .swatch { width: 36px; height: 36px; }
+#screen-lobby .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+#screen-lobby .chip { font-size: 0.9rem; padding: 8px 12px; }
+#screen-lobby .lobby-players { gap: 8px; }
+#screen-lobby .lobby-players li { padding: 10px 12px; gap: 10px; }
+#screen-lobby .lobby-players .name { font-size: 1.2rem; font-weight: 700; }
+#screen-lobby .lobby-players .bio { font-size: 1rem; }
+#screen-lobby .lobby-players .dot { width: 18px; height: 18px; }
+#screen-lobby .lobby-players button { padding: 6px 10px; font-size: 0.9rem; }
+#screen-lobby .script-cards { gap: 10px; }
+#screen-lobby .script-card { grid-template-columns: 3rem 1fr; padding: 12px 14px; gap: 2px 14px; }
+#screen-lobby .script-card .script-ico { font-size: 2.4rem; }
+#screen-lobby .script-card b { font-size: 1.15rem; letter-spacing: 0.04em; }
+#screen-lobby .script-card small { font-size: 1.02rem; line-height: 1.25; }
+#screen-lobby .script-current b { font-size: 1.15rem; }
+#screen-lobby .lobby-setup button, #screen-lobby .lobby-setup select { font-size: 1rem; }
+#screen-lobby .lobby-setup .check { font-size: 1.02rem; line-height: 1.3; }
+/* the settings block flows straight in the scrolling panel, so the Launch button can stay in view while you scroll */
+#screen-lobby .lobby-setup { display: contents; }
+#screen-lobby .lobby-setup > * { margin: 0 0 10px; }
+#screen-lobby .lobby-setup > h3 { margin-top: 18px; }
+/* the Launch button stays in view while you scroll the settings */
+#screen-lobby .lobby-setup > button.primary.big { position: sticky; bottom: -2px; z-index: 2; padding: 18px 22px; font-size: 1.15rem; box-shadow: 0 -14px 20px -4px rgba(10, 13, 28, 0.95), 0 0 26px rgba(108, 240, 255, 0.45); }
+#screen-lobby #lobby-wait { font-size: 1.05rem; }
+
 /* ---------- the in-game menu ---------- */
 body.has-menu #btn-settings, body.has-menu #btn-wiki, body.has-menu #btn-tts, body.has-menu #btn-help, body.has-menu #btn-pause { display: none !important; }
 .menu-btn { font-size: 1.25rem; }
