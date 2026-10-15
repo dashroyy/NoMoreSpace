@@ -5,7 +5,7 @@ import { el, problem } from '../util.js';
 import { store, send, contender, card, anomaly, evolution, player, colorOf } from './net.js';
 import { DiceTray } from './dice.js';
 import { faceSvg, faceIcon } from './faces.js';
-import { sfx } from './sound.js';
+import { sfx, unlock } from './sound.js';
 import { settings, toggleMute, onSettings, openSettings } from './settings.js';
 import { icon, menuList, onEscape, keyHints } from './ui.js';
 import { processLog } from './fx.js';

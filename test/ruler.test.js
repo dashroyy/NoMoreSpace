@@ -411,3 +411,28 @@ test('the settings are remembered and bounded, and old sound switches are carrie
   for (const key of ['master', 'music', 'effects', 'muted', 'quality', 'shake']) assert.match(src, new RegExp(`${key}:`), `${key} has a default`);
   assert.match(src, /rotg-sound/, 'the first version\'s sound switch is still read');
 });
+
+test('no screen calls a shared helper it forgot to import (a missing import only blows up when the button is clicked)', () => {
+  const namesIn = (src) => new Set([...src.matchAll(/export\s+(?:async\s+)?(?:const|let|function|class)\s+([\w$]+)/g)].map((m) => m[1]));
+  // everything the client modules (and the shared util.js) export
+  const vocabulary = new Set();
+  for (const file of [...clientFiles(), path.join(ROOT, 'public/js/util.js')]) for (const n of namesIn(fs.readFileSync(file, 'utf8'))) vocabulary.add(n);
+  assert.ok(vocabulary.has('unlock') && vocabulary.has('el') && vocabulary.has('sfx'));
+  for (const file of clientFiles()) {
+    const src = fs
+      .readFileSync(file, 'utf8')
+      .replace(/\/\*[\s\S]*?\*\//g, '')
+      .replace(/^\s*\/\/.*$/gm, '')
+      .replace(/^(\s+)(?:static\s+|async\s+|get\s+|set\s+)*[\w$]+(\([^)]*\)\s*\{)/gm, '$1$2'); // (a class method's own name is not a call)
+    const imported = new Set();
+    for (const m of src.matchAll(/import\s*\{([^}]*)\}\s*from/g)) for (const part of m[1].split(',')) imported.add(part.trim().split(/\s+as\s+/).pop());
+    for (const m of src.matchAll(/import\s+(?:\*\s+as\s+)?([\w$]+)\s+from/g)) imported.add(m[1]);
+    for (const name of vocabulary) {
+      if (['clamp', 'lerp', 'clear', 'step'].includes(name)) continue; // (also names in shaders and methods: too easy to mistake)
+      const esc = name.replace(/\$/g, '\\$');
+      if (!new RegExp(`(?<![.\\w$'"\`])${esc}\\(`).test(src)) continue; // not called here
+      const declared = new RegExp(`\\b(?:function|const|let|var|class)\\s+${esc}\\b`).test(src);
+      assert.ok(imported.has(name) || declared, `${path.relative(ROOT, file)} calls ${name}() but never imports or defines it`);
+    }
+  }
+});
