@@ -91,6 +91,15 @@ export function buildGame(root, { onLeave, world: w }) {
   // the clock on whatever is being waited for
   setInterval(tickTimer, 250);
 
+  // a robot that took over while you were away steps aside the moment you touch the screen
+  let lastWake = 0;
+  document.addEventListener('pointerdown', () => {
+    const st = store.state;
+    if (!st || st.phase !== 'playing' || !player(st.you.id)?.afk || Date.now() - lastWake < 2000) return;
+    lastWake = Date.now();
+    send('wake').catch(() => {});
+  });
+
   // Escape opens the menu (unless it closed something else)
   document.addEventListener('keydown', (e) => {
     if (e.key !== 'Escape' || e.defaultPrevented || document.getElementById('screen-game').hidden) return;
@@ -266,6 +275,7 @@ function renderTodo(state) {
     if (tray.length > 1) extra = el('div', { className: 'tray-pick' }, ...tray.map((x) => starCard(x, { small: true, cls: x.uid === (c?.uid || '') ? 'sel' : '', onClick: () => ((ui.trayUid = x.uid), sfx('select'), renderGameAgain()) })));
     else if (c) art = starCard(c, { cls: 'big' });
   }
+  if (meP?.afk && state.phase === 'playing') extra = el('div', { className: 'afk-note' }, '💤 A robot is playing for you', el('small', {}, 'Do anything to take over'));
   box.className = `todo ${tone}`;
   box.replaceChildren(
     art,

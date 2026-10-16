@@ -11,6 +11,7 @@ import { starArt } from './art.js';
 let world = null;
 let seenFor = null;
 let lastSeq = 0;
+let announced = ''; // the game start that has already been announced (a re-draw of the same state must not do it twice)
 let lastFaceUp = []; // the stars that were turned over at the last look (they go to the tray when the trading ends)
 
 export function initFx(w) {
@@ -29,17 +30,21 @@ export function processLog(state, prev) {
     seenFor = state.code;
     lastSeq = top;
     // a new game has just started: announce it
-    if (prev && prev.code === state.code && prev.phase === 'lobby' && state.phase === 'playing') {
+    if (prev && prev.code === state.code && prev.phase === 'lobby' && state.phase === 'playing' && announced !== `${state.code}|${top}`) {
+      announced = `${state.code}|${top}`;
       sfx('start');
       banner('Let\'s grow some stars!', `${state.players.length} players · ${state.setIds.length} kinds of star · ${state.deckCount} in the deck`, 'gold');
     }
     return;
   }
   if (prev?.turn?.phase === 'trade') lastFaceUp = prev.turn.faceUp;
+  const fresh = state.log.filter((e) => e.seq > lastSeq);
+  // a crowd of events at once (the last harvest of the game, or a tab that was asleep): the show gets lighter, or it would
+  // pile up into one white blaze
+  const crowd = fresh.filter((e) => e.k !== 'emote').length;
   let beat = 0;
-  for (const e of state.log) {
-    if (e.seq <= lastSeq) continue;
-    later(beat * 130, () => handle(e, state));
+  for (const e of fresh) {
+    later(beat * (crowd > 4 ? 180 : 130), () => handle(e, state, crowd > 4));
     if (e.k !== 'emote') beat += 1;
   }
   lastSeq = Math.max(lastSeq, top);
@@ -105,7 +110,7 @@ function lumenPop(pid, field, lumens) {
 
 // ---------------------------------------------------------------------------
 
-function handle(e, state) {
+function handle(e, state, light = false) {
   if (!world) return;
   const me = state.you.id;
   const t = world.table;
@@ -130,9 +135,9 @@ function handle(e, state) {
       } else t.fly(t.posOf(e.pid, 'tray'), to.clone(), { id: e.t, dur: 0.55, arc: 2.2, scale: 0.9 });
       t.delayLast(e.pid, e.field, delay);
       later(delay * 1000, () => {
-        world.fx.flash(to, col, 2.8, 0);
-        world.fx.burst(to, col, 12, 2.6, 0, 0.6, 0.16);
-        if (e.n >= 3) world.fx.ringFacing(to.clone().setY(0.15), new THREE.Vector3(0, 1, 0), col, 0.5, 2.2, 0.6, 0);
+        world.fx.flash(to, col, 2.2, 0);
+        if (!light) world.fx.burst(to, col, 12, 2.6, 0, 0.6, 0.16);
+        if (e.n >= 3 && !light) world.fx.ringFacing(to.clone().setY(0.15), new THREE.Vector3(0, 1, 0), col, 0.5, 2.2, 0.6, 0);
       });
       break;
     }
@@ -142,11 +147,11 @@ function handle(e, state) {
       const col = colorOf(e.t);
       const k = e.lumens;
       sfx(k >= 3 ? 'bigharvest' : 'harvest');
-      world.fx.converge(at, col, { count: 20 + e.n * 4, radius: 2.8, life: 0.5, size: 0.2 });
-      later(480, () => {
-        world.fx.flash(at, GOLD, 4 + k, 0);
-        world.fx.shockwave(at.clone().setY(0.15), col, 3.5 + k * 1.2, 0, 0.8);
-        world.fx.burst(at, k ? GOLD : new THREE.Color('#ff6a4d'), 14 + k * 8, 3.4, 0, 0.9, 0.2);
+      if (!light) world.fx.converge(at, col, { count: 16 + e.n * 3, radius: 2.6, life: 0.5, size: 0.18 });
+      later(light ? 0 : 480, () => {
+        world.fx.flash(at, GOLD, 2.2 + k * 0.5, 0);
+        if (!light) world.fx.shockwave(at.clone().setY(0.15), col, 3 + k * 0.9, 0, 0.8);
+        world.fx.burst(at, k ? GOLD : new THREE.Color('#ff6a4d'), light ? 8 : 10 + k * 5, 3, 0, 0.8, 0.16);
         lumenPop(e.pid, e.field, k);
         if (k) {
           // the lumens fly to the owner's stack of gold
@@ -154,15 +159,15 @@ function handle(e, state) {
           t.delayCoins(e.pid, k, 0.9);
           for (let i = 0; i < k; i++) {
             t.fly(at, dest, { coin: true, dur: 0.8, delay: i * 0.14, arc: 2.4 });
-            later(900 + i * 140, () => sfx('lumen'));
+            if (!light) later(900 + i * 140, () => sfx('lumen'));
           }
-        } else world.fx.smoke(at, 8, 0x553322, 1.6, 1.2);
-        if (k >= 4) {
-          world.stage.punch(0.6);
-          world.stage.shake(0.5);
+        } else if (!light) world.fx.smoke(at, 8, 0x553322, 1.6, 1.2);
+        if (k >= 4 && !light) {
+          world.stage.punch(0.5);
+          world.stage.shake(0.4);
         }
       });
-      if (k >= 4) world.look(e.pid, { radius: 19, hold: 2.4 });
+      if (k >= 4 && !light) world.look(e.pid, { radius: 19, hold: 2.4 });
       break;
     }
 
@@ -212,7 +217,7 @@ function handle(e, state) {
 
     case 'draw':
       sfx('draw');
-      for (let i = 0; i < Math.min(3, e.n || 0); i++) world.fx.streak(t.deckPos(), t.posOf(e.pid, 'tag'), new THREE.Color('#9b7bff'), 0.5, 0.08, i * 0.16);
+      if (!light) for (let i = 0; i < Math.min(3, e.n || 0); i++) world.fx.streak(t.deckPos(), t.posOf(e.pid, 'tag'), new THREE.Color('#9b7bff'), 0.5, 0.08, i * 0.16);
       break;
 
     case 'field': {

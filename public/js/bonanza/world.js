@@ -12,7 +12,7 @@ import { store, star, payout } from './net.js';
 // the table as you play: the whole oval, nudged up so the hand and your nurseries at the bottom do not hide it
 const GAME_VIEW = () => (innerWidth > 820 ? { target: new THREE.Vector3(0, 0, 2.2), radius: 37, theta: 0, phi: 0.9 } : { target: new THREE.Vector3(0, 0, 3.4), radius: 46, theta: 0, phi: 0.95 });
 // the title screen: the table over to the right, clear of the menu on the left (on a phone the menu is at the bottom)
-const HOME_VIEW = () => (innerWidth > 820 ? { target: new THREE.Vector3(0, 0, 1.2), radius: 38, theta: 0.1, phi: 0.95 } : { target: new THREE.Vector3(0, -3, 3.5), radius: 46, theta: 0, phi: 0.85 });
+const HOME_VIEW = () => (innerWidth > 820 ? { target: new THREE.Vector3(0, 0, 1.2), radius: 44, theta: 0.1, phi: 0.95 } : { target: new THREE.Vector3(0, -3, 3.5), radius: 46, theta: 0, phi: 0.85 });
 const LOBBY_VIEW = () => (innerWidth > 820 ? { target: new THREE.Vector3(0, 0, 2.4), radius: 40, theta: 0.08, phi: 0.95 } : { target: new THREE.Vector3(0, -3, 3.5), radius: 46, theta: 0, phi: 0.85 });
 // the opening shot behind the start screen: far out over the galaxy
 const TITLE_SHOT = { target: new THREE.Vector3(0, -30, 0), radius: 160, theta: -0.7, phi: 0.55 };
@@ -155,7 +155,7 @@ export class World {
     const home = this.mode === 'showcase' && this.shot === 'home' && this.titleMenu;
     const game = this.mode === 'game';
     const k = 1 - Math.exp(-dt * 3);
-    this.shiftX += ((home && wide ? 0.22 : game && wide && this.trading ? -0.1 : 0) - this.shiftX) * k;
+    this.shiftX += ((home && wide ? 0.24 : game && wide && this.trading ? -0.1 : 0) - this.shiftX) * k;
     this.shiftY += ((home && !wide ? 0.16 : game ? (wide ? 0.13 : 0.1) : 0) - this.shiftY) * k;
     const cam = this.stage.camera;
     if (Math.abs(this.shiftX) + Math.abs(this.shiftY) > 0.001) {

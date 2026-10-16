@@ -103,6 +103,8 @@ button.scard:hover { transform: translateY(-6px); border-color: var(--c); box-sh
 .todo.hurry .tt-n { color: var(--crimson); animation: lastPulse 0.8s infinite; }
 .todo-timer .timer { width: 100%; margin: 0; }
 .tray-pick { display: flex; gap: 6px; }
+.afk-note { display: flex; flex-direction: column; align-items: flex-end; padding: 4px 12px; border-radius: 10px; background: rgba(255, 211, 107, 0.1); border: 1px dashed rgba(255, 211, 107, 0.5); font: 700 14px var(--body); color: var(--lum); }
+.afk-note small { font: 600 12px var(--body); color: #cdd6f5; }
 
 .dock-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: stretch; }
 .hand-wrap { padding: 7px 12px 8px; min-width: 0; display: flex; flex-direction: column; gap: 5px; border-radius: 14px; }
@@ -221,7 +223,7 @@ button.scard:hover { transform: translateY(-6px); border-color: var(--c); box-sh
 /* ---------- the rules book ---------- */
 .rules .lead { font-size: 17.5px; color: #eef2ff; margin: 0 0 4px; }
 .rules-head { margin: 22px 0 6px; font: 800 14px var(--display); letter-spacing: 0.14em; text-transform: uppercase; color: var(--lum); }
-.star-table { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 8px; margin-top: 8px; }
+.star-table { display: grid; grid-template-columns: repeat(auto-fill, minmax(420px, 1fr)); gap: 8px; margin-top: 8px; }
 .star-row { --c: #fff; display: grid; grid-template-columns: 56px 1fr auto; align-items: center; gap: 10px; padding: 6px 12px 6px 6px; border-radius: 14px; background: linear-gradient(90deg, color-mix(in srgb, var(--c) 16%, rgba(8, 12, 28, 0.9)), rgba(8, 12, 28, 0.9)); border: 1px solid color-mix(in srgb, var(--c) 45%, transparent); }
 .star-row img { width: 56px; height: 56px; filter: drop-shadow(0 0 8px var(--c)); }
 .sr-name { display: flex; flex-direction: column; line-height: 1.2; }
