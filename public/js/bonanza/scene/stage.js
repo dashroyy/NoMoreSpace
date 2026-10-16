@@ -1,31 +1,138 @@
-// Star Bonanza: the 3D stage. A cartoon one: flat toon lighting, no glow, a camera that bobs about like it is
-// having fun, and HTML labels that follow 3D objects around. Everything 3D in the game hangs off this.
+// Star Bonanza: the 3D stage. A cel-shaded one: hard bands of light and shade (the shade is purple, never grey), a
+// thin rim light, a hard little glint on shiny things and a thick ink outline that stays the same width on screen
+// however big or far away something is. No glow, no soft shadows. A camera that bobs about like it is having fun,
+// and HTML labels that follow 3D objects around. Everything 3D in the game hangs off this.
 import * as THREE from 'three';
 
 const ease = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
 
-// three bands of light and shade: the toon look
+export const INK = 0x2d1b4e;
+
+// ---------------------------------------------------------------------------
+// cel shading: three flat bands (deep purple shade, a middle tone, full colour), each a colour that multiplies the
+// surface, so a yellow thing goes orange-brown in its shade and a green one goes teal, like a drawing
+// ---------------------------------------------------------------------------
 let GRADIENT = null;
 export function toonGradient() {
   if (GRADIENT) return GRADIENT;
-  GRADIENT = new THREE.DataTexture(new Uint8Array([110, 185, 255]), 3, 1, THREE.RedFormat);
+  const bands = [
+    [118, 92, 196],
+    [205, 188, 238],
+    [255, 255, 255],
+  ];
+  const data = new Uint8Array(bands.flatMap(([r, g, b]) => [r, g, b, 255]));
+  GRADIENT = new THREE.DataTexture(data, bands.length, 1, THREE.RGBAFormat);
   GRADIENT.minFilter = GRADIENT.magFilter = THREE.NearestFilter;
   GRADIENT.generateMipmaps = false;
   GRADIENT.needsUpdate = true;
   return GRADIENT;
 }
-export const toon = (color, extra = {}) => new THREE.MeshToonMaterial({ color, gradientMap: toonGradient(), ...extra });
 
-// the soft lighting every 3D thing in the game is drawn with (the card portraits use it too)
-export function addLights(scene) {
-  scene.add(new THREE.HemisphereLight(0xdfe8ff, 0x7a5aa8, 1.6));
-  const key = new THREE.DirectionalLight(0xfff4e0, 2.1);
-  key.position.set(6, 14, 10);
-  scene.add(key);
-  const rim = new THREE.DirectionalLight(0xff9ad5, 0.7);
-  rim.position.set(-10, 6, -12);
-  scene.add(rim);
+// extra cel tricks, added to the standard toon shader: a thin bright edge on the lit side, and a hard white glint
+const CEL_FRAGMENT = /* glsl */ `
+  {
+    vec3 celV = normalize( vViewPosition );
+    float celEdge = 1.0 - clamp( dot( normal, celV ), 0.0, 1.0 );
+    outgoingLight += vec3( step( 0.74, celEdge ) ) * 0.14;
+    vec3 celH = normalize( normalize( vec3( -0.35, 0.8, 0.5 ) ) + celV );
+    float celGlint = step( 0.972, dot( normal, celH ) );
+    outgoingLight = mix( outgoingLight, vec3( 1.0 ), celGlint * 0.92 * celShine );
+  }
+`;
+
+// turns a standard toon material into the game's cel material (shine: 0 for matte things, 1 for glossy ones)
+export function celify(material, shine = 1) {
+  material.onBeforeCompile = (shader) => {
+    shader.uniforms.celShine = { value: shine };
+    shader.fragmentShader = 'uniform float celShine;\n' + shader.fragmentShader.replace('#include <opaque_fragment>', CEL_FRAGMENT + '\n#include <opaque_fragment>');
+  };
+  material.customProgramCacheKey = () => `cel${shine}`;
+  return material;
 }
+export const toon = (color, extra = {}) => celify(new THREE.MeshToonMaterial({ color, gradientMap: toonGradient(), ...extra }), extra.shine ?? 1);
+
+// the lighting every 3D thing in the game is drawn with (the card portraits use it too): a strong key light from the
+// top left, so the bands fall on the same side everywhere, and a soft purple fill
+export function addLights(scene) {
+  scene.add(new THREE.HemisphereLight(0xf2eeff, 0x9a78d8, 1.3));
+  const key = new THREE.DirectionalLight(0xfff1dc, 3.2);
+  key.position.set(-7, 15, 9);
+  scene.add(key);
+}
+
+// ---------------------------------------------------------------------------
+// ink outlines: a copy of the shape pushed outwards on screen by a fixed number of pixels, drawn from the inside out,
+// so only a rim shows. The copy needs smoothed normals (so a box's corners do not tear open).
+// ---------------------------------------------------------------------------
+const inkRes = { value: new THREE.Vector2(1280, 760) };
+export const setInkResolution = (w, h) => inkRes.value.set(w, h);
+const inkMats = new Map();
+function inkMaterial(px) {
+  if (!inkMats.has(px)) {
+    const m = new THREE.ShaderMaterial({
+      uniforms: { uRes: inkRes, uWidth: { value: px }, uColor: { value: new THREE.Color(INK) } },
+      vertexShader: /* glsl */ `
+        attribute vec3 snormal;
+        uniform vec2 uRes;
+        uniform float uWidth;
+        void main() {
+          vec4 clip = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
+          vec3 nv = normalize( normalMatrix * snormal );
+          vec2 d = ( projectionMatrix * vec4( nv, 0.0 ) ).xy * uRes;
+          d = d / max( length( d ), 1e-5 );
+          clip.xy += d / uRes * uWidth * 2.0 * clip.w;
+          gl_Position = clip;
+        }`,
+      fragmentShader: /* glsl */ `
+        uniform vec3 uColor;
+        void main() { gl_FragColor = vec4( uColor, 1.0 ); }`,
+      side: THREE.BackSide,
+    });
+    m.userData.shared = true;
+    inkMats.set(px, m);
+  }
+  return inkMats.get(px);
+}
+
+// the average of the normals of all the vertices that share a spot (kept on the geometry, once)
+export function smoothNormals(geometry) {
+  if (geometry.attributes.snormal) return geometry;
+  const pos = geometry.attributes.position;
+  const nor = geometry.attributes.normal || (geometry.computeVertexNormals(), geometry.attributes.normal);
+  const sums = new Map();
+  const key = (i) => `${Math.round(pos.getX(i) * 800)},${Math.round(pos.getY(i) * 800)},${Math.round(pos.getZ(i) * 800)}`;
+  for (let i = 0; i < pos.count; i++) {
+    const k = key(i);
+    const s = sums.get(k) || [0, 0, 0];
+    s[0] += nor.getX(i);
+    s[1] += nor.getY(i);
+    s[2] += nor.getZ(i);
+    sums.set(k, s);
+  }
+  const out = new Float32Array(pos.count * 3);
+  for (let i = 0; i < pos.count; i++) {
+    const s = sums.get(key(i));
+    const len = Math.hypot(s[0], s[1], s[2]) || 1;
+    out.set([s[0] / len, s[1] / len, s[2] / len], i * 3);
+  }
+  geometry.setAttribute('snormal', new THREE.BufferAttribute(out, 3));
+  return geometry;
+}
+
+// puts an ink outline round a mesh (px = how many screen pixels thick); returns the mesh
+export function ink(mesh, px = 3) {
+  const shell = new THREE.Mesh(smoothNormals(mesh.geometry), inkMaterial(px));
+  shell.userData.isInk = true;
+  shell.raycast = () => {};
+  mesh.add(shell);
+  return mesh;
+}
+// the same, for a geometry on its own (when the shell has to live somewhere else)
+export const inkShell = (geometry, px = 3) => {
+  const shell = new THREE.Mesh(smoothNormals(geometry), inkMaterial(px));
+  shell.userData.isInk = true;
+  return shell;
+};
 
 export class Stage {
   constructor(host, labelHost) {
@@ -72,6 +179,7 @@ export class Stage {
     const w = this.host.clientWidth || innerWidth;
     const h = this.host.clientHeight || innerHeight;
     this.renderer.setSize(w, h, false);
+    setInkResolution(w, h);
     this.camera.aspect = w / h;
     this.baseFov = w / h < 0.8 ? 60 : 46;
     this.camera.fov = this.baseFov;

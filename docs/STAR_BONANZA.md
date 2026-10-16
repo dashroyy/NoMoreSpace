@@ -4,7 +4,7 @@ A silly trading card game for 3 to 7 players, played online with friends (robots
 
 It is a cartoon space-farm remake of the classic planting-and-trading card game *Bohnanza* (Uwe Rosenberg, 1997). You are a space farmer on a floating island; the beans become **star buddies** (chubby little stars with faces and costume gags), the bean fields become **patches** of soil, and the coins are gold **Star Coins**. A UFO flown by Zorp the alien is the deck. The rules follow the original's shape (a hand you may never reorder, planting in order, cards turned over and traded with everybody, a coin table that rewards rare cards); the characters, jokes, art and the whole 3D farm are original.
 
-On purpose it looks nothing like the other games on the arcade: bright candy colours, chunky stickers with thick outlines, bouncy buttons, comic-book sound words, cartoon 3D (toon shading, outlines, no glow), boings and ka-chings for sound and a marimba tune for music.
+On purpose it looks nothing like the other games on the arcade: bright candy colours, chunky stickers with thick outlines, bouncy buttons, comic-book sound words, boings and ka-chings for sound and a marimba tune for music, and a properly **cel-shaded** 3D world (see below) that is never still.
 
 ## How to win
 
@@ -21,21 +21,22 @@ Grow star buddies in your patches and **harvest** them for coins. When the UFO h
 
 ## The star buddies
 
-Each is named after a real kind of star, and the joke is in taking the name literally. 3 to 5 players use eight kinds (104 cards); 6 or 7 players, or a host who switches on **All 11 star buddies**, use all eleven (154). Stars needed for 1, 2, 3 and 4 coins (the original game's table, so the balance has had decades of testing: the commoner the kind, the more of them each coin takes):
+Each is named after a real kind of star, and the joke is in taking the name literally. Eleven are the original game's beans; the **Stink Star** is our own, because every farm needs a farter. 3 to 5 players use nine kinds (116 cards); 6 or 7 players, or a host who switches on **All 12 star buddies**, use all twelve (166). Stars needed for 1, 2, 3 and 4 coins (the original game's table, so the balance has had decades of testing: the commoner the kind, the more of them each coin takes):
 
 | Star buddy | Who they are | In the UFO | 1 | 2 | 3 | 4 |
 |---|---|---|---|---|---|---|
-| Red Dwarf (all 11 only) | grumpy bearded miner in a hard hat | 24 | 4 | 7 | 10 | 12 |
-| Brown Dwarf (all 11 only) | sleepyhead in a nightcap | 22 | 4 | 7 | 9 | 11 |
+| Red Dwarf (full set only) | grumpy bearded miner in a hard hat | 24 | 4 | 7 | 10 | 12 |
+| Brown Dwarf (full set only) | sleepyhead in a nightcap | 22 | 4 | 7 | 9 | 11 |
 | Orange Dwarf | garden gnome | 20 | 4 | 6 | 8 | 10 |
 | Yellow Dwarf | far too sunny, in a straw hat | 18 | 3 | 6 | 8 | 9 |
 | White Dwarf | retired old-timer with specs and a moustache | 16 | 3 | 5 | 7 | 8 |
 | Blue Giant | gym buddy in a sweatband | 14 | 3 | 5 | 6 | 7 |
+| **Stink Star** | resident farter, trailed by flies | 12 | 2 | 4 | 6 | 8 |
 | Red Giant | puffed-up, sweating hothead | 12 | 2 | 4 | 6 | 7 |
 | Neutron Star | tiny, but lifts a dumbbell | 10 | 2 | 4 | 5 | 6 |
 | Pulsar | winking party DJ in headphones | 8 | 2 | 3 | 4 | 5 |
 | Quasar | show-off in shades and a crown | 6 | – | 2 | 3 | – |
-| Magnetar (all 11 only) | so attractive spoons stick to it | 4 | – | 2 | 3 | 4 |
+| Magnetar (full set only) | so attractive spoons stick to it | 4 | – | 2 | 3 | 4 |
 
 The buddies are built in 3D from simple shapes (`scene/critters.js`): a puffy five-pointed star body, eyes that blink, a mouth, and a costume. The card pictures are photographs of those same models, taken once when the game loads (`art.js`), so a card always looks like the star in the patch.
 
@@ -53,10 +54,30 @@ Everybody trades at once, so there are no turns inside the trade: people put **d
 
 - **Start screen.** The bouncing logo and a stripy loading bar, a funny tip, then **Press any key** (also what lets the browser play sound). The camera swoops from deep space down to the farm.
 - **Title screen.** The logo in the middle with star buddies peeking round it, four big chunky buttons (Play with friends, Join a farm, Practice, How to play), your farmer name (tap to change it; the dice makes up silly ones like *Captain Pickles*) and Settings. The farm plays a little demo game behind, with the camera slowly circling.
-- **Lobby.** The farm code on four tilted sticker letters, an invite link and a QR code, up to seven farmers (with Add robot), the house rules (how long, speed, all 11 buddies), a chat, and a big **Let's farm!** button.
+- **Lobby.** The farm code on four tilted sticker letters, an invite link and a QR code, up to seven farmers (with Add robot), the house rules (how long, speed, all 12 buddies), a chat, and a big **Let's farm!** button.
 - **The game.** Along the top, a sticker for every farmer (coins, cards in hand, their patches; tap one to fly over their farm) next to the UFO's star count. At the bottom, **Zorp** says what to do right now in a speech bubble (with a different joke each turn), your **hand** of cards with their coin tables and a *Next!* sticker on the card you must plant, and your **patches** as wooden planters (*Plant here!*, *Harvest first*, *Lonely star*, what they are worth and how many more the next coin needs). Keys: 1, 2, 3 plant; D ends your trading; Esc opens the menu.
 - **Trading Post.** A market stall with a striped awning: the beamed-down stars, the deals on the table and the deal-maker.
 - **The end.** A podium for the top three, everyone's coins and a few silly awards (Jackpot!, Wheeler-dealer, Big softie, Rarest buddy).
+
+## The Stink Star
+
+A fat olive-green star with a sly smirk, a cloud of flies and green stink wisps orbiting its head, and no shame at all. Every few seconds it **farts**: it crouches and strains, then goes *PFFFT!* (a comic word pops up, a green stink cloud wobbles upwards and one of three farty noises plays: long and rumbling, short and sharp, or a quick double), and it hops up looking relieved. Every other star buddy within range pulls a disgusted face (the other Stink Stars cheer). It also lets one go the moment it lands in a patch, and Zorp sometimes asks who opened a window.
+
+## The cel-shaded look
+
+Cel shading means flat bands of colour instead of smooth light. Everything 3D here is drawn that way (`scene/stage.js`):
+
+- **Three flat bands** of light and shade, and the shade is purple, never grey (a yellow thing goes orange-brown in its shadow, a green one goes teal), a thin **rim light** on the lit edge and a hard white **glint** on shiny things.
+- A thick **ink outline** on everything that is solid. It is a copy of the shape pushed outwards on screen by a fixed number of pixels, so it stays the same width however big or far away something is (a tiny star far away still has a bold line round it).
+- A flat dark **shadow** on the ground under every star buddy that shrinks when it jumps, a sky painted in flat bands (no smooth gradient), no glow and no soft shadows anywhere.
+
+And it never keeps still:
+
+- **Star buddies** bob, sway, breathe and blink; their eyes wander; each kind has a moving costume (the neutron star really lifts its dumbbell, the pulsar's headphones sway and it bounces to the beat, the brown dwarf's nightcap droops, the red giant sweats a falling drop); each pulls a **gag** every few seconds (a hop, a spin, a wiggle, a stomp, a flex, a nod, a look round, a shiver) and **reacts** to what happens: they *cheer* (jump, spin, squinty grin) when harvested for coins, *sulk* (droop and frown) when it paid nothing and *gasp* at surprises.
+- **Islands** bob and tilt, hop when it becomes their turn, grass tufts and flowers sway, pebbles float, coins spin, the crate rattles when a star lands in it, and a patch **squishes** like jelly when something is planted in it.
+- **The UFO** leans towards whoever's turn it is while **Zorp turns his head to watch them**, his antennae wobble on springs and his mouth stretches when the beam fires; rings run down the tractor beam; the lights chase.
+- **The sky** has fat clouds drifting by, tumbling asteroids, planets that bob and spin, a moon that sometimes opens one eye and the odd shooting star.
+- **The screens** are animated too: cards are dealt into the hand flying up from below, the *Next!* sticker bobs, coin counters spin and bounce when they grow, Zorp's bubble pops (and he squashes and stretches) at every new instruction, and the menu buttons wiggle now and then.
 
 ## The 3D farm and the effects
 
@@ -77,7 +98,7 @@ Everything on screen comes from the game log (`fx.js`), so everyone sees the sam
 
 ```
 server/bonanza/
-  data.js      the eleven star buddies (counts, coin tables, persona, colours), rules numbers, what the client needs
+  data.js      the twelve star buddies (counts, coin tables, persona, colours), rules numbers, what the client needs
   engine.js    the rules: a state machine (plant, trade, tray, draw) driven by act(); viewFor(id) is what each person sees
   bots.js      the robots
   index.js     the "/bonanza" Socket.IO namespace: tables, seats, chat, the one "act" event
@@ -86,7 +107,7 @@ public/
   js/bonanza/
     main.js      screens, the socket, the store
     world.js     the 3D world: the farm, the camera, the attract-mode demo on the title screen
-    scene/       stage.js (toon renderer and camera), sky.js (cartoon space), critters.js (the star buddies, coins, card backs),
+    scene/       stage.js (cel shading, ink outlines, the camera), sky.js (cartoon space), critters.js (the star buddies, their costumes, gags and reactions),
                  farm.js (islands, patches, the UFO, flights), toonfx.js (puffs, confetti, sparkles, rings)
     art.js       the card pictures, photographed from the 3D buddies
     game.js      the game screen: Zorp's bubble, hand, patches, the Trading Post

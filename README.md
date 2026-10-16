@@ -5,7 +5,7 @@ Four free multiplayer games that run in the browser, on one site and one server.
 - **[No More Space](#no-more-space)** (`/nms`): a spooky social-deduction game on a 3D spaceship, 3 to 15 players.
 - **[Phase to Space](docs/PHASE_TO_SPACE.md)** (`/phase`): a space card battler for 2 to 6 players with robots to fill empty seats: recruit a crew, slay Void Beasts and Signal Jam your friends.
 - **[Ruler of the Galaxy](docs/RULER.md)** (`/ruler`): a 3D dice battle for 2 to 6 players (robots fill empty seats), in the spirit of *King of Tokyo*: roll, blast your rivals with lasers and hold the Omni-Throne at the heart of a 3D galaxy.
-- **[Star Bonanza](docs/STAR_BONANZA.md)** (`/bonanza`): a silly trading card game for 3 to 7 players (robots fill empty seats), a cartoon space-farm remake of *Bohnanza*: grow star buddies on a floating island, swap them with everyone at once and cash them in for coins.
+- **[Star Bonanza](docs/STAR_BONANZA.md)** (`/bonanza`): a silly trading card game for 3 to 7 players (robots fill empty seats), a cartoon space-farm remake of *Bohnanza*: grow star buddies (one of them farts) on a floating island in a cel-shaded cartoon world, swap them with everyone at once and cash them in for coins.
 
 The first three share the same fonts and look (Star Bonanza has a cartoon look of its own), and there is an optional custom icon set to replace emoji (`?icons=on`; see [docs/ASSETS.md](docs/ASSETS.md)); older invite and replay links (`/?join=CODE`) still go to No More Space.
 

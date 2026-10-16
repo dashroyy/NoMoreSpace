@@ -17,7 +17,7 @@ const HOME_VIEW = () => (innerWidth > 820 ? { target: new THREE.Vector3(0, 1.5, 
 const TITLE_SHOT = { target: new THREE.Vector3(0, 6, 0), radius: 110, theta: -0.6, phi: 0.75 };
 
 const DEMO_NAMES = [['Moo', '🐮'], ['Zip', '👽'], ['Penny', '🐷'], ['Clucky', '🐔'], ['Hops', '🐸']];
-const DEMO_KINDS = ['orange-dwarf', 'yellow-dwarf', 'white-dwarf', 'blue-giant', 'red-giant', 'neutron-star', 'pulsar', 'quasar'];
+const DEMO_KINDS = ['orange-dwarf', 'yellow-dwarf', 'stink-star', 'blue-giant', 'red-giant', 'neutron-star', 'pulsar', 'quasar'];
 
 export class World {
   constructor() {

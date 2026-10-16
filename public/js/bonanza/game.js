@@ -15,7 +15,7 @@ import { mountChat, renderChat } from './chat.js';
 
 let built = null;
 let world = null;
-const ui = { sel: new Set(), want: new Map(), to: '', trayUid: null, busy: false, dl: null };
+const ui = { sel: new Set(), want: new Map(), to: '', trayUid: null, busy: false, dl: null, seen: new Set(), coins: new Map(), title: '' };
 
 const iconBtn = (label, title, onClick, className = '') => el('button', { className: `icon-btn ${className}`, title, 'aria-label': title, onclick: onClick }, label);
 const pluralS = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
@@ -35,7 +35,7 @@ const QUIPS = {
   trade: ['Wheel and deal, farmer!', 'Swapsies time!', 'Everyone wants a deal. Make one!', 'Bargain hunting season!'],
   other: ['Psst… make them an offer!', 'Got spares? They might want them!', 'The Trading Post is open!'],
   tray: ['You won it, you plant it!', 'Fresh from the trade!', 'Into the soil they go!'],
-  wait: ['*whistles in alien*', 'Harvest any time, you know!', 'Patience, farmer…', 'Nice weather in space today.'],
+  wait: ['*whistles in alien*', 'Harvest any time, you know!', 'Patience, farmer…', 'Nice weather in space today.', 'Does anyone else smell… that?', 'Who opened a window?'],
 };
 
 // ---------------------------------------------------------------------------
@@ -44,11 +44,11 @@ const QUIPS = {
 function meter(d) {
   return el('div', { className: 'sc-meter', title: 'Stars needed for each coin' }, ...d.table.map((need, i) => (need == null ? el('span', { className: 'm none' }, '·') : el('span', { className: 'm' }, el('b', {}, `${need}`), coin(i + 1)))));
 }
-function starCard(c, { cls = '', onClick = null, badge = null, small = false } = {}) {
+function starCard(c, { cls = '', onClick = null, badge = null, small = false, delay = 0 } = {}) {
   const d = star(c.t);
   const node = el(
     onClick ? 'button' : 'div',
-    { className: `scard ${small ? 'small' : ''} ${cls}`, style: { '--c': d?.color || '#fff' }, title: d ? `${d.name}, ${d.persona.toLowerCase()}. ${d.table.map((n, i) => (n == null ? null : `${n} = ${i + 1} coin${i ? 's' : ''}`)).filter(Boolean).join(', ')}` : '', dataset: { uid: c.uid || '' } },
+    { className: `scard ${small ? 'small' : ''} ${cls}`, style: { '--c': d?.color || '#fff', '--d': `${delay}ms` }, title: d ? `${d.name}, ${d.persona.toLowerCase()}. ${d.table.map((n, i) => (n == null ? null : `${n} = ${i + 1} coin${i ? 's' : ''}`)).filter(Boolean).join(', ')}` : '', dataset: { uid: c.uid || '' } },
     el('span', { className: 'sc-name' }, d?.name || c.t),
     el('img', { src: starArt(c.t), alt: '', draggable: false }),
     small || !d ? null : meter(d),
@@ -202,6 +202,8 @@ function renderStrip(state) {
   const sig = JSON.stringify(state.players.map((p) => [p.id, p.name, p.coins, p.handCount, p.fields.map((f) => [f.type, f.n]), p.tray.length, p.afk, p.connected])) + state.turn?.pid;
   if (built.strip.dataset.sig === sig) return;
   built.strip.dataset.sig = sig;
+  const bumped = new Set(state.players.filter((p) => ui.coins.has(p.id) && p.coins > ui.coins.get(p.id)).map((p) => p.id));
+  for (const p of state.players) ui.coins.set(p.id, p.coins);
   built.strip.replaceChildren(
     ...state.players.map((p) =>
       el(
@@ -209,7 +211,7 @@ function renderStrip(state) {
         { type: 'button', className: `pchip ${state.turn?.pid === p.id ? 'turn' : ''} ${p.id === state.you.id ? 'me' : ''} ${!p.connected || p.afk ? 'away' : ''}`, dataset: { pid: p.id }, onclick: () => world.look(p.id, { radius: 19, hold: 2.6 }), title: `${p.name}: tap to fly over their farm` },
         el('span', { className: 'pc-av' }, p.avatar),
         el('span', { className: 'pc-who' }, el('b', {}, p.id === state.you.id ? 'You' : p.name), el('span', { className: 'pc-fields' }, ...p.fields.map((f) => (f.type ? el('span', { className: 'pf', title: `${f.n} × ${star(f.type).name}` }, el('img', { src: starArt(f.type), alt: '' }), el('em', {}, `${f.n}`)) : el('span', { className: 'pf empty', title: 'empty patch' }))))),
-        el('span', { className: 'pc-n', title: 'Coins' }, el('b', {}, `${p.coins}`), coin()),
+        el('span', { className: `pc-n ${bumped.has(p.id) ? 'bump' : ''}`, title: 'Coins' }, el('b', {}, `${p.coins}`), coin()),
         el('span', { className: 'pc-n cards', title: 'Cards in hand' }, el('b', {}, `${p.handCount}`), '🃏'),
       ),
     ),
@@ -284,7 +286,9 @@ function renderTodo(state) {
     else if (c) art = starCard(c, { small: true, cls: 'big' });
   }
   if (meP?.afk && state.phase === 'playing') extra = el('div', { className: 'afk-note' }, '💤 A robot is farming for you', el('small', {}, 'Tap anything to take over'));
-  box.className = `todo ${tone}`;
+  const fresh = title !== ui.title; // a new instruction: Zorp says it with a little bounce
+  ui.title = title;
+  box.className = `todo ${tone} ${fresh ? 'talk' : ''}`;
   box.replaceChildren(
     el('div', { className: 'zorp', innerHTML: ZORP, title: 'Zorp, your alien farm hand' }),
     el('div', { className: 'bubble' }, art, el('div', { className: 'todo-text' }, el('h3', {}, title), sub ? el('p', {}, sub) : null, quip ? el('p', { className: 'quip' }, `“${quip}”`) : null), extra),
@@ -315,10 +319,13 @@ function renderHand(state) {
   built.hand.dataset.sig = sig;
   built.handHead.replaceChildren(el('b', {}, '🃏 Your hand'), el('span', { className: 'muted' }, state.you.isSpectator ? 'you are watching' : hand.length ? (trading ? 'tap cards to offer them' : 'in the order you got them: no sorting!') : 'empty'));
   built.hand.classList.toggle('picking', trading);
+  let dealt = 0;
+  const live = new Set(hand.map((c) => c.uid));
   built.hand.replaceChildren(
     ...hand.map((c, i) =>
       starCard(c, {
-        cls: `${i === 0 ? 'next' : ''} ${ui.sel.has(c.uid) ? 'sel' : ''}`,
+        cls: `${i === 0 ? 'next' : ''} ${ui.sel.has(c.uid) ? 'sel' : ''} ${!ui.seen.has(c.uid) ? 'deal' : ''}`,
+        delay: !ui.seen.has(c.uid) ? dealt++ * 90 : 0,
         badge: i === 0 ? 'Next!' : null,
         onClick: trading
           ? () => {
@@ -332,6 +339,7 @@ function renderHand(state) {
     ),
     hand.length ? null : el('div', { className: 'hand-empty' }, state.you.isSpectator ? '👀 Watching the farm' : 'No cards: you draw three at the end of your turn'),
   );
+  ui.seen = live;
 }
 
 // ---------------------------------------------------------------------------

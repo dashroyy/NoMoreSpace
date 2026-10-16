@@ -135,6 +135,22 @@ const SOUNDS = {
     tone({ type: 'sawtooth', from: 330, to: 300, dur: 0.3, vol: 0.05, wobble: 8, rate: 7 });
     tone({ type: 'sawtooth', from: 260, to: 180, dur: 0.6, vol: 0.05, wobble: 10, rate: 6, at: 0.3 });
   },
+  // a fart, in one of a few varieties: long and rumbling, short and sharp, or a quick double
+  fart: () => {
+    const kind = Math.floor(Math.random() * 3);
+    const base = 85 + Math.random() * 70;
+    const burst = (at, dur, pitch) => {
+      tone({ type: 'sawtooth', from: pitch * 1.7, to: pitch * 0.7, dur, vol: 0.2, at, wobble: 40 + Math.random() * 50, rate: 22 + Math.random() * 18 });
+      tone({ type: 'square', from: pitch * 0.85, to: pitch * 0.5, dur: dur * 0.9, vol: 0.09, at: at + 0.02, wobble: 30, rate: 19 });
+      noise({ dur, vol: 0.11, from: 900, to: 150, q: 2, at });
+    };
+    if (kind === 0) burst(0, 0.6, base);
+    else if (kind === 1) burst(0, 0.28, base * 1.3);
+    else {
+      burst(0, 0.18, base * 1.2);
+      burst(0.22, 0.34, base);
+    }
+  },
   ufo: () => {
     tone({ type: 'sine', from: 500, to: 1000, dur: 0.45, vol: 0.12, wobble: 60, rate: 9 });
     tone({ type: 'sine', from: 1000, to: 600, dur: 0.4, vol: 0.1, wobble: 60, rate: 9, at: 0.4 });

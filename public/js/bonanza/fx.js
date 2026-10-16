@@ -16,6 +16,11 @@ let lastFaceUp = []; // the stars the UFO beamed down, at the last look (they go
 
 export function initFx(w) {
   world = w;
+  // a Stink Star farts: the noise and a comic word where it happened
+  w.farm.onFart = (at) => {
+    sfx('fart');
+    popAt(at.clone().add(new THREE.Vector3(0, 1.6, 0)), pick(FART_WORDS), 'comic small green');
+  };
 }
 
 const layer = () => document.getElementById('layer-fx');
@@ -100,6 +105,7 @@ export function ghost(fromRect, toPoint, id, { dur = 650, size = 84 } = {}) {
   setTimeout(() => img.remove(), dur + 200);
 }
 
+const FART_WORDS = ['PFFFT!', 'BRAAAP!', 'TOOT!', 'PBBBT!', 'PARP!', 'FRRRP!'];
 const PLANT_WORDS = ['PLOP!', 'BOING!', 'POMF!', 'SPROING!', 'PLONK!'];
 const TRADE_LINES = ['SWAP!', 'DEAL!', 'SWOOSH!'];
 const OFFER_LINES = ['Psst! Wanna trade?', 'Got a deal for ya!', 'Swapsies?', 'Make me an offer!', 'Trade you!', 'Ooh, pick me!'];
@@ -144,6 +150,8 @@ function handle(e, state, light = false) {
       const at = t.posOf(e.pid, 'pad', e.field);
       const k = e.lumens;
       sfx(k ? (k >= 3 ? 'bigharvest' : 'harvest') : 'fizzle');
+      t.reactHarvest(e.pid, e.field, k > 0); // the buddies being harvested cheer, or sulk if it paid nothing
+      if (k >= 2 && !light) later(300, () => (player(e.pid)?.fields || []).forEach((_, i) => i !== e.field && t.cheer(e.pid, i)));
       fx.puff(at, k ? '#ffffff' : '#9a8fb8', light ? 3 : 7, 0.5);
       if (k) {
         // the coins fly to the owner's pile
@@ -189,6 +197,8 @@ function handle(e, state, light = false) {
       sfx(gift ? 'gift' : 'trade');
       e.gave.forEach((id, i) => t.fly(a, t.posOf(e.to, 'tray'), { id, dur: 1, arc: 4, scale: 0.5, delay: i * 0.12 }));
       e.got.forEach((id, i) => t.fly(b, t.posOf(e.from, 'tray'), { id, dur: 1, arc: 4.6, scale: 0.5, delay: 0.08 + i * 0.12 }));
+      t.bounce(e.from);
+      t.bounce(e.to);
       const mid = a.clone().lerp(b, 0.5).setY(4);
       popAt(mid, gift ? 'AWW, A GIFT!' : pick(TRADE_LINES), 'comic pink');
       if (!light) fx.sparkles(mid, 8, '#ffc2e5', 1.6);

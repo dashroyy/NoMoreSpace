@@ -3,7 +3,7 @@
 // URL you can drop into an <img>. (Without WebGL there is a simple drawing instead.)
 import * as THREE from 'three';
 import { makeCritter } from './scene/critters.js';
-import { addLights } from './scene/stage.js';
+import { addLights, setInkResolution } from './scene/stage.js';
 import { store, star } from './net.js';
 
 const cache = new Map();
@@ -22,6 +22,7 @@ export function initArt() {
   renderer.setSize(256, 256, false);
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.setClearColor(0x000000, 0);
+  setInkResolution(120, 120); // (the picture is shown about this big, so the outline comes out as thick as on the farm)
   const scene = new THREE.Scene();
   addLights(scene);
   // the same framing for everyone (hats and dumbbells included), turned a little for a three-quarter view
@@ -32,6 +33,7 @@ export function initArt() {
     const c = makeCritter(s.id);
     c.rotation.y = -0.28;
     c.userData.update(0, 0);
+    c.userData.shadow.visible = false;
     scene.add(c);
     renderer.render(scene, cam);
     cache.set(s.id, renderer.domElement.toDataURL('image/png'));
@@ -39,6 +41,7 @@ export function initArt() {
   }
   renderer.dispose();
   renderer.forceContextLoss?.();
+  setInkResolution(innerWidth, innerHeight);
 }
 
 // a plain drawing, for a browser without WebGL

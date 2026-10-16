@@ -1,4 +1,4 @@
-// Star Bonanza: everything in the game that is not a rule. The eleven kinds of star buddy (the "beans"), how many of
+// Star Bonanza: everything in the game that is not a rule. The twelve kinds of star buddy (the "beans"), how many of
 // each are in the deck, and how many of a kind you need to harvest for 1, 2, 3 or 4 coins (the "beanometer").
 //
 // The game is an original, space-farm remake of the planting, trading and harvesting card game Bohnanza (Uwe
@@ -11,6 +11,7 @@
 
 // stars: how many in the deck, `table` = stars needed for 1, 2, 3, 4 coins (null = that payout does not exist)
 // persona: the two-word joke on the card; blurb: a line for How to play
+// (eleven of them are the original game's beans; the Stink Star is our own, because every farm needs one)
 const STARS = [
   { id: 'red-dwarf', name: 'Red Dwarf', persona: 'Grumpy miner', count: 24, table: [4, 7, 10, 12], color: '#ff5a4e', glow: '#c92a1e', size: 0.9, set: 'full', blurb: 'Short, bearded and digging for gold. Do not wake him before noon.' },
   { id: 'brown-dwarf', name: 'Brown Dwarf', persona: 'Sleepyhead', count: 22, table: [4, 7, 9, 11], color: '#c08457', glow: '#7a4a28', size: 0.9, set: 'full', blurb: 'Never quite managed to light up. Five more minutes, please.' },
@@ -18,6 +19,7 @@ const STARS = [
   { id: 'yellow-dwarf', name: 'Yellow Dwarf', persona: 'Sunny side up', count: 18, table: [3, 6, 8, 9], color: '#ffd93d', glow: '#e0a800', size: 1, set: 'base', blurb: 'Just like our Sun, only far too cheerful in the mornings.' },
   { id: 'white-dwarf', name: 'White Dwarf', persona: 'Retired old-timer', count: 16, table: [3, 5, 7, 8], color: '#e9f2ff', glow: '#8fb8e8', size: 0.85, set: 'base', blurb: 'Glowed for ten billion years. Now it mostly naps and tells stories.' },
   { id: 'blue-giant', name: 'Blue Giant', persona: 'Gym buddy', count: 14, table: [3, 5, 6, 7], color: '#4aa8ff', glow: '#1c64c8', size: 1.25, set: 'base', blurb: 'Big, blue and always asking if you even lift.' },
+  { id: 'stink-star', name: 'Stink Star', persona: 'Resident farter', count: 12, table: [2, 4, 6, 8], color: '#a6c93a', glow: '#6f8f14', size: 1.05, set: 'base', blurb: 'A gas giant in every sense. Trails flies, clears rooms, says it was the dog.' },
   { id: 'red-giant', name: 'Red Giant', persona: 'Puffed-up hothead', count: 12, table: [2, 4, 6, 7], color: '#ff4766', glow: '#b8122f', size: 1.35, set: 'base', blurb: 'Swelling up, sweating buckets, about to eat a planet.' },
   { id: 'neutron-star', name: 'Neutron Star', persona: 'Tiny but heavy', count: 10, table: [2, 4, 5, 6], color: '#3fe0d0', glow: '#0d9c8e', size: 0.7, set: 'base', blurb: 'The size of a town, heavier than a mountain range. Skips no leg day.' },
   { id: 'pulsar', name: 'Pulsar', persona: 'Party DJ', count: 8, table: [2, 3, 4, 5], color: '#a66bff', glow: '#6a2fd6', size: 0.85, set: 'base', blurb: 'Spins and blinks all night long. The beat never drops.' },
@@ -28,7 +30,7 @@ const STARS = [
 const STAR_BY_ID = Object.fromEntries(STARS.map((s) => [s.id, s]));
 const starDef = (id) => STAR_BY_ID[id] || null;
 
-// 3-5 players use the eight "base" kinds (104 cards); 6-7 players (or a host who wants a bigger galaxy) use all eleven (154)
+// 3-5 players use the nine "base" kinds (116 cards); 6-7 players (or a host who wants a bigger galaxy) use all twelve (166)
 const BASE_SET = STARS.filter((s) => s.set === 'base').map((s) => s.id);
 const FULL_SET = STARS.map((s) => s.id);
 

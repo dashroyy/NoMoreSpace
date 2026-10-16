@@ -1,7 +1,7 @@
 // Star Bonanza: cartoon effects. Puffs of smoke, confetti, pop-up sparkles, rings that spread across the ground,
 // and a sparkle trail behind anything flying. No glow anywhere: everything is solid, bouncy and a bit silly.
 import * as THREE from 'three';
-import { toon } from './stage.js';
+import { toon, ink } from './stage.js';
 import { sparkleTexture } from './sky.js';
 
 const BALL = new THREE.SphereGeometry(1, 14, 10);
@@ -40,20 +40,38 @@ export class ToonFx {
     }
   }
 
-  // round cartoon puffs of smoke that swell and fade
+  // round cartoon puffs of smoke with an ink outline: they swell, hang there for a beat and pop away
   puff(at, color = '#ffffff', n = 7, size = 0.5, delay = 0) {
     for (let i = 0; i < n; i++) {
-      const m = new THREE.Mesh(BALL, toon(color, { transparent: true, opacity: 0.95 }));
+      const m = ink(new THREE.Mesh(BALL, toon(color, { shine: 0 })), 3);
       const dir = v(Math.random() - 0.5, Math.random() * 0.6 + 0.2, Math.random() - 0.5).normalize();
       const s = size * (0.6 + Math.random() * 0.6);
       m.position.copy(at);
       m.visible = false;
-      this.add(m, 0.7 + Math.random() * 0.3, (k) => {
-        m.position.copy(at).addScaledVector(dir, (1 - Math.pow(1 - k, 3)) * size * 2.6);
-        m.scale.setScalar(s * (0.4 + k * 1.1));
-        m.material.opacity = 0.95 * (1 - k * k);
+      this.add(m, 0.75 + Math.random() * 0.3, (k) => {
+        m.position.copy(at).addScaledVector(dir, (1 - Math.pow(1 - k, 3)) * size * 2.4);
+        // pops up with an overshoot, then shrinks to nothing
+        m.scale.setScalar(Math.max(0.001, s * (k < 0.3 ? (k / 0.3) * 1.25 : 1.25 - ((k - 0.3) / 0.7) * 1.25)));
       });
       this.items[this.items.length - 1].t = -delay;
+    }
+  }
+
+  // a stink cloud: fat green blobs that wobble upwards, swell and pop (and a few small ones that drift off)
+  stink(at) {
+    for (let i = 0; i < 10; i++) {
+      const m = ink(new THREE.Mesh(BALL, toon(i % 2 ? '#a9d447' : '#86b02a', { shine: 0 })), 3);
+      const ox = (Math.random() - 0.5) * 0.9;
+      const oz = (Math.random() - 0.5) * 0.9;
+      const s = (i < 6 ? 0.4 : 0.2) + Math.random() * 0.3;
+      const wob = Math.random() * 6;
+      m.position.copy(at);
+      m.visible = false;
+      this.add(m, 1.3 + Math.random() * 0.6, (k) => {
+        m.position.set(at.x + ox * (1 + k * 2.4) + Math.sin(k * 9 + wob) * 0.3, at.y + k * (1.8 + i * 0.12), at.z + oz * (1 + k * 2.4));
+        m.scale.setScalar(Math.max(0.001, s * (k < 0.2 ? (k / 0.2) * 1.2 : 1.2 - ((k - 0.2) / 0.8) * 1.2)));
+      });
+      this.items[this.items.length - 1].t = -i * 0.04;
     }
   }
 

@@ -128,8 +128,8 @@ export function renderLobby(state) {
     el(
       'div',
       { className: 'rule-row inline' },
-      el('div', { className: 'rr-text' }, el('b', {}, '🌌 All 11 star buddies'), el('small', {}, n >= 6 ? 'Always on with six or more farmers' : bigGalaxy ? '154 stars in the UFO' : '8 kinds and 104 stars: switch on for the Red Dwarfs, Brown Dwarfs and Magnetars')),
-      el('button', { type: 'button', className: `switch ${bigGalaxy ? 'on' : ''}`, role: 'switch', 'aria-checked': String(bigGalaxy), 'aria-label': 'All 11 star buddies', disabled: !host || n >= 6, onclick: () => (sfx('select'), send('settings', { full: !s.full }).catch(say)) }),
+      el('div', { className: 'rr-text' }, el('b', {}, `🌌 All ${data.fullSet.length} star buddies`), el('small', {}, n >= 6 ? 'Always on with six or more farmers' : bigGalaxy ? `${data.deck.full} stars in the UFO` : `${data.baseSet.length} kinds and ${data.deck.base} stars: switch on for the Red Dwarfs, Brown Dwarfs and Magnetars`)),
+      el('button', { type: 'button', className: `switch ${bigGalaxy ? 'on' : ''}`, role: 'switch', 'aria-checked': String(bigGalaxy), 'aria-label': 'All the star buddies', disabled: !host || n >= 6, onclick: () => (sfx('select'), send('settings', { full: !s.full }).catch(say)) }),
     ),
     el('p', { className: 'rules-note' }, n === 3 ? '🌱 With 3 farmers everyone gets three patches.' : '🌱 Everyone starts with two patches; a third costs 3 coins.'),
   );

@@ -35,11 +35,11 @@ function table(n = 3, { seed = 1, settings = {} } = {}) {
 const hand = (p, types) => (p.hand = types.map(card));
 const fieldOf = (p, i, type, n) => (p.fields[i] = { type: n ? type : null, cards: Array.from({ length: n }, () => card(type)) });
 
-test('the cards: eleven kinds, 104 in the base set and 154 in the full one, and the payout table the real game uses', () => {
-  assert.strictEqual(data.STARS.length, 11);
-  assert.strictEqual(data.CLIENT_DATA.deck.base, 104);
-  assert.strictEqual(data.CLIENT_DATA.deck.full, 154);
-  assert.strictEqual(data.BASE_SET.length, 8);
+test('the cards: twelve kinds, 116 in the base set and 166 in the full one, and the payout table the real game uses', () => {
+  assert.strictEqual(data.STARS.length, 12);
+  assert.strictEqual(data.CLIENT_DATA.deck.base, 116);
+  assert.strictEqual(data.CLIENT_DATA.deck.full, 166);
+  assert.strictEqual(data.BASE_SET.length, 9);
   // the more common a star, the more of them you need for each lumen
   for (const s of data.STARS) {
     const needs = s.table.filter((x) => x != null);
@@ -68,10 +68,10 @@ test('setup: five stars each, three nurseries for three players and two for more
     for (let i = 0; i < n; i++) g.addPlayer(`P${i}`);
     g.hostId = g.players[0].id;
     g.start(g.hostId);
-    const total = n >= 6 ? 154 : 104;
+    const total = n >= 6 ? 166 : 116;
     assert.strictEqual(g.deck.length, total - 5 * n, `${n} players`);
     assert.ok(g.players.every((p) => p.hand.length === 5 && p.fields.length === (n === 3 ? 3 : 2)), `${n} players: hands and nurseries`);
-    assert.strictEqual(g.setIds.length, n >= 6 ? 11 : 8);
+    assert.strictEqual(g.setIds.length, n >= 6 ? 12 : 9);
     assert.strictEqual(g.turn.phase, 'plant');
     g.destroy();
   }
@@ -396,7 +396,7 @@ const get = (port, p) =>
 test('the data route, and a live practice table over the socket where the human can plant', async () => {
   const port = await listen();
   const json = JSON.parse((await get(port, '/bonanza-data.json')).body);
-  assert.strictEqual(json.stars.length, 11);
+  assert.strictEqual(json.stars.length, 12);
   const sock = io(`http://localhost:${port}/bonanza`, { transports: ['websocket'], forceNew: true });
   try {
     let latest = null;
@@ -536,7 +536,7 @@ test('the page has the start screen, its own stylesheet and every element the sc
 
 test('every kind of star buddy has its costume, a joke and colours', () => {
   const critters = fs.readFileSync(path.join(CLIENT, 'scene/critters.js'), 'utf8');
-  const kinds = critters.slice(critters.indexOf('const KINDS = {'), critters.indexOf('// the dark cartoon outline'));
+  const kinds = critters.slice(critters.indexOf('const KINDS = {'), critters.indexOf('// how each costume moves'));
   for (const s of data.STARS) {
     assert.ok(kinds.includes(`'${s.id}'(`) || kinds.includes(`${s.id}(`), `critters.js dresses up the ${s.id}`);
     assert.ok(s.persona && s.blurb, `${s.id} has a joke`);
