@@ -1,18 +1,20 @@
-// Star Bonanza: the start screen. The logo and a loading bar while the galaxy and the stars load,
+// Star Bonanza: the start screen. The bouncing logo and a loading bar while the farm and the stars load,
 // a tip or two, then "Press any key" (which is also the click browsers need before they play sound). Seen once
 // per visit: coming back from a game, or reloading, goes straight to the menu.
 import { $ } from '../util.js';
 
 const SEEN = 'sbz-started';
 const TIPS = [
-  'You must plant the first star in your hand, in the order you were dealt them. You may plant the next one too.',
-  'Rare stars pay more per star: a Pulsar earns a lumen from just two.',
-  'Trading is how you beat the luck of the deal. Offer the stars you cannot use.',
-  'Every star you win in a trade has to be planted, so only take what fits.',
-  'A nursery holds one kind of star. Planting a different kind means harvesting first.',
-  'A single star is safe from harvest while another nursery has more.',
-  'Harvest any time you like, even on someone else\'s turn.',
-  'Spend three lumens to open a third nursery.',
+  'The first star in your hand MUST be planted. No sorting your hand, no matter how much you want to.',
+  'Rare stars pay faster: two Pulsars already make a coin.',
+  'Trading is how you beat bad luck. Offer the stars you cannot use!',
+  'Whatever you win in a trade has to be planted straight away, so only take what fits.',
+  'A patch grows one kind of star. A different kind means harvesting first.',
+  'A patch with one lonely star cannot be harvested while another patch has more.',
+  'Harvest whenever you like, even on somebody else’s turn.',
+  'Three coins buys a third patch. More room for more buddies!',
+  'Neutron Stars skip no leg day.',
+  'Never wake a Red Dwarf before noon.',
   'Robots fill empty seats, so you can always play.',
 ];
 
@@ -72,7 +74,7 @@ export function createSplash() {
         }
         status.textContent = '';
         press.hidden = false;
-        press.textContent = matchMedia('(hover: none)').matches ? 'Tap to start' : 'Press any key';
+        press.textContent = matchMedia('(hover: none)').matches ? 'Tap to play!' : 'Press any key!';
         const go = (e) => {
           if (e.type === 'keydown' && ['Shift', 'Control', 'Alt', 'Meta', 'Tab'].includes(e.key)) return;
           removeEventListener('keydown', go, true);

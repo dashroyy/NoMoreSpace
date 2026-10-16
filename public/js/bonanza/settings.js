@@ -123,7 +123,7 @@ export function openSettings() {
         ['balanced', 'Balanced'],
         ['low', 'Low'],
       ]),
-      onOff('shake', 'Camera shake', '🎥', 'When a nursery is harvested'),
+      onOff('shake', 'Camera wobble', '🎥', 'For the really big harvests'),
       el(
         'div',
         { className: 'set-foot' },

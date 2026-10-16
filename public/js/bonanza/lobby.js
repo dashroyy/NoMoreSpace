@@ -1,5 +1,6 @@
-// Star Bonanza: the lobby. The table code to share, up to seven seats (open ones show), the match rules (the host
-// edits them, everyone reads them) and a big Launch button. The table runs a demo game in the middle.
+// Star Bonanza: the lobby. The farm code on a big sticker, up to seven farmers (open seats show, with an Add robot
+// button), the house rules (the host changes them, everyone sees them), a chat, and a big "Let's farm!" button.
+// The space farm keeps circling behind.
 import { el, problem, toast } from '../util.js';
 import { store, send } from './net.js';
 import { mountChat, renderChat } from './chat.js';
@@ -12,11 +13,12 @@ let refs = null;
 let world = null;
 
 const say = (e) => problem(e.message);
+const SPEED_TEXT = { chill: '🐢 Chill', normal: '🐇 Normal', quick: '⚡ Quick' };
 
 export function buildLobby(rootEl, { onLeave, world: w }) {
   world = w;
   refs = {
-    code: el('div', { className: 'lobby-code', 'aria-label': 'Table code' }),
+    code: el('div', { className: 'lobby-code', 'aria-label': 'Farm code' }),
     qr: el('img', { className: 'qr', alt: 'QR code to join' }),
     qrBox: el('div', { className: 'qr-box', hidden: true }),
     seats: el('div', { className: 'seats' }),
@@ -37,8 +39,7 @@ export function buildLobby(rootEl, { onLeave, world: w }) {
   );
   const copyLink = () => {
     const url = `${location.origin}/bonanza?join=${store.state?.code}`;
-    sfx('select');
-    navigator.clipboard?.writeText(url).then(() => toast('Invite link copied'), () => toast(url));
+    navigator.clipboard?.writeText(url).then(() => toast('Invite link copied!'), () => toast(url));
   };
   rootEl.replaceChildren(
     el(
@@ -48,18 +49,18 @@ export function buildLobby(rootEl, { onLeave, world: w }) {
         'header',
         { className: 'lobby-head' },
         btn([icon('back'), el('span', {}, 'Leave')], onLeave, 'ghost back-btn', { dataset: { sfx: 'back' } }),
-        el('div', { className: 'lobby-title' }, el('div', { className: 'eyebrow' }, 'Table lobby'), el('h2', {}, 'Gather your growers')),
+        el('h2', { className: 'lobby-title' }, '🧑‍🌾 Your farm crew'),
         el('div', { className: 'lobby-head-right' }, btn(icon('book'), () => openRules(), 'icon-btn', { title: 'How to play', 'aria-label': 'How to play' }), btn(icon('sliders'), () => openSettings(), 'icon-btn', { title: 'Settings', 'aria-label': 'Settings' })),
       ),
       el(
-        'aside',
-        { className: 'squad panel' },
-        el('div', { className: 'code-card' }, el('div', { className: 'code-main' }, el('div', { className: 'eyebrow' }, 'Table code'), refs.code), el('div', { className: 'code-btns' }, btn([icon('copy'), el('span', {}, 'Invite link')], copyLink, 'small'), qrBtn)),
+        'section',
+        { className: 'crew panel' },
+        el('div', { className: 'code-card' }, el('div', {}, el('div', { className: 'card-label' }, 'Farm code'), refs.code), el('div', { className: 'code-btns' }, btn([icon('copy'), el('span', {}, 'Invite link')], copyLink, 'small sky'), qrBtn)),
         refs.qrBox,
-        el('div', { className: 'panel-title' }, 'Players'),
+        el('div', { className: 'card-label' }, 'Farmers'),
         refs.seats,
       ),
-      el('aside', { className: 'lobby-right' }, el('div', { className: 'rules-panel panel' }, refs.rules), el('div', { className: 'chat-panel panel' }, refs.chat)),
+      el('aside', { className: 'lobby-side' }, el('section', { className: 'rules-panel panel' }, refs.rules), el('section', { className: 'chat-panel panel' }, refs.chat)),
       refs.start,
     ),
   );
@@ -75,7 +76,7 @@ export function renderLobby(state) {
   const data = store.data;
   const host = state.hostId === state.you.id;
   const seats = data.maxPlayers;
-  refs.code.textContent = state.code;
+  refs.code.replaceChildren(...state.code.split('').map((ch, i) => el('span', { style: { '--i': i } }, ch)));
   if (refs.qr.dataset.code !== state.code) {
     refs.qr.dataset.code = state.code;
     refs.qr.src = `/qr.svg?code=${state.code}&game=bonanza`;
@@ -84,65 +85,53 @@ export function renderLobby(state) {
   // ----- the seats
   const seat = (p, i) => {
     if (!p) {
+      const next = host && state.players.length < seats && i === state.players.length;
       return el(
         'div',
-        { className: 'seat empty', style: { '--i': i } },
-        el('span', { className: 'seat-no' }, `${i + 1}`),
-        el('span', { className: 'seat-wait' }, i < data.minPlayers ? 'Waiting for a player…' : 'Open seat'),
-        host && state.players.length < seats && i === state.players.length ? btn([icon('robot'), el('span', {}, 'Add robot')], () => send('add-bot').catch(say), 'small') : null,
+        { className: `seat empty ${next ? 'next' : ''}`, style: { '--i': i } },
+        el('span', { className: 'seat-av' }, '❔'),
+        el('span', { className: 'seat-wait' }, i < data.minPlayers ? 'Waiting for a farmer…' : 'Empty seat'),
+        next ? btn([icon('robot'), el('span', {}, 'Add robot')], () => send('add-bot').catch(say), 'small mint') : null,
       );
     }
+    const me = p.id === state.you.id;
     return el(
       'div',
-      { className: `seat ${p.id === state.you.id ? 'me' : ''}`, style: { '--c': '#ffd36b', '--i': i } },
-      el('span', { className: 'seat-no' }, `${i + 1}`),
+      { className: `seat ${me ? 'me' : ''}`, style: { '--i': i } },
       el('span', { className: 'seat-av' }, p.avatar),
-      el('div', { className: 'seat-who' }, el('b', {}, p.name, p.id === state.you.id ? el('small', { className: 'you' }, 'YOU') : null), el('span', {}, p.isBot ? 'Robot' : p.connected ? 'Ready' : 'Away')),
-      p.id === state.hostId ? el('span', { className: 'badge gold', title: 'Host' }, icon('check'), 'Host') : null,
-      host && p.id !== state.you.id
-        ? btn(icon('close'), () => (p.isBot ? send('remove-bot', { id: p.id }) : send('kick', { id: p.id })).catch(say), 'icon-btn small-icon', { title: p.isBot ? 'Remove robot' : 'Remove player', 'aria-label': p.isBot ? 'Remove robot' : 'Remove player' })
-        : null,
+      el('div', { className: 'seat-who' }, el('b', {}, p.name), el('small', {}, p.isBot ? 'Robot farmer' : p.connected ? (me ? 'That’s you!' : 'Ready to farm') : 'Wandered off…')),
+      p.id === state.hostId ? el('span', { className: 'badge', title: 'Host' }, '👑 Host') : null,
+      host && !me ? btn(icon('close'), () => (p.isBot ? send('remove-bot', { id: p.id }) : send('kick', { id: p.id })).catch(say), 'icon-btn small-icon', { title: p.isBot ? 'Remove robot' : 'Remove player', 'aria-label': p.isBot ? 'Remove robot' : 'Remove player' }) : null,
     );
   };
   refs.seats.replaceChildren(...Array.from({ length: seats }, (_, i) => seat(state.players[i], i)));
 
-  // ----- the rules
+  // ----- the house rules
   const s = state.settings;
-  const lock = host ? null : el('span', { className: 'lock-note' }, icon('lock'), 'The host sets these');
   const n = state.players.length;
   const bigGalaxy = s.full || n >= 6;
+  const seg = (list, on, set, label) => el('div', { className: 'segmented', role: 'radiogroup', 'aria-label': label }, ...list.map(([v, text]) => el('button', { type: 'button', className: `seg ${on === v ? 'on' : ''}`, role: 'radio', 'aria-checked': String(on === v), disabled: !host, onclick: () => (sfx('select'), set(v)) }, text)));
   refs.rules.replaceChildren(
-    el('div', { className: 'panel-title' }, 'Match rules', lock),
+    el('div', { className: 'card-label' }, 'House rules', host ? null : el('span', { className: 'lock-note' }, '🔒 the host picks')),
     el(
       'div',
-      { className: 'rule-row target' },
-      el('span', { className: 'rr-glyph' }, '⏳'),
-      el('div', { className: 'rr-text' }, el('b', {}, 'Game length'), el('small', {}, data.passes.find((p) => p.id === s.passes)?.text || '')),
-      el('div', { className: 'segmented', role: 'radiogroup', 'aria-label': 'Game length' }, ...data.passes.map((p) => el('button', { type: 'button', className: `seg ${s.passes === p.id ? 'on' : ''}`, role: 'radio', 'aria-checked': String(s.passes === p.id), disabled: !host, onclick: () => (sfx('select'), send('settings', { passes: p.id }).catch(say)) }, p.name))),
+      { className: 'rule-row' },
+      el('div', { className: 'rr-text' }, el('b', {}, '⏳ How long'), el('small', {}, data.passes.find((p) => p.id === s.passes)?.text || '')),
+      seg(data.passes.map((p) => [p.id, p.name]), s.passes, (v) => send('settings', { passes: v }).catch(say), 'Game length'),
     ),
     el(
       'div',
-      { className: 'rule-row target' },
-      el('span', { className: 'rr-glyph' }, '⏱️'),
-      el('div', { className: 'rr-text' }, el('b', {}, 'Speed'), el('small', {}, 'How long people get to plant and trade')),
-      el('div', { className: 'segmented', role: 'radiogroup', 'aria-label': 'Speed' }, ...data.speeds.map((sp) => el('button', { type: 'button', className: `seg ${s.speed === sp ? 'on' : ''}`, role: 'radio', 'aria-checked': String(s.speed === sp), disabled: !host, onclick: () => (sfx('select'), send('settings', { speed: sp }).catch(say)) }, sp[0].toUpperCase() + sp.slice(1)))),
+      { className: 'rule-row' },
+      el('div', { className: 'rr-text' }, el('b', {}, '⏱️ Speed'), el('small', {}, 'How long everyone gets to plant and trade')),
+      seg(data.speeds.map((sp) => [sp, SPEED_TEXT[sp] || sp]), s.speed, (v) => send('settings', { speed: v }).catch(say), 'Speed'),
     ),
     el(
       'div',
-      { className: `rule-row ${host ? '' : 'locked'}` },
-      el('span', { className: 'rr-glyph' }, '🌌'),
-      el('div', { className: 'rr-text' }, el('b', {}, 'Full galaxy'), el('small', {}, n >= 6 ? 'Six or more players always use all 11 kinds' : bigGalaxy ? 'All 11 kinds, 154 stars' : '8 kinds and 104 stars: switch on for all 11')),
-      el('button', {
-        type: 'button',
-        className: `switch ${bigGalaxy ? 'on' : ''}`,
-        role: 'switch',
-        'aria-checked': String(bigGalaxy),
-        'aria-label': 'Full galaxy',
-        disabled: !host || n >= 6,
-        onclick: () => (sfx('select'), send('settings', { full: !s.full }).catch(say)),
-      }),
+      { className: 'rule-row inline' },
+      el('div', { className: 'rr-text' }, el('b', {}, '🌌 All 11 star buddies'), el('small', {}, n >= 6 ? 'Always on with six or more farmers' : bigGalaxy ? '154 stars in the UFO' : '8 kinds and 104 stars: switch on for the Red Dwarfs, Brown Dwarfs and Magnetars')),
+      el('button', { type: 'button', className: `switch ${bigGalaxy ? 'on' : ''}`, role: 'switch', 'aria-checked': String(bigGalaxy), 'aria-label': 'All 11 star buddies', disabled: !host || n >= 6, onclick: () => (sfx('select'), send('settings', { full: !s.full }).catch(say)) }),
     ),
-    el('p', { className: 'muted rules-note' }, `${n === 3 ? 'With 3 players everyone gets three nurseries.' : 'Everyone starts with two nurseries; a third costs 3 lumens.'}`),
+    el('p', { className: 'rules-note' }, n === 3 ? '🌱 With 3 farmers everyone gets three patches.' : '🌱 Everyone starts with two patches; a third costs 3 coins.'),
   );
 
   // ----- the launch bar
@@ -152,10 +141,10 @@ export function renderLobby(state) {
       ? el(
           'div',
           { className: 'launch-inner' },
-          el('div', { className: 'launch-note' }, n < need ? `You need at least ${need} players: add a robot, or share the code.` : `${n} players ready${n < seats ? `: add up to ${seats - n} more` : ''}`),
-          btn([icon('play'), el('span', {}, n < need ? `Need ${need} players` : `Launch with ${n}`)], () => (sfx('start'), send('start').catch(say)), 'gold big launch', { disabled: n < need, dataset: { sfx: 'none' } }),
+          el('div', { className: 'launch-note' }, n < need ? `You need ${need} farmers: add a robot, or share the code!` : `${n} farmers ready${n < seats ? ` (room for ${seats - n} more)` : ''}`),
+          btn([el('span', {}, n < need ? `Need ${need} farmers` : 'Let’s farm!'), icon('play')], () => send('start').catch(say), 'gold big launch', { disabled: n < need, dataset: { sfx: 'none' } }),
         )
-      : el('div', { className: 'launch-inner' }, el('div', { className: 'launch-note waiting' }, el('i', { className: 'live-dot' }), 'Waiting for the host to launch…')),
+      : el('div', { className: 'launch-inner' }, el('div', { className: 'launch-note waiting' }, el('i', { className: 'live-dot' }), 'Waiting for the host to start…')),
   );
 
   world.showcase('lobby');

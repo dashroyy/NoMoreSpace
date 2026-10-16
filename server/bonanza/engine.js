@@ -19,7 +19,7 @@ const LOG_KEEP = 120;
 // how long people get (ms) before a robot acts for them; "speed" scales these
 const TIMERS = { plant: 45_000, trade: 80_000, tray: 45_000 };
 const SPEED = { chill: 1.8, normal: 1, quick: 0.55 };
-const NAMES = ['Nova', 'Orbit', 'Zip', 'Comet', 'Quasar', 'Pixel', 'Blip', 'Cosmo', 'Widget', 'Lumen', 'Static', 'Pogo'];
+const NAMES = ['Beep Boop', 'Sir Plops', 'Clucky', 'Gizmo', 'Turnip', 'Wobbles', 'Tater', 'Sprocket', 'Noodle', 'Moo-Bot', 'Bloop', 'Doodle'];
 
 function cleanName(name) {
   return String(name || '')
@@ -126,7 +126,7 @@ class BonanzaGame {
   resetPlayer(p) {
     p.hand = [];
     p.fields = [];
-    p.stash = []; // lumens: harvested stars, turned face down
+    p.stash = []; // coins: harvested stars, turned face down
     p.tray = []; // stars won in trades, waiting to be planted
     p.afk = false;
     p.stats = { harvests: 0, best: 0, trades: 0, gifts: 0, bought: 0, earned: {} };
@@ -230,7 +230,7 @@ class BonanzaGame {
       for (let i = 0; i < START_HAND; i++) p.hand.push(this.deck.pop());
     }
     this.phase = 'playing';
-    this.say(`${n} players, ${this.setIds.length} kinds of star, ${this.deck.length} stars left in the deck. Plant well!`, { k: 'start' });
+    this.say(`${n} farmers, ${this.setIds.length} kinds of star buddy, ${this.deck.length} stars in the UFO. Happy farming!`, { k: 'start' });
     this.startTurn(0);
   }
 
@@ -275,7 +275,7 @@ class BonanzaGame {
       this.deckOuts += 1;
       if (this.deckOuts >= this.settings.passes) {
         this.endPending = true;
-        this.say('The deck has run out for the last time! This turn is the last.', { k: 'last' });
+        this.say('The UFO is empty for the last time! This turn is the last.', { k: 'last' });
       } else this.reshuffle();
     }
     return card;
@@ -283,7 +283,7 @@ class BonanzaGame {
 
   reshuffle() {
     this.deck = this.shuffle(this.discard.splice(0));
-    this.say(`The deck runs out and is shuffled again (${this.deckOuts} of ${this.settings.passes}).`, { k: 'reshuffle', n: this.deckOuts });
+    this.say(`The UFO is empty! It zooms off and comes back full (${this.deckOuts} of ${this.settings.passes}).`, { k: 'reshuffle', n: this.deckOuts });
   }
 
   // ---------------------------------------------------------------------------
@@ -318,7 +318,7 @@ class BonanzaGame {
     for (const p of who) {
       if (!p.isBot && !p.afk) {
         p.afk = true;
-        this.say(`💤 ${p.name} went quiet, so a robot is planting for them.`, { k: 'afk', pid: p.id });
+        this.say(`💤 ${p.name} dozed off, so a robot is farming for them.`, { k: 'afk', pid: p.id });
       }
     }
     let guard = 40;
@@ -341,7 +341,7 @@ class BonanzaGame {
       if (c) t.faceUp.push(c);
     }
     t.tradeAt = Date.now();
-    this.say(`${this.name(t.pid)} turns over ${t.faceUp.map((c) => this.starName(c.t)).join(' and ') || 'nothing'}.`, { k: 'reveal', pid: t.pid, cards: t.faceUp.map((c) => c.t) });
+    this.say(`The UFO beams down ${t.faceUp.map((c) => this.starName(c.t)).join(' and ') || 'nothing'} for ${this.name(t.pid)}.`, { k: 'reveal', pid: t.pid, cards: t.faceUp.map((c) => c.t) });
     this.setDeadline('trade');
     this.runAuto();
   }
@@ -444,10 +444,10 @@ class BonanzaGame {
       if (!card) throw new Error('You have nothing to plant.');
     } else throw new Error('You cannot plant right now.');
     const f = p.fields[Number(field)];
-    if (!f) throw new Error('Which nursery?');
+    if (!f) throw new Error('Which patch?');
     if (f.cards.length && f.type !== card.t) {
       if (!harvest) {
-        const err = new Error(`That nursery grows ${this.starName(f.type)}s: harvest it first to plant a ${this.starName(card.t)}.`);
+        const err = new Error(`That patch grows ${this.starName(f.type)}s: harvest it first to plant a ${this.starName(card.t)}.`);
         err.code = 'mismatch';
         throw err;
       }
@@ -483,8 +483,8 @@ class BonanzaGame {
   harvest(p, idx, { force = false } = {}) {
     if (this.phase !== 'playing' && !force) throw new Error('The game is not running.');
     const f = p.fields[idx];
-    if (!f || !f.cards.length) throw new Error('That nursery is empty.');
-    if (!force && !this.canHarvest(p, idx)) throw new Error('A nursery with one star can only be harvested when none of your others has more.');
+    if (!f || !f.cards.length) throw new Error('That patch is empty.');
+    if (!force && !this.canHarvest(p, idx)) throw new Error('A patch with one star can only be harvested when none of your others has more.');
     const n = f.cards.length;
     const type = f.type;
     const k = payout(type, n);
@@ -496,17 +496,17 @@ class BonanzaGame {
     p.stats.harvests += 1;
     p.stats.best = Math.max(p.stats.best, k);
     p.stats.earned[type] = (p.stats.earned[type] || 0) + k;
-    this.say(k ? `${p.name} harvests ${n} ${this.starName(type)}${n === 1 ? '' : 's'} for ${k} lumen${k === 1 ? '' : 's'}.` : `${p.name} lets ${n} ${this.starName(type)}${n === 1 ? '' : 's'} burn out for nothing.`, { k: 'harvest', pid: p.id, field: idx, t: type, n, lumens: k });
+    this.say(k ? `${p.name} harvests ${n} ${this.starName(type)}${n === 1 ? '' : 's'} for ${k} coin${k === 1 ? '' : 's'}.` : `${p.name}'s ${n} ${this.starName(type)}${n === 1 ? '' : 's'} fizzle out for nothing.`, { k: 'harvest', pid: p.id, field: idx, t: type, n, lumens: k });
     return k;
   }
 
   buyField(p) {
-    if (p.fields.length >= 3) throw new Error('You already have three nurseries.');
-    if (p.stash.length < FIELD_PRICE) throw new Error(`A third nursery costs ${FIELD_PRICE} lumens.`);
+    if (p.fields.length >= 3) throw new Error('You already have three patches.');
+    if (p.stash.length < FIELD_PRICE) throw new Error(`A third patch costs ${FIELD_PRICE} coins.`);
     this.discard.push(...p.stash.splice(0, FIELD_PRICE));
     p.fields.push({ type: null, cards: [] });
     p.stats.bought += 1;
-    this.say(`${p.name} pays ${FIELD_PRICE} lumens for a third nursery.`, { k: 'field', pid: p.id });
+    this.say(`${p.name} pays ${FIELD_PRICE} coins for a third patch.`, { k: 'field', pid: p.id });
   }
 
   // ----- trading -----
@@ -649,7 +649,7 @@ class BonanzaGame {
     this.phase = 'ended';
     this.turn = null;
     this.clearTimers();
-    this.say(top ? `🏆 ${top.name} wins with ${top.stash.length} lumens!` : 'The game is over.', { k: 'win', pid: top?.id });
+    this.say(top ? `🏆 ${top.name} wins with ${top.stash.length} coins!` : 'The game is over.', { k: 'win', pid: top?.id });
   }
 
   // ---------------------------------------------------------------------------

@@ -5,9 +5,9 @@ Four free multiplayer games that run in the browser, on one site and one server.
 - **[No More Space](#no-more-space)** (`/nms`): a spooky social-deduction game on a 3D spaceship, 3 to 15 players.
 - **[Phase to Space](docs/PHASE_TO_SPACE.md)** (`/phase`): a space card battler for 2 to 6 players with robots to fill empty seats: recruit a crew, slay Void Beasts and Signal Jam your friends.
 - **[Ruler of the Galaxy](docs/RULER.md)** (`/ruler`): a 3D dice battle for 2 to 6 players (robots fill empty seats), in the spirit of *King of Tokyo*: roll, blast your rivals with lasers and hold the Omni-Throne at the heart of a 3D galaxy.
-- **[Star Bonanza](docs/STAR_BONANZA.md)** (`/bonanza`): a star-trading card game for 3 to 7 players (robots fill empty seats), a space remake of *Bohnanza*: plant stars, trade the ones you cannot use with everyone at once, harvest the most lumens, round a glowing 3D table.
+- **[Star Bonanza](docs/STAR_BONANZA.md)** (`/bonanza`): a silly trading card game for 3 to 7 players (robots fill empty seats), a cartoon space-farm remake of *Bohnanza*: grow star buddies on a floating island, swap them with everyone at once and cash them in for coins.
 
-All four share the same fonts and look, and there is an optional custom icon set to replace emoji (`?icons=on`; see [docs/ASSETS.md](docs/ASSETS.md)); older invite and replay links (`/?join=CODE`) still go to No More Space.
+The first three share the same fonts and look (Star Bonanza has a cartoon look of its own), and there is an optional custom icon set to replace emoji (`?icons=on`; see [docs/ASSETS.md](docs/ASSETS.md)); older invite and replay links (`/?join=CODE`) still go to No More Space.
 
 # No More Space
 
@@ -61,7 +61,7 @@ public/
   js/main.js            wires No More Space together
   js/phase/             the Phase to Space client (board, prompts, dice, effects)
   js/ruler/             the Ruler of the Galaxy client: scene/ (the 3D galaxy, arena, ships and effects), dice tray, table, prompts
-  js/bonanza/           the Star Bonanza client: scene/ (the glass table and the 3D stars; the sky and effects are Ruler's), cards, trading panel
+  js/bonanza/           the Star Bonanza client: scene/ (cartoon 3D: the star buddies, the floating farm, the UFO), cards, the Trading Post
   js/icons.js           swaps emoji for the arcade's own icons, in the page and in canvas text
   js/world/             the 3D ship (Three.js): layout, ship, avatars (the astronaut), role models (KayKit characters with a cartoon outline, the procedural Parasite), sky
   js/ui/                HUD, chat, role card, night & drawing, tasks, lobby,
@@ -82,7 +82,7 @@ tools/                  pack-models.mjs and pack-animations.mjs (KayKit packs in
 - 🧱 **[3D models, icons, fonts and credits](docs/ASSETS.md)**: the real 3D models, the icon atlas, card portraits and fonts (KayKit and Kenney, CC0), how they are made and loaded
 - 🃏 **[Phase to Space](docs/PHASE_TO_SPACE.md)**: the rules, every card, how the engine and the robots work
 - 👑 **[Ruler of the Galaxy](docs/RULER.md)**: the rules, the contenders, the 3D scene, how to add a card
-- 🌟 **[Star Bonanza](docs/STAR_BONANZA.md)**: the rules, every star and what it pays, trading, the robots, the 3D table
+- 🌟 **[Star Bonanza](docs/STAR_BONANZA.md)**: the rules, every star buddy and what it pays, trading, the robots, the cartoon farm
 
 ## Voice chat behind strict networks (optional)
 

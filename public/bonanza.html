@@ -4,23 +4,21 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <title>Star Bonanza</title>
-    <meta name="description" content="Plant, trade and harvest stars: a space card game for 3-7 friends online, remade from the classic bean-planting game." />
+    <meta name="description" content="Grow silly star buddies on your space farm, swap them with your friends and cash them in for coins. A cartoon card game for 3-7 players, free in your browser." />
     <meta property="og:title" content="Star Bonanza" />
-    <meta property="og:description" content="Grow red dwarfs, pulsars and quasars, trade the ones you cannot use, and harvest the most lumens. A 3D space card game, free in your browser." />
-    <meta name="theme-color" content="#070913" />
-    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='12' fill='%23ffd36b'/%3E%3Cpath d='M32 2l4 24 24 6-24 6-4 24-4-24-24-6 24-6z' fill='%23ffb800' opacity='.85'/%3E%3Ccircle cx='32' cy='32' r='7' fill='%23fff6d6'/%3E%3C/svg%3E" />
+    <meta property="og:description" content="Plant grumpy red dwarfs and party-DJ pulsars, trade like mad with everyone at once, and harvest the most coins. A cartoon space-farm card game." />
+    <meta name="theme-color" content="#2e1a73" />
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cpath d='M32 5l8 17 18 2-13 13 4 19-17-10-17 10 4-19L6 24l18-2z' fill='%23ffd23f' stroke='%232d1b4e' stroke-width='4' stroke-linejoin='round'/%3E%3Ccircle cx='26' cy='31' r='3' fill='%232d1b4e'/%3E%3Ccircle cx='38' cy='31' r='3' fill='%232d1b4e'/%3E%3Cpath d='M26 39q6 5 12 0' fill='none' stroke='%232d1b4e' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="/css/ruler.css" />
-    <link rel="stylesheet" href="/css/ruler-menus.css" />
+    <link href="https://fonts.googleapis.com/css2?family=Lilita+One&family=Fredoka:wght@500;600;700&family=Nunito:wght@600;700;800;900&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="/css/bonanza.css" />
     <script type="importmap">
       { "imports": { "three": "/vendor/three/three.module.min.js", "three/addons/": "/vendor/three-addons/" } }
     </script>
   </head>
   <body class="on-home">
-    <!-- the galaxy: one 3D scene behind every screen -->
+    <!-- the space farm: one 3D scene behind every screen -->
     <div id="stage" aria-hidden="true"></div>
     <div id="labels" aria-hidden="true"></div>
     <div id="app">
@@ -39,24 +37,22 @@
     <div id="splash" class="splash">
       <div class="splash-inner">
         <div class="logo-lockup">
-          <svg class="emblem" viewBox="0 0 120 100" aria-hidden="true">
-            <ellipse cx="60" cy="52" rx="56" ry="16" fill="none" stroke="#4fe8ff" stroke-width="3" transform="rotate(-14 60 52)" opacity="0.5" />
-            <path d="M60 2l7 36 37 12-37 12-7 36-7-36-37-12 37-12z" fill="#ffb21a" stroke="#6b3a00" stroke-width="2.5" stroke-linejoin="round" />
-            <path d="M60 2l7 36-7 12-7-12z" fill="#ffe08a" opacity="0.8" />
-            <circle cx="60" cy="50" r="17" fill="#ffd36b" stroke="#6b3a00" stroke-width="2.5" />
-            <circle cx="54" cy="44" r="9" fill="#fff1c2" />
-            <circle cx="50" cy="40" r="3.4" fill="#ffffff" />
-            <g transform="translate(60 52) rotate(-14)"><path d="M-56 0A56 16 0 0 0 56 0" fill="none" stroke="#4fe8ff" stroke-width="3" /></g>
-            <circle cx="14" cy="22" r="3" fill="#fff6d6" /><circle cx="108" cy="14" r="2.4" fill="#c985ff" /><circle cx="100" cy="86" r="2.6" fill="#ff6a4d" />
+          <svg class="emblem" viewBox="0 0 120 120" aria-hidden="true">
+            <path d="M60 8l14 30 32 4-23 23 6 33-29-16-29 16 6-33L14 42l32-4z" fill="#ffd23f" stroke="#2d1b4e" stroke-width="7" stroke-linejoin="round" />
+            <path d="M60 22l9 20 21 3" fill="none" stroke="#fff4b0" stroke-width="5" stroke-linecap="round" opacity="0.8" />
+            <ellipse cx="48" cy="60" rx="6" ry="8" fill="#2d1b4e" /><ellipse cx="72" cy="60" rx="6" ry="8" fill="#2d1b4e" />
+            <circle cx="46" cy="57" r="2.2" fill="#fff" /><circle cx="70" cy="57" r="2.2" fill="#fff" />
+            <path d="M50 74q10 9 20 0" fill="#2d1b4e" stroke="#2d1b4e" stroke-width="3" stroke-linejoin="round" />
+            <ellipse cx="38" cy="72" rx="6" ry="3.5" fill="#ff8fb8" /><ellipse cx="82" cy="72" rx="6" ry="3.5" fill="#ff8fb8" />
           </svg>
-          <div class="wordmark"><span class="wm-1">STAR</span><span class="wm-2">bonanza</span></div>
+          <div class="wordmark"><span class="wm-1">Star</span><span class="wm-2">Bonanza</span></div>
         </div>
         <div class="splash-bar"><i id="splash-fill"></i></div>
-        <div class="splash-status" id="splash-status">Lighting the stars…</div>
+        <div class="splash-status" id="splash-status">Watering the stars…</div>
         <button class="splash-press" id="splash-press" type="button" hidden>Press any key</button>
       </div>
       <div class="splash-tip" id="splash-tip"></div>
-      <div class="splash-foot">3–7 players · online with friends · robots fill empty seats</div>
+      <div class="splash-foot">3–7 farmers · play with friends online · robots fill empty seats</div>
     </div>
 
     <script src="/socket.io/socket.io.js"></script>

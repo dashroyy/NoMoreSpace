@@ -1,15 +1,16 @@
-// Star Bonanza: the title screen. A main menu down the left (play online, join, practice, how to play, settings),
-// the table running a little demo game on the right, your callsign at the top, and how many people are playing at
-// the bottom. Join and Practice open in place of the menu.
+// Star Bonanza: the title screen. The bouncing logo in the middle with star buddies peeking round it, big chunky
+// buttons underneath (play with friends, join, practice, how to play), your farmer name at the top and how many
+// people are playing at the bottom. Join and Practice open in place of the buttons. The space farm circles behind.
 import { el, problem } from '../util.js';
 import { store, send } from './net.js';
 import { unlock, sfx } from './sound.js';
 import { openRules } from './codex.js';
 import { openSettings } from './settings.js';
-import { askName, btn, icon, keyHints, menuList, onEscape } from './ui.js';
+import { starArt } from './art.js';
+import { askName, btn, icon, onEscape } from './ui.js';
 
 const NAME_KEY = 'sbz-name';
-const VERSION = 'v0.1';
+const VERSION = 'v0.2';
 const read = (k) => {
   try {
     return localStorage.getItem(k) || '';
@@ -25,7 +26,10 @@ const write = (k, v) => {
 
 // the logo from the start screen (one copy of the drawing, in bonanza.html)
 const LOGO = document.querySelector('#splash .logo-lockup')?.cloneNode(true);
-export const logoLockup = () => LOGO?.cloneNode(true) || el('div', { className: 'logo-lockup' }, el('div', { className: 'wordmark' }, el('span', { className: 'wm-1' }, 'STAR'), el('span', { className: 'wm-2' }, 'bonanza')));
+export const logoLockup = () => LOGO?.cloneNode(true) || el('div', { className: 'logo-lockup' }, el('div', { className: 'wordmark' }, el('span', { className: 'wm-1' }, 'Star'), el('span', { className: 'wm-2' }, 'Bonanza')));
+
+// a big chunky menu button with an emoji, a title and a line of explanation
+const bigButton = (emoji, title, sub, kind, onClick) => btn([el('span', { className: 'bb-ico' }, emoji), el('span', { className: 'bb-text' }, el('b', {}, title), el('small', {}, sub))], onClick, `bigbtn ${kind}`, { dataset: { sfx: 'none' } });
 
 export function buildHome(root, { world }) {
   let name = read(NAME_KEY);
@@ -34,22 +38,22 @@ export function buildHome(root, { world }) {
   let busy = false;
   const practice = { bots: 3, passes: 2 };
 
-  const badge = el('button', { className: 'pilot', type: 'button', title: 'Change your callsign', onclick: () => editName() });
+  const badge = el('button', { className: 'farmer', type: 'button', title: 'Change your farmer name', onclick: () => editName() });
   const online = el('div', { className: 'online' });
   const body = el('div', { className: 'home-view' });
-  const hints = el('div', { className: 'home-hints' });
+  // a few star buddies peeking round the logo
+  const peekers = el('div', { className: 'peekers', 'aria-hidden': 'true' }, ...['red-dwarf', 'pulsar', 'quasar', 'neutron-star', 'brown-dwarf'].map((id, i) => el('img', { className: `peek p${i}`, src: starArt(id), alt: '' })));
   const frame = el(
     'div',
     { className: 'home' },
     el('header', { className: 'home-top' }, el('a', { className: 'arcade-link', href: '/' }, icon('back'), el('span', {}, 'All games')), el('div', { className: 'home-top-right' }, badge, btn(icon('sliders'), () => openSettings(), 'icon-btn', { title: 'Settings', 'aria-label': 'Settings' }))),
-    el('div', { className: 'home-col' }, logoLockup(), body),
-    el('footer', { className: 'home-foot' }, hints, el('div', { className: 'foot-right' }, online, el('span', { className: 'version' }, VERSION))),
+    el('div', { className: 'home-col' }, el('div', { className: 'home-logo' }, peekers, logoLockup()), el('p', { className: 'home-tag' }, 'Grow silly star buddies. Swap them with your friends. Cash them in!'), body),
+    el('footer', { className: 'home-foot' }, online, el('span', { className: 'version' }, VERSION)),
   );
   root.replaceChildren(frame);
 
   const drawBadge = () => {
-    badge.style.setProperty('--c', '#ffd36b');
-    badge.replaceChildren(el('span', { className: 'pilot-art' }, '🧑‍🚀'), el('span', { className: 'pilot-text' }, el('b', {}, name || 'Set your callsign'), el('small', {}, name ? 'Star grower' : 'Tap to choose a name')), icon('edit', 'pilot-edit'));
+    badge.replaceChildren(el('span', { className: 'farmer-art' }, '🧑‍🌾'), el('span', { className: 'farmer-text' }, el('b', {}, name || 'Pick a name'), el('small', {}, name ? 'Space farmer' : 'tap to choose')), icon('edit', 'farmer-edit'));
   };
 
   async function editName() {
@@ -70,6 +74,7 @@ export function buildHome(root, { world }) {
     if (!(await ensureName())) return;
     busy = true;
     setTimeout(() => (busy = false), 2500);
+    sfx('start');
     send(event, { name, ...data }).catch((e) => {
       busy = false;
       sfx('error');
@@ -82,20 +87,16 @@ export function buildHome(root, { world }) {
   // ---------------------------------------------------------------------------
   const views = {
     main() {
-      const menu = menuList([
-        { label: 'Play online', sub: 'Host a table and invite friends with a code', onClick: () => go('create', {}) },
-        { label: 'Join a table', sub: 'Got a four-letter code? Jump in', onClick: () => show('join') },
-        { label: 'Practice', sub: 'Learn the ropes against robots, right now', onClick: () => show('practice') },
-        { label: 'How to play', sub: 'The rules, with pictures of every star', onClick: () => openRules() },
-        { label: 'Settings', sub: 'Sound, music and graphics', onClick: () => openSettings() },
-      ]);
-      hints.replaceChildren(
-        keyHints([
-          [['↑', '↓'], 'Choose'],
-          [['Enter'], 'Select'],
-        ]),
+      const box = el(
+        'div',
+        { className: 'big-menu' },
+        bigButton('🚀', 'Play with friends', 'Start a farm and share the code', 'gold', () => go('create', {})),
+        bigButton('🔑', 'Join a farm', 'Got a four-letter code?', 'sky', () => (sfx('select'), show('join'))),
+        bigButton('🤖', 'Practice', 'You against the robots, right now', 'mint', () => (sfx('select'), show('practice'))),
+        bigButton('📖', 'How to play', 'Every star buddy and what it pays', 'pink', () => openRules()),
       );
-      return menu;
+      setTimeout(() => box.querySelector('button')?.focus({ preventScroll: true }), 60);
+      return box;
     },
 
     join(code = '') {
@@ -114,7 +115,7 @@ export function buildHome(root, { world }) {
           const v = b.value;
           b.value = '';
           fill(v, k);
-          if (v) sfx('hover');
+          if (v) sfx('tick');
         });
         b.addEventListener('keydown', (e) => {
           if (e.key === 'Backspace' && !b.value && k > 0) {
@@ -132,16 +133,9 @@ export function buildHome(root, { world }) {
         });
       });
       const join = () => value().length === 4 && go('join', { code: value() });
-      const joinBtn = btn([el('span', {}, 'Join'), icon('next')], join, 'gold big', { disabled: true, dataset: { sfx: 'none' } });
-      hints.replaceChildren(
-        keyHints([
-          [['Enter'], 'Join'],
-          [['Esc'], 'Back'],
-        ]),
-      );
-      const panel = el('div', { className: 'sub-panel' }, el('div', { className: 'eyebrow' }, 'Join a table'), el('h2', {}, 'Enter the code'), el('p', { className: 'muted' }, 'Four letters, from whoever is hosting.'), el('div', { className: 'code-boxes' }, ...boxes), el('div', { className: 'sub-actions' }, backBtn(), joinBtn));
+      const joinBtn = btn([el('span', {}, 'Hop in!'), icon('next')], join, 'gold big', { disabled: true, dataset: { sfx: 'none' } });
       setTimeout(() => (code ? fill(code) : boxes[0].focus()), 60);
-      return panel;
+      return el('div', { className: 'sub-panel panel' }, el('h2', {}, '🔑 Join a farm'), el('p', { className: 'muted' }, 'Type the four letters your friend gave you.'), el('div', { className: 'code-boxes' }, ...boxes), el('div', { className: 'sub-actions' }, backBtn(), joinBtn));
     },
 
     practice() {
@@ -150,27 +144,15 @@ export function buildHome(root, { world }) {
       const draw = () => {
         opp.replaceChildren(
           ...[2, 3, 4, 5, 6].map((n) =>
-            el(
-              'button',
-              { type: 'button', className: `opp ${practice.bots === n ? 'on' : ''}`, role: 'radio', 'aria-checked': String(practice.bots === n), onclick: () => ((practice.bots = n), draw()) },
-              el('span', { className: 'opp-bots' }, '🤖'.repeat(Math.min(n, 3))),
-              el('b', {}, `${n}`),
-              el('small', {}, 'robots'),
-            ),
+            el('button', { type: 'button', className: `opp ${practice.bots === n ? 'on' : ''}`, role: 'radio', 'aria-checked': String(practice.bots === n), onclick: () => ((practice.bots = n), sfx('select'), draw()) }, el('span', { className: 'opp-bots' }, '🤖'.repeat(Math.min(n, 3))), el('b', {}, `${n}`), el('small', {}, 'robots')),
           ),
         );
-        length.replaceChildren(...store.data.passes.map((p) => el('button', { type: 'button', className: `seg ${practice.passes === p.id ? 'on' : ''}`, title: p.text, onclick: () => ((practice.passes = p.id), draw()) }, p.name)));
+        length.replaceChildren(...store.data.passes.map((p) => el('button', { type: 'button', className: `seg ${practice.passes === p.id ? 'on' : ''}`, title: p.text, onclick: () => ((practice.passes = p.id), sfx('select'), draw()) }, p.name)));
       };
       draw();
-      hints.replaceChildren(
-        keyHints([
-          [['Enter'], 'Start'],
-          [['Esc'], 'Back'],
-        ]),
-      );
-      const start = btn([icon('play'), el('span', {}, 'Start practice')], () => go('create', { practice: true, bots: practice.bots, passes: practice.passes }), 'gold big', { dataset: { sfx: 'none' } });
+      const start = btn([icon('play'), el('span', {}, 'Let’s farm!')], () => go('create', { practice: true, bots: practice.bots, passes: practice.passes }), 'gold big', { dataset: { sfx: 'none' } });
       setTimeout(() => start.focus({ preventScroll: true }), 60);
-      return el('div', { className: 'sub-panel' }, el('div', { className: 'eyebrow' }, 'Practice'), el('h2', {}, 'You against the robots'), el('div', { className: 'sub-label' }, 'Opponents'), opp, el('div', { className: 'sub-label' }, 'How long'), length, el('div', { className: 'sub-actions' }, backBtn(), start));
+      return el('div', { className: 'sub-panel panel' }, el('h2', {}, '🤖 Practice'), el('div', { className: 'sub-label' }, 'How many robot farmers?'), opp, el('div', { className: 'sub-label' }, 'How long?'), length, el('div', { className: 'sub-actions' }, backBtn(), start));
     },
   };
 
@@ -188,7 +170,6 @@ export function buildHome(root, { world }) {
         sfx('back');
         show('main');
       });
-    if (next === 'main' && view) setTimeout(() => body.querySelector('.menu')?.focusSelected(), 30);
     view = next;
   }
 
@@ -199,7 +180,7 @@ export function buildHome(root, { world }) {
       .then((r) => r.json())
       .then((s) => {
         const b = s.bonanza || {};
-        online.replaceChildren(el('i', { className: 'live-dot' }), b.people ? `${b.people} playing · ${b.tables} ${b.tables === 1 ? 'table' : 'tables'}` : 'Servers online');
+        online.replaceChildren(el('i', { className: 'live-dot' }), b.people ? `${b.people} farming now · ${b.tables} ${b.tables === 1 ? 'farm' : 'farms'}` : 'Servers online');
       })
       .catch(() => online.replaceChildren());
   };
@@ -211,13 +192,12 @@ export function buildHome(root, { world }) {
   const joinCode = new URLSearchParams(location.search).get('join');
 
   return {
-    // after Press Start: the menu slides in (a join link opens Join with its code)
+    // after Press Start: the menu bounces in (a join link opens Join with its code)
     intro() {
       frame.classList.remove('enter');
       void frame.offsetWidth;
       frame.classList.add('enter');
       if (joinCode) show('join', joinCode.toUpperCase());
-      else setTimeout(() => body.querySelector('.menu')?.focusSelected(), 400);
     },
   };
 }

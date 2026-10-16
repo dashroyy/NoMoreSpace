@@ -1,5 +1,5 @@
 // Star Bonanza: the entry point. Shows the start screen while the 3D galaxy loads, connects to the server and
-// shows the right screen (title menu, lobby or the table).
+// shows the right screen (title menu, lobby or the farm).
 
 // The DOM turns a null child into the word "null"; the screens build lists with optional pieces, so null and false
 // are simply skipped (the same small patch Ruler of the Galaxy and Phase to Space use).
@@ -21,6 +21,7 @@ import { renderEnd } from './end.js';
 import { closeModal } from './codex.js';
 import { createSplash, returning } from './splash.js';
 import { applySettings } from './settings.js';
+import { initArt } from './art.js';
 import { confirmDialog, wireUiSounds, warp } from './ui.js';
 
 const SEAT_KEY = 'sbz-seat';
@@ -52,8 +53,8 @@ function show(name) {
 
 async function leave() {
   const phase = store.state?.phase;
-  const text = phase === 'ended' ? 'You go back to the title screen.' : phase === 'lobby' ? 'Your seat is freed for someone else.' : 'A robot takes your seat and plays on for you.';
-  const ok = await confirmDialog({ title: 'Leave this table?', text, yes: 'Leave', no: 'Stay', danger: true });
+  const text = phase === 'ended' ? 'Back to the title screen you go.' : phase === 'lobby' ? 'Your seat is freed up for another farmer.' : 'A robot takes over your farm and plays on for you.';
+  const ok = await confirmDialog({ title: 'Leave the farm?', text, yes: 'Leave', no: 'Stay', danger: true });
   if (!ok) return;
   send('leave').catch(() => {});
   saveSeat(null);
@@ -62,9 +63,11 @@ async function leave() {
 
 async function boot() {
   const splash = createSplash();
-  splash.progress(0.08, 'Lighting the stars…');
+  splash.progress(0.08, 'Watering the stars…');
   await loadData();
-  splash.progress(0.3, 'Polishing the table…');
+  splash.progress(0.2, 'Taking the stars’ photos…');
+  initArt(); // (every screen shows the star buddies' pictures, so they are taken first)
+  splash.progress(0.3, 'Fluffing the clouds…');
   const world = new World();
   window.__sbz = {
     store,
@@ -85,11 +88,11 @@ async function boot() {
   buildGame($('screen-game'), { onLeave: leave, world });
   show('home');
   const seat = loadSeat();
-  if (!returning() && !seat?.code) world.titleShot(); // far out over the galaxy, behind the logo
+  if (!returning() && !seat?.code) world.titleShot(); // far out in space, behind the logo
 
   // the bar creeps up while everything is made
   let shown = 0.34;
-  const creep = setInterval(() => splash.progress((shown += (0.92 - shown) * 0.09), 'Growing the stars…'), 220);
+  const creep = setInterval(() => splash.progress((shown += (0.92 - shown) * 0.09), 'Feeding the alien…'), 220);
 
   // browsers only play sound after a first click
   const unlockOnce = () => unlock();
@@ -136,7 +139,7 @@ async function boot() {
     renderEnd(state, { onLeave: leave });
   });
 
-  // everything is in: wait for a key (the very first visit), then dive down to the table
+  // everything is in: wait for a key (the very first visit), then swoop down to the farm
   await Promise.race([world.ready, new Promise((r) => setTimeout(r, 12000))]);
   clearInterval(creep);
   splash.progress(1, 'Ready');

@@ -522,25 +522,24 @@ test('every sound the screens ask for exists in sound.js', () => {
   assert.ok(asked.size >= 15, 'the check found the sounds');
 });
 
-test('the page has the start screen, its stylesheets and every element the scripts look up', () => {
+test('the page has the start screen, its own stylesheet and every element the scripts look up', () => {
   const html = fs.readFileSync(path.join(ROOT, 'public/bonanza.html'), 'utf8');
-  for (const css of ['/css/ruler.css', '/css/ruler-menus.css', '/css/bonanza.css']) {
-    assert.ok(html.includes(css), `${css} is linked`);
-    assert.ok(fs.existsSync(path.join(ROOT, 'public', css)), `${css} exists`);
-  }
+  assert.ok(html.includes('/css/bonanza.css') && fs.existsSync(path.join(ROOT, 'public/css/bonanza.css')), 'bonanza.css is linked and exists');
+  assert.ok(!html.includes('/css/ruler'), 'it has a look of its own, not the one Ruler of the Galaxy uses');
   assert.ok(html.includes('/js/bonanza/main.js'));
   const splash = fs.readFileSync(path.join(CLIENT, 'splash.js'), 'utf8');
   for (const id of [...splash.matchAll(/\$\('([\w-]+)'\)/g)].map((m) => m[1])) assert.ok(html.includes(`id="${id}"`), `bonanza.html has #${id}`);
   for (const id of ['stage', 'labels', 'screen-home', 'screen-lobby', 'screen-game', 'layer-fx', 'layer-prompt', 'layer-modal', 'toasts', 'problem', 'warp']) assert.ok(html.includes(`id="${id}"`), `bonanza.html has #${id}`);
   assert.ok(html.includes('class="logo-lockup"'));
+  for (const file of clientFiles()) assert.ok(!fs.readFileSync(file, 'utf8').includes('/ruler/'), `${path.relative(ROOT, file)} does not borrow the scene Ruler of the Galaxy uses`);
 });
 
-test('every kind of star has its picture and its 3D look', () => {
-  const art = fs.readFileSync(path.join(CLIENT, 'art.js'), 'utf8');
-  const mesh = fs.readFileSync(path.join(CLIENT, 'scene/starmesh.js'), 'utf8');
+test('every kind of star buddy has its costume, a joke and colours', () => {
+  const critters = fs.readFileSync(path.join(CLIENT, 'scene/critters.js'), 'utf8');
+  const kinds = critters.slice(critters.indexOf('const KINDS = {'), critters.indexOf('// the dark cartoon outline'));
   for (const s of data.STARS) {
-    assert.ok(art.includes(`'${s.id}'`) || art.includes(`${s.id}:`) || art.includes(`${s.id}(`), `art.js draws ${s.id}`);
-    assert.ok(mesh.includes(`'${s.id}'`) || mesh.includes(`${s.id}:`) || mesh.includes(`${s.id}(`), `starmesh.js sizes ${s.id}`);
+    assert.ok(kinds.includes(`'${s.id}'(`) || kinds.includes(`${s.id}(`), `critters.js dresses up the ${s.id}`);
+    assert.ok(s.persona && s.blurb, `${s.id} has a joke`);
     assert.match(s.color, /^#[0-9a-f]{6}$/i);
     assert.match(s.glow, /^#[0-9a-f]{6}$/i);
   }

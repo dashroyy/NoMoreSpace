@@ -1,4 +1,4 @@
-// Star Bonanza: the pieces every menu shares (the same kit Ruler of the Galaxy uses, with this game's sounds). Line icons, menu lists you can drive with the keyboard,
+// Star Bonanza: the pieces every menu shares. Line icons, menu lists you can drive with the keyboard,
 // dialogs (instead of the browser's own confirm box), the callsign prompt, menu sounds, the Escape key, the
 // warp flash between screens and the key hints along the bottom.
 import { el } from '../util.js';
@@ -40,7 +40,7 @@ export function icon(name, className = '') {
   });
 }
 
-// a button in the game's style: kind is '' (glass), 'gold' (the main action), 'primary' (cyan), 'danger' or 'ghost'
+// a chunky cartoon button: kind is '' (paper), 'gold' (the main action), 'primary' (sky blue), 'mint', 'pink', 'danger' or 'ghost'
 export function btn(label, onClick, kind = '', props = {}) {
   return el('button', { className: `btn ${kind}`, type: 'button', onclick: onClick, ...props }, label);
 }
@@ -163,8 +163,8 @@ export function confirmDialog({ title, text, yes = 'Yes', no = 'Cancel', danger 
   });
 }
 
-const CALL_A = ['Nova', 'Void', 'Solar', 'Quantum', 'Nebula', 'Astro', 'Comet', 'Pulsar', 'Rogue', 'Stellar', 'Lunar', 'Cosmic', 'Hyper', 'Dark', 'Ion'];
-const CALL_B = ['Rider', 'Baron', 'Ace', 'Warden', 'Lancer', 'Corsair', 'Duke', 'Spark', 'Ranger', 'Titan', 'Viper', 'Falcon', 'Nomad', 'Knight', 'Pilot'];
+const CALL_A = ['Farmer', 'Captain', 'Cosmic', 'Space', 'Little', 'Moon', 'Rocket', 'Sparkle', 'Turbo', 'Lucky', 'Silly', 'Fuzzy', 'Mighty', 'Sir', 'Granny'];
+const CALL_B = ['Moo', 'Pickles', 'Noodle', 'Beans', 'Sprout', 'Biscuit', 'Waffles', 'Nugget', 'Pebble', 'Bloop', 'Muffin', 'Taters', 'Turnip', 'Wobble', 'Sprinkles'];
 export function randomCallsign() {
   const pick = (a) => a[Math.floor(Math.random() * a.length)];
   return `${pick(CALL_A)} ${pick(CALL_B)}`;
@@ -174,7 +174,7 @@ export function randomCallsign() {
 export function askName(current = '') {
   return new Promise((resolve) => {
     let d = null;
-    const input = el('input', { className: 'name-input', value: current || randomCallsign(), maxLength: 18, autocomplete: 'nickname', spellcheck: false, 'aria-label': 'Your callsign' });
+    const input = el('input', { className: 'name-input', value: current || randomCallsign(), maxLength: 18, autocomplete: 'nickname', spellcheck: false, 'aria-label': 'Your farmer name' });
     const finish = (v) => {
       d?.close();
       resolve(v);
@@ -192,12 +192,12 @@ export function askName(current = '') {
       input.value = randomCallsign();
       input.focus();
       input.select();
-    }, 'icon-btn', { title: 'A random callsign', 'aria-label': 'A random callsign' });
+    }, 'icon-btn', { title: 'A random silly name', 'aria-label': 'A random silly name' });
     const form = el('form', { className: 'name-form', onsubmit: (e) => (e.preventDefault(), ok()) }, input, roll);
     d = dialog({
-      title: 'Your callsign',
-      body: el('div', {}, el('p', { className: 'muted' }, 'The name the galaxy will know you by.'), form),
-      actions: [btn('Cancel', () => finish(null), 'ghost', { dataset: { sfx: 'back' } }), btn('Confirm', ok, 'gold')],
+      title: 'Your farmer name',
+      body: el('div', {}, el('p', { className: 'muted' }, 'What should the other farmers call you? (The dice makes up a silly one.)'), form),
+      actions: [btn('Cancel', () => finish(null), 'ghost', { dataset: { sfx: 'back' } }), btn('That’s me!', ok, 'gold')],
       onClose: () => resolve(null),
     });
     setTimeout(() => {
@@ -211,7 +211,7 @@ export function askName(current = '') {
 // menu sounds: a tick when the pointer reaches a button, a blip when one is pressed (in menus, not mid-battle,
 // where the game's own sounds play)
 // ---------------------------------------------------------------------------
-const MENUS = '#screen-home, #screen-lobby, .layer-modal, .layer-dialog, .pause, .end-wrap, .topbar, .select-screen';
+const MENUS = '#screen-home, #screen-lobby, .layer-modal, .layer-dialog, .pause, .end-wrap, .topbar, .trade';
 export function wireUiSounds() {
   let last = null;
   document.addEventListener('pointerover', (e) => {

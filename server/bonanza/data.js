@@ -1,24 +1,28 @@
-// Star Bonanza: everything in the game that is not a rule. The eleven kinds of star (the "beans"), how many of each
-// are in the deck, and how many stars of a kind you need to harvest for 1, 2, 3 or 4 lumens (the "beanometer").
+// Star Bonanza: everything in the game that is not a rule. The eleven kinds of star buddy (the "beans"), how many of
+// each are in the deck, and how many of a kind you need to harvest for 1, 2, 3 or 4 coins (the "beanometer").
 //
-// The game is an original, space-themed remake of the planting, trading and harvesting card game Bohnanza (Uwe
-// Rosenberg, 1997). Mechanics are not owned by anyone; the names, the art and the story here are our own. The card
-// counts and the payout table are the real game's, since that balance has had twenty-five years of testing:
-// the more of a kind in the deck, the more of them you need for each lumen.
+// The game is an original, space-farm remake of the planting, trading and harvesting card game Bohnanza (Uwe
+// Rosenberg, 1997). Mechanics are not owned by anyone; the names, the characters and the jokes here are our own. The
+// card counts and the payout table are the real game's, since that balance has had twenty-five years of testing:
+// the more of a kind in the deck, the more of them you need for each coin.
+//
+// Every kind is a little star with a face and a personality, named after a real kind of star (the joke is in taking
+// the name literally: a red dwarf is a grumpy bearded miner, a neutron star is tiny and lifts weights).
 
-// stars: how many in the deck, `table` = stars needed for 1, 2, 3, 4 lumens (null = that payout does not exist)
+// stars: how many in the deck, `table` = stars needed for 1, 2, 3, 4 coins (null = that payout does not exist)
+// persona: the two-word joke on the card; blurb: a line for How to play
 const STARS = [
-  { id: 'red-dwarf', name: 'Red Dwarf', cls: 'M', count: 24, table: [4, 7, 10, 12], color: '#ff6a4d', glow: '#ff3b1f', size: 0.5, set: 'full', blurb: 'Small, cool and absolutely everywhere.' },
-  { id: 'brown-dwarf', name: 'Brown Dwarf', cls: 'L', count: 22, table: [4, 7, 9, 11], color: '#c0794a', glow: '#8a4a26', size: 0.45, set: 'full', blurb: 'A star that never quite managed to light up.' },
-  { id: 'orange-dwarf', name: 'Orange Dwarf', cls: 'K', count: 20, table: [4, 6, 8, 10], color: '#ffa63d', glow: '#ff7a00', size: 0.6, set: 'base', blurb: 'Calm, long-lived and quietly reliable.' },
-  { id: 'yellow-dwarf', name: 'Yellow Dwarf', cls: 'G', count: 18, table: [3, 6, 8, 9], color: '#ffe14d', glow: '#ffc400', size: 0.7, set: 'base', blurb: 'A cheerful sunny star, just like home.' },
-  { id: 'white-dwarf', name: 'White Dwarf', cls: 'D', count: 16, table: [3, 5, 7, 8], color: '#eaf4ff', glow: '#9fd0ff', size: 0.38, set: 'base', blurb: 'The glowing ember of a star that lived well.' },
-  { id: 'blue-giant', name: 'Blue Giant', cls: 'B', count: 14, table: [3, 5, 6, 7], color: '#5aa7ff', glow: '#1f6bff', size: 1.0, set: 'base', blurb: 'Hot, bright and extremely full of itself.' },
-  { id: 'red-giant', name: 'Red Giant', cls: 'RG', count: 12, table: [2, 4, 6, 7], color: '#ff4a3a', glow: '#d81b0e', size: 1.3, set: 'base', blurb: 'Swollen, glowing and swallowing its planets.' },
-  { id: 'neutron-star', name: 'Neutron Star', cls: 'NS', count: 10, table: [2, 4, 5, 6], color: '#9ff0ff', glow: '#3fd0ff', size: 0.3, set: 'base', blurb: 'A city-sized ball heavier than a mountain range.' },
-  { id: 'pulsar', name: 'Pulsar', cls: 'P', count: 8, table: [2, 3, 4, 5], color: '#c985ff', glow: '#9a3dff', size: 0.35, set: 'base', blurb: 'A spinning lighthouse that blinks at the galaxy.' },
-  { id: 'quasar', name: 'Quasar', cls: 'Q', count: 6, table: [null, 2, 3, null], color: '#ffffff', glow: '#b8f0ff', size: 0.8, set: 'base', blurb: 'The brightest thing there is. It is showing off.' },
-  { id: 'magnetar', name: 'Magnetar', cls: 'MG', count: 4, table: [null, 2, 3, 4], color: '#ff5fb0', glow: '#ff1f8e', size: 0.4, set: 'full', blurb: 'The strongest magnet in the universe. Do not bring a watch.' },
+  { id: 'red-dwarf', name: 'Red Dwarf', persona: 'Grumpy miner', count: 24, table: [4, 7, 10, 12], color: '#ff5a4e', glow: '#c92a1e', size: 0.9, set: 'full', blurb: 'Short, bearded and digging for gold. Do not wake him before noon.' },
+  { id: 'brown-dwarf', name: 'Brown Dwarf', persona: 'Sleepyhead', count: 22, table: [4, 7, 9, 11], color: '#c08457', glow: '#7a4a28', size: 0.9, set: 'full', blurb: 'Never quite managed to light up. Five more minutes, please.' },
+  { id: 'orange-dwarf', name: 'Orange Dwarf', persona: 'Garden gnome', count: 20, table: [4, 6, 8, 10], color: '#ff9a3c', glow: '#d0640a', size: 0.95, set: 'base', blurb: 'Pointy hat, kind heart, terrible jokes.' },
+  { id: 'yellow-dwarf', name: 'Yellow Dwarf', persona: 'Sunny side up', count: 18, table: [3, 6, 8, 9], color: '#ffd93d', glow: '#e0a800', size: 1, set: 'base', blurb: 'Just like our Sun, only far too cheerful in the mornings.' },
+  { id: 'white-dwarf', name: 'White Dwarf', persona: 'Retired old-timer', count: 16, table: [3, 5, 7, 8], color: '#e9f2ff', glow: '#8fb8e8', size: 0.85, set: 'base', blurb: 'Glowed for ten billion years. Now it mostly naps and tells stories.' },
+  { id: 'blue-giant', name: 'Blue Giant', persona: 'Gym buddy', count: 14, table: [3, 5, 6, 7], color: '#4aa8ff', glow: '#1c64c8', size: 1.25, set: 'base', blurb: 'Big, blue and always asking if you even lift.' },
+  { id: 'red-giant', name: 'Red Giant', persona: 'Puffed-up hothead', count: 12, table: [2, 4, 6, 7], color: '#ff4766', glow: '#b8122f', size: 1.35, set: 'base', blurb: 'Swelling up, sweating buckets, about to eat a planet.' },
+  { id: 'neutron-star', name: 'Neutron Star', persona: 'Tiny but heavy', count: 10, table: [2, 4, 5, 6], color: '#3fe0d0', glow: '#0d9c8e', size: 0.7, set: 'base', blurb: 'The size of a town, heavier than a mountain range. Skips no leg day.' },
+  { id: 'pulsar', name: 'Pulsar', persona: 'Party DJ', count: 8, table: [2, 3, 4, 5], color: '#a66bff', glow: '#6a2fd6', size: 0.85, set: 'base', blurb: 'Spins and blinks all night long. The beat never drops.' },
+  { id: 'quasar', name: 'Quasar', persona: 'Total show-off', count: 6, table: [null, 2, 3, null], color: '#ffe89a', glow: '#e8b400', size: 1, set: 'base', blurb: 'The brightest thing in the universe, and it will tell you so.' },
+  { id: 'magnetar', name: 'Magnetar', persona: 'Very attractive', count: 4, table: [null, 2, 3, 4], color: '#ff6ec7', glow: '#d01f8a', size: 0.9, set: 'full', blurb: 'Everything sticks to it: spoons, keys, the odd spaceship.' },
 ];
 
 const STAR_BY_ID = Object.fromEntries(STARS.map((s) => [s.id, s]));
@@ -33,10 +37,10 @@ const MAX_PLAYERS = 7;
 const START_HAND = 5;
 const DRAW_COUNT = 3;
 const FACE_UP = 2;
-const FIELD_PRICE = 3; // lumens for a third nursery
+const FIELD_PRICE = 3; // coins for a third patch
 const MAX_OFFERS = 3; // open offers one person can have at a time
 
-// the lumens a field of n stars of a kind pays when harvested
+// the coins a patch of n stars of a kind pays when harvested
 function payout(id, n) {
   const def = starDef(id);
   if (!def) return 0;
@@ -62,9 +66,9 @@ const PASSES = [
 ];
 const SPEEDS = ['chill', 'normal', 'quick'];
 
-const AVATARS = ['🧑‍🚀', '👩‍🚀', '🛸', '🪐', '☄️', '🌟', '🚀', '👽', '🤖', '🌌', '🔭', '🛰️'];
-const BOT_AVATARS = ['🤖', '👾', '🛸', '🦾', '🪐', '☄️', '🔭'];
-const EMOTES = ['😂', '😱', '👏', '🔥', '😈', '🤔', '😭', '🎉'];
+const AVATARS = ['🧑‍🚀', '👽', '🐮', '🐷', '🐔', '🐸', '🦙', '🐙', '🦊', '🐼', '🐨', '🦄'];
+const BOT_AVATARS = ['🤖', '👾', '🐤', '🐞', '🦖', '🐌', '🐳'];
+const EMOTES = ['😂', '😱', '👏', '🤩', '😈', '🤔', '😭', '🎉'];
 
 // what the client needs to draw the game
 const CLIENT_DATA = {

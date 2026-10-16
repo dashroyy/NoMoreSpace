@@ -1,107 +1,110 @@
 # Star Bonanza
 
-A star-trading card game for 3 to 7 players, played online with friends (robots fill empty seats). It is the fourth game on the arcade and lives at `/bonanza`.
+A silly trading card game for 3 to 7 players, played online with friends (robots fill empty seats). It is the fourth game on the arcade and lives at `/bonanza`.
 
-It is a space remake of the classic planting-and-trading card game *Bohnanza* (Uwe Rosenberg, 1997): the beans become **stars**, the fields become **nurseries**, the coins become **lumens**. The rules follow that game's shape (a hand you may never reorder, planting in order, turning cards over and trading them with everybody, a payout table that rewards rare cards); the names, the story, the art and the whole 3D table are original.
+It is a cartoon space-farm remake of the classic planting-and-trading card game *Bohnanza* (Uwe Rosenberg, 1997). You are a space farmer on a floating island; the beans become **star buddies** (chubby little stars with faces and costume gags), the bean fields become **patches** of soil, and the coins are gold **Star Coins**. A UFO flown by Zorp the alien is the deck. The rules follow the original's shape (a hand you may never reorder, planting in order, cards turned over and traded with everybody, a coin table that rewards rare cards); the characters, jokes, art and the whole 3D farm are original.
+
+On purpose it looks nothing like the other games on the arcade: bright candy colours, chunky stickers with thick outlines, bouncy buttons, comic-book sound words, cartoon 3D (toon shading, outlines, no glow), boings and ka-chings for sound and a marimba tune for music.
 
 ## How to win
 
-Grow stars in your nurseries and **harvest** them into lumens. When the deck has run out for the last time (the host picks 1, 2 or 3 times through it), the game ends: everything still growing is harvested and **the most lumens wins**. A tie goes to whoever holds more cards.
+Grow star buddies in your patches and **harvest** them for coins. When the UFO has run out of stars for the last time (the host picks 1, 2 or 3 trips), the game ends: every patch is harvested and **the most coins wins**. A tie goes to whoever holds more cards.
 
 ## A turn
 
-1. **Plant.** You **must** plant the first star in your hand and **may** plant the next one too. Hands stay in the order they were dealt: you can never sort them. A nursery grows one kind of star at a time; planting a different kind means harvesting the nursery first.
-2. **Turn over and trade.** Two stars are turned over from the deck. You can plant them (they go to your tray), or trade them and any star in your hand with the other players. While it is your turn, anybody can make you an offer, and you can offer to one person or to everybody. Stars you give away for nothing are a gift.
-3. **Plant what you won.** Every star that changed hands in a trade, and every turned-over star you kept, must be planted straight away. Take only what fits.
-4. **Draw three** stars, to the back of your hand. The next player goes.
+1. **Plant.** You **must** plant the first card in your hand and **may** plant the next one. Hands stay in the order they were dealt: no sorting! A patch grows one kind of star at a time; planting a different kind means harvesting the patch first.
+2. **Trade.** The UFO beams down two stars. You can plant them, or swap them (and any card in your hand) with the other farmers at the **Trading Post**. While it is your turn anybody can offer you a deal, and you can offer to one farmer or to everyone. Giving a star for nothing is a gift.
+3. **Plant your winnings.** Every star that changed hands, and every beamed-down star you kept, must be planted straight away. Only take what fits!
+4. **Draw three** cards, to the back of your hand. Next farmer.
 
-**Harvesting happens any time**, even on somebody else's turn: tap a nursery and the stars you need for each lumen turn gold, and the rest burn out. A nursery with a **single star** is safe while any of your other nurseries has more than one. A **third nursery** costs 3 lumens (with 3 players everybody starts with three).
+**Harvest any time**, even on somebody else's turn: the stars you need for each coin are on every card (the "beanometer"); the rest wander off. A patch with one **lonely star** is safe while any of your other patches has more. A **third patch** costs 3 coins (with 3 farmers everybody starts with three).
 
-When the deck runs out it is shuffled again from the burnt-out stars (that is the first, or second, "time through"). The last time it runs out, the turn in progress is the last.
+## The star buddies
 
-## Every star
+Each is named after a real kind of star, and the joke is in taking the name literally. 3 to 5 players use eight kinds (104 cards); 6 or 7 players, or a host who switches on **All 11 star buddies**, use all eleven (154). Stars needed for 1, 2, 3 and 4 coins (the original game's table, so the balance has had decades of testing: the commoner the kind, the more of them each coin takes):
 
-3 to 5 players use the eight base kinds (104 cards); 6 or 7 players, or a host who switches on **Full galaxy**, use all eleven (154). Stars needed for 1, 2, 3 and 4 lumens (the real game's table, so the balance has had twenty-five years of testing: the more of a kind in the deck, the more of them you need):
+| Star buddy | Who they are | In the UFO | 1 | 2 | 3 | 4 |
+|---|---|---|---|---|---|---|
+| Red Dwarf (all 11 only) | grumpy bearded miner in a hard hat | 24 | 4 | 7 | 10 | 12 |
+| Brown Dwarf (all 11 only) | sleepyhead in a nightcap | 22 | 4 | 7 | 9 | 11 |
+| Orange Dwarf | garden gnome | 20 | 4 | 6 | 8 | 10 |
+| Yellow Dwarf | far too sunny, in a straw hat | 18 | 3 | 6 | 8 | 9 |
+| White Dwarf | retired old-timer with specs and a moustache | 16 | 3 | 5 | 7 | 8 |
+| Blue Giant | gym buddy in a sweatband | 14 | 3 | 5 | 6 | 7 |
+| Red Giant | puffed-up, sweating hothead | 12 | 2 | 4 | 6 | 7 |
+| Neutron Star | tiny, but lifts a dumbbell | 10 | 2 | 4 | 5 | 6 |
+| Pulsar | winking party DJ in headphones | 8 | 2 | 3 | 4 | 5 |
+| Quasar | show-off in shades and a crown | 6 | – | 2 | 3 | – |
+| Magnetar (all 11 only) | so attractive spoons stick to it | 4 | – | 2 | 3 | 4 |
 
-| Star | In the deck | 1 ✦ | 2 ✦ | 3 ✦ | 4 ✦ |
-|---|---|---|---|---|---|
-| Red Dwarf (full galaxy only) | 24 | 4 | 7 | 10 | 12 |
-| Brown Dwarf (full galaxy only) | 22 | 4 | 7 | 9 | 11 |
-| Orange Dwarf | 20 | 4 | 6 | 8 | 10 |
-| Yellow Dwarf | 18 | 3 | 6 | 8 | 9 |
-| White Dwarf | 16 | 3 | 5 | 7 | 8 |
-| Blue Giant | 14 | 3 | 5 | 6 | 7 |
-| Red Giant | 12 | 2 | 4 | 6 | 7 |
-| Neutron Star | 10 | 2 | 4 | 5 | 6 |
-| Pulsar | 8 | 2 | 3 | 4 | 5 |
-| Quasar | 6 | – | 2 | 3 | – |
-| Magnetar (full galaxy only) | 4 | – | 2 | 3 | 4 |
-
-Every kind has its own 3D look: a boiling plasma ball with a glow of its own, and extras. A pulsar sweeps two beams round like a lighthouse, a neutron star shoots a thin jet each way, a quasar fires jets from a tilted disc of gas, a magnetar spins loops of magnetic field, a red giant swells and a white dwarf glints. Each one is also drawn as a card picture (`public/js/bonanza/art.js`).
+The buddies are built in 3D from simple shapes (`scene/critters.js`): a puffy five-pointed star body, eyes that blink, a mouth, and a costume. The card pictures are photographs of those same models, taken once when the game loads (`art.js`), so a card always looks like the star in the patch.
 
 ## Trading
 
-Everybody trades at once, so there are no turns inside the trade: people post **offers** and the first person who can accept an offer takes it.
+Everybody trades at once, so there are no turns inside the trade: people put **deals** on the table and the first person who can take a deal gets it.
 
-- Open the offer builder and tap the stars you want to give (in your hand, or turned over if it is your turn), tap the kinds you want back (tap again for two, three...), and post it.
-- An offer from the active player goes to everyone, or to one person they choose. An offer from anyone else goes to the active player (you only ever trade **with the active player**, the way the real game does).
-- You can have three offers open; take one back any time.
-- Accepting hands over exactly the stars the offer asked for (the screen picks them for you; if you have spares in your hand it asks which).
-- Robots make offers, take good ones, and accept a gift when the star is worth planting (and give away a star they cannot use rather than burn out a nursery). The active player ends the trading with **Done trading**, or the clock does.
+- In **Make a deal**, tap the cards you would give (in your hand, or beamed-down ones on your turn), tap the kinds you want back (tap again for two, three...), and put it on the table.
+- A deal from the farmer whose turn it is goes to everyone, or to one farmer they pick. A deal from anyone else goes to the farmer whose turn it is (you only ever trade **with the active farmer**, as in the original).
+- Three deals open at once at most; take one back any time.
+- **Deal!** hands over exactly what was asked for (the game picks the cards; if you have spares in your hand, it asks which).
+- Robots make deals, take good ones, accept a gift when it is worth planting, and give away stars they cannot use rather than ruin a patch. The active farmer closes the Trading Post with **Done trading**, or the clock does.
 
-## The menus
+## The screens
 
-Built like the other games on the arcade: the title screen over the 3D table (which plays a little demo game by itself), Play online, Join a table (four letter boxes, or an invite link `/bonanza?join=ABCD`), Practice (two to six robots and a game length), How to play (a picture of every star with what it pays), Settings. The lobby has seven seats, a code with a copy-link button and a QR code, the match rules (game length, speed, full galaxy; the host edits them, everybody else sees them locked) and a Launch button.
+- **Start screen.** The bouncing logo and a stripy loading bar, a funny tip, then **Press any key** (also what lets the browser play sound). The camera swoops from deep space down to the farm.
+- **Title screen.** The logo in the middle with star buddies peeking round it, four big chunky buttons (Play with friends, Join a farm, Practice, How to play), your farmer name (tap to change it; the dice makes up silly ones like *Captain Pickles*) and Settings. The farm plays a little demo game behind, with the camera slowly circling.
+- **Lobby.** The farm code on four tilted sticker letters, an invite link and a QR code, up to seven farmers (with Add robot), the house rules (how long, speed, all 11 buddies), a chat, and a big **Let's farm!** button.
+- **The game.** Along the top, a sticker for every farmer (coins, cards in hand, their patches; tap one to fly over their farm) next to the UFO's star count. At the bottom, **Zorp** says what to do right now in a speech bubble (with a different joke each turn), your **hand** of cards with their coin tables and a *Next!* sticker on the card you must plant, and your **patches** as wooden planters (*Plant here!*, *Harvest first*, *Lonely star*, what they are worth and how many more the next coin needs). Keys: 1, 2, 3 plant; D ends your trading; Esc opens the menu.
+- **Trading Post.** A market stall with a striped awning: the beamed-down stars, the deals on the table and the deal-maker.
+- **The end.** A podium for the top three, everyone's coins and a few silly awards (Jackpot!, Wheeler-dealer, Big softie, Rarest buddy).
 
-In the game:
+## The 3D farm and the effects
 
-- **Along the top**, a chip for every player: lumens, cards in hand, and a swatch for each of their nurseries. Tap one to fly the camera to their table.
-- **At the bottom**, a big prompt that says what to do right now (*Plant your Red Giant*, *Trade!*, *Plant what you won*), with the clock. Under it, **your hand** in order (the next star to plant is marked) and **your nurseries**. Plantable nurseries glow and say *plant here*; tap one (or press 1, 2, 3). Planting over a different kind asks whether to harvest first. Each nursery shows what it pays now and how many more stars the next lumen needs, and has a **Harvest** button.
-- **On the right**, while stars are turned over, the trading panel: the turned-over stars, every offer (with a gold Accept when you can take it) and the offer builder.
-- **In the 3D table**, each player has glowing nursery pads (the more of a kind, the brighter), a tray where the stars they have just won wait to be planted, and a stack of gold lumens. The deck is a violet orb in the middle with the stars left and which time through you are on.
+Everything on screen comes from the game log (`fx.js`), so everyone sees the same thing at the same moment.
 
-Everything is readable with pictures first: the star pictures carry the meaning, and the words are big.
-
-## The animations
-
-Everything on screen comes from the game log, so everyone sees the same thing at the same moment (`fx.js`). Planting flies the star from your hand card into the nursery in a flash; a harvest pulls the stars together, bursts, and the lumens fly to the owner's stack (a big one makes the camera lean in); turned-over stars fly from the deck; a trade swaps stars across the table; the shuffle and the *Last turn!* warning shake the deck; the winner gets fireworks and the camera circles them.
+- Every farmer has a **floating island** (grass on an upside-down rock, with bushes, flowers and spotty toadstools), two or three **soil patches**, a crate for won stars, a pile of **gold coins** and a bouncing arrow when it is their turn. The **UFO** hovers in the middle with Zorp at the wheel, its lights chasing round and a tractor beam holding the beamed-down stars.
+- **Planting**: the card flies from your hand into the patch with a puff of soil and a *PLOP!* or *BOING!*.
+- **Harvesting**: the buddies hop off the patch, coins fly to the pile with a *KA-CHING!* (a big one gets confetti and a camera bump; harvesting for nothing gets a sad *wah-wah*).
+- **Trading**: stars fly between islands with a *SWAP!* (or *AWW, A GIFT!*), and the robots shout things like *Psst! Wanna trade?*.
+- **Drawing**: three card backs flip out of the UFO. **Refill**: the UFO zooms off and comes back full (slide whistle). **Last call!** when it is empty for good, and a confetti party for the winner.
+- When a lot happens at once (the last harvest of the game), the effects get lighter so it never turns into a blur.
 
 ## Robots
 
-`server/bonanza/bots.js` plays the same actions a person can, through the same door: it plants where a star fits or the cheapest nursery to harvest, harvests when a nursery has peaked or its kind is running low, posts a couple of offers per turn (spare stars for stars that fit), accepts offers that help, and gives away stars it cannot plant. Anyone who goes quiet is taken over by a robot for that step (and flagged, with a sleepy marker). In an all-robot game nothing is ever lost or stuck: `test/bonanza.test.js` plays whole games with 3 to 7 robots.
+`server/bonanza/bots.js` plays through the same `act()` door a person uses: it plants where a star fits or over the cheapest patch, harvests when a patch has peaked or its kind is running low, makes a couple of deals per turn, takes deals that help, and gives away what it cannot plant. Anyone who goes quiet is taken over by a robot for that step (a *💤* shows, and touching the screen takes back over). `test/bonanza.test.js` plays whole robot-only games with 3 to 7 farmers.
 
 ## Where things are
 
 ```
 server/bonanza/
-  data.js      the eleven stars, counts and payout table, rules numbers and what the client needs
+  data.js      the eleven star buddies (counts, coin tables, persona, colours), rules numbers, what the client needs
   engine.js    the rules: a state machine (plant, trade, tray, draw) driven by act(); viewFor(id) is what each person sees
   bots.js      the robots
   index.js     the "/bonanza" Socket.IO namespace: tables, seats, chat, the one "act" event
 public/
-  bonanza.html, css/bonanza.css (the game; the shared glass panels, buttons and menus come from ruler.css and ruler-menus.css)
+  bonanza.html, css/bonanza.css (everything: this game shares no styles with the others)
   js/bonanza/
     main.js      screens, the socket, the store
-    world.js     the 3D world: the table, the camera, and the attract-mode demo on the title screen
-    scene/       table.js (the glass table, nursery pads, trays, lumen stacks, flights), starmesh.js (every kind of 3D star)
-                 (the sky, plasma and effects are Ruler of the Galaxy's: public/js/ruler/scene/)
-    art.js       the card pictures, drawn on a canvas
-    game.js      the game screen: prompt, hand, nurseries, trading panel
-    fx.js        reads the game log and turns each line into 3D effects, sounds, pop-ups and banners
+    world.js     the 3D world: the farm, the camera, the attract-mode demo on the title screen
+    scene/       stage.js (toon renderer and camera), sky.js (cartoon space), critters.js (the star buddies, coins, card backs),
+                 farm.js (islands, patches, the UFO, flights), toonfx.js (puffs, confetti, sparkles, rings)
+    art.js       the card pictures, photographed from the 3D buddies
+    game.js      the game screen: Zorp's bubble, hand, patches, the Trading Post
+    fx.js        reads the game log and turns each line into effects, comic words, sounds and banners
     home.js, lobby.js, end.js, codex.js (How to play), settings.js, splash.js, ui.js, chat.js, sound.js
 test/bonanza.test.js   the rules, the robots, a full live game over a socket, and checks that the client's pieces fit
 ```
 
 ### How the engine works
 
-Unlike Ruler of the Galaxy and Phase to Space, which are one long function that asks people questions, this game never waits for one person: anyone can harvest at any time, and people trade while it is somebody else's turn. So `engine.js` is a small **state machine** (`plant`, `trade`, `tray`, `draw`). Everything a person does is one call, `act(playerId, { type, ... })`: `plant`, `skipPlant`, `harvest`, `buyField`, `offer`, `cancelOffer`, `accept` and `doneTrading`. The server checks everything; a mistake comes back as a plain message to just that person. Robots call the same `apply()`.
+Unlike Ruler of the Galaxy and Phase to Space, which are one long function that asks people questions, this game never waits for one person: anyone can harvest at any time, and people trade while it is somebody else's turn. So `engine.js` is a small **state machine** (`plant`, `trade`, `tray`, `draw`). Everything a person does is one call, `act(playerId, { type, ... })`: `plant`, `skipPlant`, `harvest`, `buyField`, `offer`, `cancelOffer`, `accept` and `doneTrading`. The server checks everything; a mistake comes back as a plain message to just that person. Robots call the same `apply()`. (Inside the code a patch is still a "field" and coins are "lumens" or the "stash"; only the words on screen changed.)
 
-`viewFor(id)` hides everyone else's hand and tells the screen what to do (`you.todo`), which nurseries can be harvested for how much, and whether a third nursery can be bought. Each log line has a kind (`k`: `plant`, `harvest`, `reveal`, `offer`, `trade`, `tray`, `draw`, `reshuffle`, `last`, `afk`, `win`, `emote`) and `fx.js` has a handler for each; `test/bonanza.test.js` checks that the screen only reacts to lines the engine really writes.
+`viewFor(id)` hides everyone else's hand and tells the screen what to do (`you.todo`), which patches can be harvested for how much, and whether a third patch can be bought. Each log line has a kind (`k`: `plant`, `harvest`, `reveal`, `offer`, `trade`, `tray`, `draw`, `reshuffle`, `last`, `afk`, `win`, `emote`) and `fx.js` has a handler for each; `test/bonanza.test.js` checks that the screen only reacts to lines the engine really writes.
 
 ### Testing
 
-`SBZ_TEST_PACE=0.15` makes the robots act (almost) at once, handy for watching a whole game. Tests set a `pace` of 0.
+`SBZ_TEST_PACE=0.15` makes the robots act (almost) at once, handy for watching a whole game. Tests set a `pace` of 0. In the browser, `window.__sbz.step(seconds)` moves the 3D scene forward by hand (a hidden tab gets no animation frames).
 
 ## Tuning
 
-Everything that decides how the game plays is in `data.js` (the payout table, the card counts, the start hand, how many stars you draw, the price of a third nursery) and the timers at the top of `engine.js`.
+Everything that decides how the game plays is in `data.js` (the coin table, the card counts, the start hand, how many cards you draw, the price of a third patch) and the timers at the top of `engine.js`.
