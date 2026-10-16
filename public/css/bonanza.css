@@ -259,6 +259,7 @@ body:has(#splash:not(.out)) #app, body:has(#splash:not(.out)) #labels { opacity:
 .sr-name { display: flex; flex-direction: column; line-height: 1.2; min-width: 0; }
 .sr-name b { font: 400 22px var(--display); }
 .sr-name small { font: 800 13px var(--body); color: var(--ink-soft); }
+.sr-name .real { font: 700 12px var(--body); color: var(--ink-soft); opacity: 0.8; }
 .sr-name em { font: 700 13.5px/1.3 var(--body); color: var(--ink); }
 .sr-pays { display: flex; gap: 4px; }
 .pay { display: flex; flex-direction: column; align-items: center; min-width: 36px; padding: 3px 2px; border: 2px solid var(--ink); border-radius: 10px; background: #fff; }

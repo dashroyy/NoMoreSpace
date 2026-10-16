@@ -36,7 +36,7 @@ export function starRow(s) {
     'div',
     { className: 'star-row', style: { '--c': s.color } },
     el('img', { src: starArt(s.id), alt: '' }),
-    el('div', { className: 'sr-name' }, el('b', {}, s.name), el('small', {}, `${s.persona} · ${s.count} in the UFO`), el('em', {}, s.blurb)),
+    el('div', { className: 'sr-name' }, el('b', {}, s.name), el('small', {}, `${s.persona} · ${s.count} in the UFO`), el('em', {}, s.blurb), s.real ? el('i', { className: 'real' }, `really a ${s.real}`) : null),
     el('div', { className: 'sr-pays' }, ...s.table.map((need, i) => (need == null ? el('span', { className: 'pay none' }, '–') : el('span', { className: 'pay' }, el('b', {}, `${need}`), coin(i + 1))))),
   );
 }

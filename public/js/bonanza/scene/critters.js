@@ -1,8 +1,8 @@
 // Star Bonanza: the star buddies. Every kind of star is a chubby little five-pointed character with a face and a
-// costume gag (the joke is in taking the astronomy literally: a red dwarf is a grumpy bearded miner, a neutron star
-// is tiny and lifts weights, a pulsar is a DJ who never stops winking). They are cel-shaded cartoons: flat bands of
+// costume gag (and a pun for a name: a Rock Star is a grumpy bearded miner, a Super Star is tiny and lifts weights,
+// a Pop Star is a DJ who never stops winking). They are cel-shaded cartoons: flat bands of
 // colour, a thick ink outline and a glint, and they are never still: they bob, sway and blink, their costumes move
-// (the neutron star really does lift its dumbbell), they pull a random gag every few seconds (a hop, a spin, a wiggle,
+// (the Super Star really does lift its dumbbell), they pull a random gag every few seconds (a hop, a spin, a wiggle,
 // a look round) and they react to what happens to them (cheer, sulk, gasp).
 //
 // Each kind is built once from simple shapes and merged into four meshes (body, eyes, mouth, costume), and every star

@@ -177,7 +177,7 @@ test('trading: offers, counter-offers, gifts, and only the active player trades 
   const offer = g.turn.offers[0];
   assert.strictEqual(offer.to, null);
   // b accepts, but gives the wrong star
-  assert.throws(() => g.act(b.id, { type: 'accept', id: offer.id, give: [b.hand[0].uid] }), /asked for 1 White Dwarf/);
+  assert.throws(() => g.act(b.id, { type: 'accept', id: offer.id, give: [b.hand[0].uid] }), /asked for 1 Silver Star/);
   assert.throws(() => g.act(b.id, { type: 'accept', id: offer.id, give: [] }), /asked for/);
   g.act(b.id, { type: 'accept', id: offer.id, give: [b.hand[2].uid] });
   assert.deepStrictEqual(b.tray.map((x) => x.t), [u1.t], 'b must plant what they got');

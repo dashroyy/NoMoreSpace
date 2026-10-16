@@ -21,22 +21,22 @@ Grow star buddies in your patches and **harvest** them for coins. When the UFO h
 
 ## The star buddies
 
-Each is named after a real kind of star, and the joke is in taking the name literally. Eleven are the original game's beans; the **Stink Star** is our own, because every farm needs a farter. 3 to 5 players use nine kinds (116 cards); 6 or 7 players, or a host who switches on **All 12 star buddies**, use all twelve (166). Stars needed for 1, 2, 3 and 4 coins (the original game's table, so the balance has had decades of testing: the commoner the kind, the more of them each coin takes):
+Every one has a pun for a name (*Rock Star*, *Pop Star*, *Super Star*, *Track Star*...) and a costume to match, and hides the real kind of star it is. Eleven are the original game's beans; the **Stinky Star** is our own, because every farm needs a farter. 3 to 5 players use nine kinds (116 cards); 6 or 7 players, or a host who switches on **All 12 star buddies**, use all twelve (166). Stars needed for 1, 2, 3 and 4 coins (the original game's table, so the balance has had decades of testing: the commoner the kind, the more of them each coin takes):
 
-| Star buddy | Who they are | In the UFO | 1 | 2 | 3 | 4 |
+| Star buddy (and what it really is) | Who they are | In the UFO | 1 | 2 | 3 | 4 |
 |---|---|---|---|---|---|---|
-| Red Dwarf (full set only) | grumpy bearded miner in a hard hat | 24 | 4 | 7 | 10 | 12 |
-| Brown Dwarf (full set only) | sleepyhead in a nightcap | 22 | 4 | 7 | 9 | 11 |
-| Orange Dwarf | garden gnome | 20 | 4 | 6 | 8 | 10 |
-| Yellow Dwarf | far too sunny, in a straw hat | 18 | 3 | 6 | 8 | 9 |
-| White Dwarf | retired old-timer with specs and a moustache | 16 | 3 | 5 | 7 | 8 |
-| Blue Giant | gym buddy in a sweatband | 14 | 3 | 5 | 6 | 7 |
-| **Stink Star** | resident farter, trailed by flies | 12 | 2 | 4 | 6 | 8 |
-| Red Giant | puffed-up, sweating hothead | 12 | 2 | 4 | 6 | 7 |
-| Neutron Star | tiny, but lifts a dumbbell | 10 | 2 | 4 | 5 | 6 |
-| Pulsar | winking party DJ in headphones | 8 | 2 | 3 | 4 | 5 |
-| Quasar | show-off in shades and a crown | 6 | – | 2 | 3 | – |
-| Magnetar (full set only) | so attractive spoons stick to it | 4 | – | 2 | 3 | 4 |
+| Rock Star (Red Dwarf; full set only) | grumpy bearded miner in a hard hat | 24 | 4 | 7 | 10 | 12 |
+| Snooze Star (Brown Dwarf; full set only) | sleepyhead in a nightcap | 22 | 4 | 7 | 9 | 11 |
+| Gnome Star (Orange Dwarf) | garden gnome | 20 | 4 | 6 | 8 | 10 |
+| Gold Star (Yellow Dwarf) | teacher's pet, far too sunny, in a straw hat | 18 | 3 | 6 | 8 | 9 |
+| Silver Star (White Dwarf) | retired old-timer with specs and a moustache | 16 | 3 | 5 | 7 | 8 |
+| Track Star (Blue Giant) | sweaty sprinter in a sweatband | 14 | 3 | 5 | 6 | 7 |
+| **Stinky Star** (a gas giant, ish) | resident farter, trailed by flies | 12 | 2 | 4 | 6 | 8 |
+| Hot Star (Red Giant) | puffed-up, sweating hothead | 12 | 2 | 4 | 6 | 7 |
+| Super Star (Neutron Star) | tiny, but lifts a dumbbell | 10 | 2 | 4 | 5 | 6 |
+| Pop Star (Pulsar) | winking party DJ in headphones | 8 | 2 | 3 | 4 | 5 |
+| Movie Star (Quasar) | show-off in shades and a crown | 6 | – | 2 | 3 | – |
+| Lodestar (Magnetar; full set only) | so attractive spoons stick to it | 4 | – | 2 | 3 | 4 |
 
 The buddies are built in 3D from simple shapes (`scene/critters.js`): a puffy five-pointed star body, eyes that blink, a mouth, and a costume. The card pictures are photographs of those same models, taken once when the game loads (`art.js`), so a card always looks like the star in the patch.
 
@@ -59,7 +59,7 @@ Everybody trades at once, so there are no turns inside the trade: people put **d
 - **Trading Post.** A market stall with a striped awning: the beamed-down stars, the deals on the table and the deal-maker.
 - **The end.** A podium for the top three, everyone's coins and a few silly awards (Jackpot!, Wheeler-dealer, Big softie, Rarest buddy).
 
-## The Stink Star
+## The Stinky Star
 
 A fat olive-green star with a sly smirk, a cloud of flies and green stink wisps orbiting its head, and no shame at all. Every few seconds it **farts**: it crouches and strains, then goes *PFFFT!* (a comic word pops up, a green stink cloud wobbles upwards and one of three farty noises plays: long and rumbling, short and sharp, or a quick double), and it hops up looking relieved. Every other star buddy within range pulls a disgusted face (the other Stink Stars cheer). It also lets one go the moment it lands in a patch, and Zorp sometimes asks who opened a window.
 
@@ -73,7 +73,7 @@ Cel shading means flat bands of colour instead of smooth light. Everything 3D he
 
 And it never keeps still:
 
-- **Star buddies** bob, sway, breathe and blink; their eyes wander; each kind has a moving costume (the neutron star really lifts its dumbbell, the pulsar's headphones sway and it bounces to the beat, the brown dwarf's nightcap droops, the red giant sweats a falling drop); each pulls a **gag** every few seconds (a hop, a spin, a wiggle, a stomp, a flex, a nod, a look round, a shiver) and **reacts** to what happens: they *cheer* (jump, spin, squinty grin) when harvested for coins, *sulk* (droop and frown) when it paid nothing and *gasp* at surprises.
+- **Star buddies** bob, sway, breathe and blink; their eyes wander; each kind has a moving costume (the Super Star really lifts its dumbbell, the Pop Star's headphones sway and it bounces to the beat, the Snooze Star's nightcap droops, the Hot Star sweats a falling drop); each pulls a **gag** every few seconds (a hop, a spin, a wiggle, a stomp, a flex, a nod, a look round, a shiver) and **reacts** to what happens: they *cheer* (jump, spin, squinty grin) when harvested for coins, *sulk* (droop and frown) when it paid nothing and *gasp* at surprises.
 - **Islands** bob and tilt, hop when it becomes their turn, grass tufts and flowers sway, pebbles float, coins spin, the crate rattles when a star lands in it, and a patch **squishes** like jelly when something is planted in it.
 - **The UFO** leans towards whoever's turn it is while **Zorp turns his head to watch them**, his antennae wobble on springs and his mouth stretches when the beam fires; rings run down the tractor beam; the lights chase.
 - **The sky** has fat clouds drifting by, tumbling asteroids, planets that bob and spin, a moon that sometimes opens one eye and the odd shooting star.

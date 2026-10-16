@@ -6,15 +6,17 @@ import { $ } from '../util.js';
 const SEEN = 'sbz-started';
 const TIPS = [
   'The first star in your hand MUST be planted. No sorting your hand, no matter how much you want to.',
-  'Rare stars pay faster: two Pulsars already make a coin.',
+  'Rare stars pay faster: two Pop Stars already make a coin.',
   'Trading is how you beat bad luck. Offer the stars you cannot use!',
   'Whatever you win in a trade has to be planted straight away, so only take what fits.',
   'A patch grows one kind of star. A different kind means harvesting first.',
   'A patch with one lonely star cannot be harvested while another patch has more.',
   'Harvest whenever you like, even on somebody else’s turn.',
   'Three coins buys a third patch. More room for more buddies!',
-  'Neutron Stars skip no leg day.',
-  'Never wake a Red Dwarf before noon.',
+  'Super Stars skip no leg day.',
+  'Never wake a Rock Star before noon.',
+  'The Stinky Star farts. You have been warned.',
+  'A Gold Star would like a sticker. Do not give it one.',
   'Robots fill empty seats, so you can always play.',
 ];
 
