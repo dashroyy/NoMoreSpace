@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en-GB">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Star Bonanza</title>
+    <meta name="description" content="Plant, trade and harvest stars: a space card game for 3-7 friends online, remade from the classic bean-planting game." />
+    <meta property="og:title" content="Star Bonanza" />
+    <meta property="og:description" content="Grow red dwarfs, pulsars and quasars, trade the ones you cannot use, and harvest the most lumens. A 3D space card game, free in your browser." />
+    <meta name="theme-color" content="#070913" />
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='12' fill='%23ffd36b'/%3E%3Cpath d='M32 2l4 24 24 6-24 6-4 24-4-24-24-6 24-6z' fill='%23ffb800' opacity='.85'/%3E%3Ccircle cx='32' cy='32' r='7' fill='%23fff6d6'/%3E%3C/svg%3E" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="/css/ruler.css" />
+    <link rel="stylesheet" href="/css/ruler-menus.css" />
+    <link rel="stylesheet" href="/css/bonanza.css" />
+    <script type="importmap">
+      { "imports": { "three": "/vendor/three/three.module.min.js", "three/addons/": "/vendor/three-addons/" } }
+    </script>
+  </head>
+  <body class="on-home">
+    <!-- the galaxy: one 3D scene behind every screen -->
+    <div id="stage" aria-hidden="true"></div>
+    <div id="labels" aria-hidden="true"></div>
+    <div id="app">
+      <section id="screen-home" class="screen"></section>
+      <section id="screen-lobby" class="screen" hidden></section>
+      <section id="screen-game" class="screen" hidden></section>
+    </div>
+    <div id="layer-fx" class="layer-fx" aria-hidden="true"></div>
+    <div id="layer-prompt" class="layer-prompt"></div>
+    <div id="layer-modal" class="layer-modal" hidden></div>
+    <div id="toasts" class="toasts" aria-live="polite"></div>
+    <div id="problem" class="problem" role="alert"></div>
+    <div id="warp" class="warp" aria-hidden="true"></div>
+
+    <!-- the start screen: up before any script, so there is something to look at while the 3D engine downloads -->
+    <div id="splash" class="splash">
+      <div class="splash-inner">
+        <div class="logo-lockup">
+          <svg class="emblem" viewBox="0 0 120 100" aria-hidden="true">
+            <ellipse cx="60" cy="52" rx="56" ry="16" fill="none" stroke="#4fe8ff" stroke-width="3" transform="rotate(-14 60 52)" opacity="0.5" />
+            <path d="M60 2l7 36 37 12-37 12-7 36-7-36-37-12 37-12z" fill="#ffb21a" stroke="#6b3a00" stroke-width="2.5" stroke-linejoin="round" />
+            <path d="M60 2l7 36-7 12-7-12z" fill="#ffe08a" opacity="0.8" />
+            <circle cx="60" cy="50" r="17" fill="#ffd36b" stroke="#6b3a00" stroke-width="2.5" />
+            <circle cx="54" cy="44" r="9" fill="#fff1c2" />
+            <circle cx="50" cy="40" r="3.4" fill="#ffffff" />
+            <g transform="translate(60 52) rotate(-14)"><path d="M-56 0A56 16 0 0 0 56 0" fill="none" stroke="#4fe8ff" stroke-width="3" /></g>
+            <circle cx="14" cy="22" r="3" fill="#fff6d6" /><circle cx="108" cy="14" r="2.4" fill="#c985ff" /><circle cx="100" cy="86" r="2.6" fill="#ff6a4d" />
+          </svg>
+          <div class="wordmark"><span class="wm-1">STAR</span><span class="wm-2">bonanza</span></div>
+        </div>
+        <div class="splash-bar"><i id="splash-fill"></i></div>
+        <div class="splash-status" id="splash-status">Lighting the stars…</div>
+        <button class="splash-press" id="splash-press" type="button" hidden>Press any key</button>
+      </div>
+      <div class="splash-tip" id="splash-tip"></div>
+      <div class="splash-foot">3–7 players · online with friends · robots fill empty seats</div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script type="module" src="/js/bonanza/main.js"></script>
+  </body>
+</html>

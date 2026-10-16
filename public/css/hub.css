@@ -54,7 +54,7 @@ body::after {
 @keyframes nudge { 50% { transform: translateY(-2px); } }
 
 /* ---- the games ---- */
-.games { width: 100%; display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 22px; perspective: 1400px; }
+.games { width: 100%; display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 22px; perspective: 1400px; }
 .game {
   position: relative; display: flex; flex-direction: column; overflow: hidden; color: inherit; text-decoration: none; min-height: 520px;
   border: 1px solid rgba(108, 240, 255, 0.25); background: linear-gradient(180deg, rgba(10, 16, 34, 0.92), rgba(4, 6, 14, 0.95));
@@ -70,6 +70,7 @@ a.game:focus-visible { outline: 3px solid var(--accent, var(--phosphor)); outlin
 .game.nms { --accent: #ff7a3d; }
 .game.pts { --accent: #ff6bd6; }
 .game.rotg { --accent: #00f0ff; }
+.game.sbz { --accent: #ffd36b; }
 
 .art { position: relative; height: 270px; overflow: hidden; background: radial-gradient(ellipse at 50% 60%, rgba(255, 255, 255, 0.05), transparent 70%); }
 .info { padding: 18px 22px 20px; display: flex; flex-direction: column; gap: 10px; flex: 1; position: relative; z-index: 2; background: linear-gradient(180deg, transparent, rgba(2, 3, 8, 0.7)); }
@@ -179,3 +180,23 @@ a.game:hover .go { transform: translateX(4px); filter: brightness(1.1); }
 .zap.z2 { animation-delay: 1.8s; background: linear-gradient(90deg, #00f0ff, transparent); box-shadow: 0 0 8px #00f0ff; }
 @keyframes zap { 0%, 60% { opacity: 0; transform: rotate(-30deg) scaleX(0.2); } 64% { opacity: 1; transform: rotate(-30deg) scaleX(1); } 76% { opacity: 0; transform: rotate(-30deg) scaleX(1.1); } }
 .zap.z2 { transform: rotate(150deg); }
+
+/* Star Bonanza: a glass table with glowing stars growing on it and a violet deck in the middle */
+.sbz .art { background: radial-gradient(ellipse at 50% 58%, rgba(255, 211, 107, 0.14), transparent 62%), radial-gradient(circle at 85% 12%, rgba(139, 91, 255, 0.16), transparent 42%); }
+.sb-table { position: absolute; left: 50%; top: 56%; width: 260px; height: 260px; margin: -130px 0 0 -130px; transform: rotateX(64deg); transform-style: preserve-3d; }
+.sb-glass { position: absolute; inset: 0; border-radius: 50%; background: radial-gradient(circle, rgba(20, 36, 90, 0.8), rgba(8, 14, 40, 0.85) 70%); box-shadow: inset 0 0 40px rgba(79, 232, 255, 0.25); }
+.sb-rim { position: absolute; inset: 0; border-radius: 50%; border: 3px solid rgba(79, 232, 255, 0.85); box-shadow: 0 0 22px rgba(79, 232, 255, 0.6); }
+.sb-deck { position: absolute; inset: 41%; border-radius: 50%; background: radial-gradient(circle, #f1e3ff, #8b5bff 55%, #2a0f66); box-shadow: 0 0 30px 8px rgba(139, 91, 255, 0.7); animation: corepulse 2.4s ease-in-out infinite; }
+.sb-star { position: absolute; width: 22px; height: 22px; margin: -11px 0 0 -11px; border-radius: 50%; background: radial-gradient(circle, #fff 12%, var(--c) 45%, transparent 72%); box-shadow: 0 0 14px 4px var(--c); animation: sbpulse 3.2s ease-in-out infinite; }
+.sb-star::after { content: ''; position: absolute; left: 50%; top: -80%; width: 2px; height: 260%; margin-left: -1px; background: linear-gradient(transparent, #fff, transparent); opacity: 0; }
+.sb-star.s5::after, .sb-star.s6::after { opacity: 0.8; animation: spin 2.4s linear infinite; }
+.s1 { --c: #8ec5ff; left: calc(50% - 112px); top: 56%; width: 30px; height: 30px; }
+.s2 { --c: #ffd24d; left: calc(50% + 112px); top: 56%; animation-delay: -1s; }
+.s3 { --c: #ff5a4d; left: 50%; top: calc(56% - 50px); animation-delay: -2s; width: 26px; height: 26px; }
+.s4 { --c: #ff9a3d; left: 50%; top: calc(56% + 54px); animation-delay: -0.6s; width: 28px; height: 28px; }
+.s5 { --c: #9ff0ff; left: calc(50% - 66px); top: calc(56% - 38px); width: 16px; height: 16px; animation-delay: -1.6s; }
+.s6 { --c: #d9a8ff; left: calc(50% + 66px); top: calc(56% + 40px); width: 16px; height: 16px; animation-delay: -2.4s; }
+@keyframes sbpulse { 50% { transform: scale(1.25); filter: brightness(1.3); } }
+.sb-lumen { position: absolute; width: 12px; height: 12px; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #fff3c4, #ffc83a 55%, #b86a00); box-shadow: 0 0 10px #ffc83a; animation: lumenhop 4s ease-in-out infinite; }
+.l1 { left: calc(50% - 44px); top: 78%; } .l2 { left: calc(50% - 30px); top: 80%; animation-delay: -1.3s; } .l3 { left: calc(50% + 26px); top: 30%; animation-delay: -2.6s; }
+@keyframes lumenhop { 50% { transform: translateY(-14px); } }

@@ -439,6 +439,151 @@ test('the data route, and a live practice table over the socket where the human 
   }
 });
 
+
+// ---------------------------------------------------------------------------
+// The client: it only runs in a browser, so these check that its pieces fit together
+// ---------------------------------------------------------------------------
+const ROOT = path.join(__dirname, '..');
+const CLIENT = path.join(ROOT, 'public/js/bonanza');
+const clientFiles = () => {
+  const out = [];
+  const walk = (dir) => {
+    for (const f of fs.readdirSync(dir, { withFileTypes: true })) {
+      if (f.isDirectory()) walk(path.join(dir, f.name));
+      else if (f.name.endsWith('.js')) out.push(path.join(dir, f.name));
+    }
+  };
+  walk(CLIENT);
+  return out;
+};
+
+test('the client is wired together: every import resolves to a real file and a real export', () => {
+  const exportsOf = (file) => {
+    const src = fs.readFileSync(file, 'utf8');
+    const names = new Set([...src.matchAll(/export\s+(?:async\s+)?(?:const|let|function|class)\s+([\w$]+)/g)].map((m) => m[1]));
+    for (const m of src.matchAll(/export\s*\{([^}]*)\}/g)) for (const part of m[1].split(',')) names.add(part.trim().split(/\s+as\s+/).pop());
+    return names;
+  };
+  assert.ok(clientFiles().length >= 15);
+  for (const file of clientFiles()) {
+    const src = fs.readFileSync(file, 'utf8');
+    for (const m of src.matchAll(/import\s*\{([^}]*)\}\s*from\s*'(\.{1,2}\/[^']+)'/g)) {
+      const target = path.join(path.dirname(file), m[2]);
+      assert.ok(fs.existsSync(target), `${path.relative(ROOT, file)} imports ${m[2]}, which does not exist`);
+      const have = exportsOf(target);
+      for (const raw of m[1].split(',').map((x) => x.trim()).filter(Boolean)) {
+        const name = raw.split(/\s+as\s+/)[0];
+        assert.ok(have.has(name), `${path.relative(ROOT, file)} imports { ${name} } from ${m[2]}, which does not export it`);
+      }
+    }
+  }
+});
+
+test('no screen calls a shared helper it forgot to import (a missing import only blows up when the button is clicked)', () => {
+  const namesIn = (src) => new Set([...src.matchAll(/export\s+(?:async\s+)?(?:const|let|function|class)\s+([\w$]+)/g)].map((m) => m[1]));
+  const vocabulary = new Set();
+  for (const file of [...clientFiles(), path.join(ROOT, 'public/js/util.js')]) for (const n of namesIn(fs.readFileSync(file, 'utf8'))) vocabulary.add(n);
+  assert.ok(vocabulary.has('unlock') && vocabulary.has('el') && vocabulary.has('sfx') && vocabulary.has('starArt'));
+  for (const file of clientFiles()) {
+    const src = fs
+      .readFileSync(file, 'utf8')
+      .replace(/\/\*[\s\S]*?\*\//g, '')
+      .replace(/^\s*\/\/.*$/gm, '')
+      .replace(/^(\s+)(?:static\s+|async\s+|get\s+|set\s+)*[\w$]+(\([^)]*\)\s*\{)/gm, '$1$2'); // (a class method's own name is not a call)
+    const imported = new Set();
+    for (const m of src.matchAll(/import\s*\{([^}]*)\}\s*from/g)) for (const part of m[1].split(',')) imported.add(part.trim().split(/\s+as\s+/).pop());
+    for (const m of src.matchAll(/import\s+(?:\*\s+as\s+)?([\w$]+)\s+from/g)) imported.add(m[1]);
+    for (const name of vocabulary) {
+      if (['clamp', 'lerp', 'clear', 'step', 'star', 'player', 'me'].includes(name)) continue; // (also plain words in comments, shaders and methods)
+      const esc = name.replace(/\$/g, '\\$');
+      if (!new RegExp(`(?<![.\\w$'"\`])${esc}\\(`).test(src)) continue; // not called here
+      const declared = new RegExp(`\\b(?:function|const|let|var|class)\\s+${esc}\\b`).test(src);
+      assert.ok(imported.has(name) || declared, `${path.relative(ROOT, file)} calls ${name}() but never imports or defines it`);
+    }
+  }
+});
+
+test('every icon the screens ask for is drawn in ui.js', () => {
+  const ui = fs.readFileSync(path.join(CLIENT, 'ui.js'), 'utf8');
+  const drawn = new Set([...ui.slice(ui.indexOf('const ICONS'), ui.indexOf('export function icon')).matchAll(/^\s+(\w+):\s*'/gm)].map((m) => m[1]));
+  assert.ok(drawn.size >= 20);
+  for (const file of clientFiles()) {
+    for (const m of fs.readFileSync(file, 'utf8').matchAll(/\bicon\('(\w+)'/g)) assert.ok(drawn.has(m[1]), `${path.relative(ROOT, file)} uses the icon "${m[1]}", which is not drawn`);
+  }
+});
+
+test('every sound the screens ask for exists in sound.js', () => {
+  const sounds = fs.readFileSync(path.join(CLIENT, 'sound.js'), 'utf8');
+  const body = sounds.slice(sounds.indexOf('const SOUNDS = {'), sounds.indexOf('export function sfx'));
+  const known = new Set([...body.matchAll(/^ {2}(\w+): /gm)].map((m) => m[1]));
+  const asked = new Map();
+  for (const file of clientFiles()) for (const m of fs.readFileSync(file, 'utf8').matchAll(/\bsfx\('([\w-]+)'\)/g)) asked.set(m[1], path.relative(ROOT, file));
+  for (const [name, where] of asked) assert.ok(known.has(name), `${where} plays the sound "${name}", which sound.js does not make`);
+  assert.ok(asked.size >= 15, 'the check found the sounds');
+});
+
+test('the page has the start screen, its stylesheets and every element the scripts look up', () => {
+  const html = fs.readFileSync(path.join(ROOT, 'public/bonanza.html'), 'utf8');
+  for (const css of ['/css/ruler.css', '/css/ruler-menus.css', '/css/bonanza.css']) {
+    assert.ok(html.includes(css), `${css} is linked`);
+    assert.ok(fs.existsSync(path.join(ROOT, 'public', css)), `${css} exists`);
+  }
+  assert.ok(html.includes('/js/bonanza/main.js'));
+  const splash = fs.readFileSync(path.join(CLIENT, 'splash.js'), 'utf8');
+  for (const id of [...splash.matchAll(/\$\('([\w-]+)'\)/g)].map((m) => m[1])) assert.ok(html.includes(`id="${id}"`), `bonanza.html has #${id}`);
+  for (const id of ['stage', 'labels', 'screen-home', 'screen-lobby', 'screen-game', 'layer-fx', 'layer-prompt', 'layer-modal', 'toasts', 'problem', 'warp']) assert.ok(html.includes(`id="${id}"`), `bonanza.html has #${id}`);
+  assert.ok(html.includes('class="logo-lockup"'));
+});
+
+test('every kind of star has its picture and its 3D look', () => {
+  const art = fs.readFileSync(path.join(CLIENT, 'art.js'), 'utf8');
+  const mesh = fs.readFileSync(path.join(CLIENT, 'scene/starmesh.js'), 'utf8');
+  for (const s of data.STARS) {
+    assert.ok(art.includes(`'${s.id}'`) || art.includes(`${s.id}:`) || art.includes(`${s.id}(`), `art.js draws ${s.id}`);
+    assert.ok(mesh.includes(`'${s.id}'`) || mesh.includes(`${s.id}:`) || mesh.includes(`${s.id}(`), `starmesh.js sizes ${s.id}`);
+    assert.match(s.color, /^#[0-9a-f]{6}$/i);
+    assert.match(s.glow, /^#[0-9a-f]{6}$/i);
+  }
+});
+
+test('the client counts lumens the way the server does', () => {
+  // net.js has its own copy of payout and nextPayout (the browser cannot require the server): they must agree for every star
+  const src = fs.readFileSync(path.join(CLIENT, 'net.js'), 'utf8');
+  const body = src.slice(src.indexOf('export function payout')).replace(/export /g, '');
+  const make = new Function('store', 'star', `${body}; return { payout, nextPayout };`);
+  const { payout, nextPayout } = make({ data: { stars: data.STARS } }, (id) => data.starDef(id));
+  for (const s of data.STARS) {
+    for (let n = 0; n <= 14; n++) {
+      assert.strictEqual(payout(s.id, n), data.payout(s.id, n), `${s.id} x${n}`);
+      const a = nextPayout(s.id, n);
+      const b = data.nextPayout(s.id, n);
+      assert.strictEqual(a ? a.lumens : null, b ? b.lumens : null, `${s.id} x${n} next`);
+    }
+  }
+});
+
+test('the arcade page lists Star Bonanza, counts its tables and takes you back to your seat', () => {
+  const html = fs.readFileSync(path.join(ROOT, 'public/index.html'), 'utf8');
+  assert.match(html, /href="\/bonanza"/);
+  assert.match(html, /data-live="bonanza"/);
+  const hub = fs.readFileSync(path.join(ROOT, 'public/js/hub.js'), 'utf8');
+  assert.match(hub, /stats\.bonanza/);
+  assert.match(hub, /game: 'bonanza'/);
+  const main = fs.readFileSync(path.join(CLIENT, 'main.js'), 'utf8');
+  const key = /SEAT_KEY = '([\w-]+)'/.exec(main)[1];
+  assert.ok(hub.includes(`'${key}'`), 'the hub reads the seat key the game saves');
+});
+
+test('every log line the screen reacts to is one the engine writes', () => {
+  const fx = fs.readFileSync(path.join(CLIENT, 'fx.js'), 'utf8');
+  const engine = fs.readFileSync(path.join(__dirname, '../server/bonanza/engine.js'), 'utf8');
+  const written = new Set([...engine.matchAll(/k: '([\w-]+)'/g)].map((m) => m[1]));
+  const handled = [...fx.slice(fx.indexOf('function handle')).matchAll(/case '([\w-]+)':/g)].map((m) => m[1]);
+  assert.ok(handled.length >= 12);
+  for (const k of handled) assert.ok(written.has(k), `fx.js reacts to "${k}", which the engine never logs`);
+  for (const k of ['plant', 'harvest', 'reveal', 'trade', 'draw', 'reshuffle', 'last', 'win']) assert.ok(handled.includes(k), `fx.js shows "${k}"`);
+});
+
 test.after(() => {
   server.close();
 });

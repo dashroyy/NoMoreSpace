@@ -353,7 +353,7 @@ class BonanzaGame {
     const p = this.active;
     p.tray.push(...t.faceUp);
     t.faceUp = [];
-    this.say('Time to plant everything you won.', { k: 'tray' });
+    this.say('Time to plant everything you won.', { k: 'tray', pid: t.pid });
     if (this.players.every((x) => !x.tray.length)) return this.finishTurn();
     this.setDeadline('tray');
     this.runAuto();
@@ -459,7 +459,7 @@ class BonanzaGame {
     } else p.tray.splice(p.tray.indexOf(card), 1);
     f.type = card.t;
     f.cards.push(card);
-    this.say(`${p.name} plants a ${this.starName(card.t)}.`, { k: 'plant', pid: p.id, field: Number(field), t: card.t, n: f.cards.length });
+    this.say(`${p.name} plants ${/^[aeiou]/i.test(this.starName(card.t)) ? 'an' : 'a'} ${this.starName(card.t)}.`, { k: 'plant', pid: p.id, field: Number(field), t: card.t, n: f.cards.length });
     if (t.phase === 'plant') {
       if (t.planted >= 2 || !p.hand.length) this.beginTrade();
     } else if (this.players.every((x) => !x.tray.length)) this.finishTurn();

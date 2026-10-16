@@ -5,7 +5,7 @@
 // people, passes their actions along and tells everyone what changed.
 
 const { BonanzaGame, MAX_PLAYERS, MIN_PLAYERS, EMOTES } = require('./engine');
-const { CLIENT_DATA } = require('./data');
+const { CLIENT_DATA, PASSES } = require('./data');
 
 const MAX_TABLES = 120;
 const EMPTY_FOR_MS = 10 * 60_000; // a table nobody has been at for this long is cleared away
@@ -88,7 +88,7 @@ function attach(io, { isCodeTaken = () => false } = {}) {
       r.game.changed();
     }
 
-    on('create', ({ name, practice, bots }) => {
+    on('create', ({ name, practice, bots, passes }) => {
       const r = makeRoom(process.env.SBZ_TEST_PACE ? { pace: Number(process.env.SBZ_TEST_PACE) } : {});
       const g = r.game;
       const person = g.addPlayer(name);
@@ -96,6 +96,7 @@ function attach(io, { isCodeTaken = () => false } = {}) {
       if (practice) {
         g.practice = true;
         g.settings.speed = 'quick';
+        if (PASSES.some((x) => x.id === Number(passes))) g.settings.passes = Number(passes);
         const n = Math.max(MIN_PLAYERS - 1, Math.min(MAX_PLAYERS - 1, Number(bots) || 3));
         for (let i = 0; i < n; i++) g.addBot(person.id);
         g.start(person.id);
