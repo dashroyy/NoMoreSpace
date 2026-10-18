@@ -21,6 +21,7 @@ const crypto = require('crypto');
 const phase = require('./phase');
 const ruler = require('./ruler');
 const bonanza = require('./bonanza');
+const charters = require('./charters');
 
 const PORT = process.env.PORT != null ? Number(process.env.PORT) : 3000;
 const ROOT = path.join(__dirname, '..');
@@ -153,6 +154,7 @@ const server = http.createServer((req, res) => {
     io.of('/phase').emit('server-restart', { in: seconds });
     io.of('/ruler').emit('server-restart', { in: seconds });
     io.of('/bonanza').emit('server-restart', { in: seconds });
+    io.of('/charters').emit('server-restart', { in: seconds });
     res.writeHead(200).end('warned');
     return;
   }
@@ -166,7 +168,7 @@ const server = http.createServer((req, res) => {
     const proto = String(req.headers['x-forwarded-proto'] || 'http').split(',')[0].trim();
     const host = String(req.headers.host || 'localhost').replace(/[^\w.:\-\[\]]/g, '');
     const qr = qrcode(0, 'M');
-    const gamePath = { phase: '/phase', ruler: '/ruler', bonanza: '/bonanza' }[url.searchParams.get('game')] || '/';
+    const gamePath = { phase: '/phase', ruler: '/ruler', bonanza: '/bonanza', charters: '/charters' }[url.searchParams.get('game')] || '/';
     qr.addData(`${proto}://${host}${gamePath}?join=${code}`);
     qr.make();
     res.writeHead(200, { 'Content-Type': 'image/svg+xml', 'Cache-Control': 'no-cache' });
@@ -182,13 +184,14 @@ const server = http.createServer((req, res) => {
       phase: phaseGame.stats(),
       ruler: rulerGame.stats(),
       bonanza: bonanzaGame.stats(),
+      charters: chartersGame.stats(),
     }));
     return;
   }
   if (url.pathname === '/api/code') {
     const code = String(url.searchParams.get('code') || '').toUpperCase().trim();
     res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' });
-    res.end(JSON.stringify({ game: rooms.has(code) ? 'nms' : phase.rooms.has(code) ? 'phase' : ruler.rooms.has(code) ? 'ruler' : bonanza.rooms.has(code) ? 'bonanza' : null }));
+    res.end(JSON.stringify({ game: rooms.has(code) ? 'nms' : phase.rooms.has(code) ? 'phase' : ruler.rooms.has(code) ? 'ruler' : bonanza.rooms.has(code) ? 'bonanza' : charters.rooms.has(code) ? 'charters' : null }));
     return;
   }
   if (url.pathname === '/phase-data.json') {
@@ -204,6 +207,11 @@ const server = http.createServer((req, res) => {
   if (url.pathname === '/bonanza-data.json') {
     res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' });
     res.end(bonanza.CLIENT_DATA_JSON);
+    return;
+  }
+  if (url.pathname === '/charters-data.json') {
+    res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' });
+    res.end(charters.CLIENT_DATA_JSON);
     return;
   }
   if (url.pathname === '/game-data.json') {
@@ -229,7 +237,7 @@ const server = http.createServer((req, res) => {
     res.writeHead(302, { Location: `/nms${url.search}` }).end();
     return;
   }
-  const PAGES = { '/': 'index.html', '/nms': 'nms.html', '/phase': 'phase.html', '/ruler': 'ruler.html', '/bonanza': 'bonanza.html' };
+  const PAGES = { '/': 'index.html', '/nms': 'nms.html', '/phase': 'phase.html', '/ruler': 'ruler.html', '/bonanza': 'bonanza.html', '/charters': 'charters.html' };
   sendFile(res, PUBLIC_DIR, PAGES[url.pathname] || url.pathname, 'no-cache');
 });
 
@@ -238,9 +246,10 @@ const server = http.createServer((req, res) => {
 // ---------------------------------------------------------------------------
 
 const io = new Server(server, { maxHttpBufferSize: 300_000 });
-const phaseGame = phase.attach(io, { isCodeTaken: (code) => rooms.has(code) || ruler.rooms.has(code) || bonanza.rooms.has(code) }); // Phase to Space, on its own namespace
-const rulerGame = ruler.attach(io, { isCodeTaken: (code) => rooms.has(code) || phase.rooms.has(code) || bonanza.rooms.has(code) }); // Ruler of the Galaxy, likewise
-const bonanzaGame = bonanza.attach(io, { isCodeTaken: (code) => rooms.has(code) || phase.rooms.has(code) || ruler.rooms.has(code) }); // Star Bonanza, likewise
+const phaseGame = phase.attach(io, { isCodeTaken: (code) => rooms.has(code) || ruler.rooms.has(code) || bonanza.rooms.has(code) || charters.rooms.has(code) }); // Phase to Space, on its own namespace
+const rulerGame = ruler.attach(io, { isCodeTaken: (code) => rooms.has(code) || phase.rooms.has(code) || bonanza.rooms.has(code) || charters.rooms.has(code) }); // Ruler of the Galaxy, likewise
+const bonanzaGame = bonanza.attach(io, { isCodeTaken: (code) => rooms.has(code) || phase.rooms.has(code) || ruler.rooms.has(code) || charters.rooms.has(code) }); // Star Bonanza, likewise
+const chartersGame = charters.attach(io, { isCodeTaken: (code) => rooms.has(code) || phase.rooms.has(code) || ruler.rooms.has(code) || bonanza.rooms.has(code) }); // Star Charters, likewise
 const rooms = new Map(); // code -> { game, sockets: Map(socketId -> personId), positions, captainLeftAt, emptySince }
 
 function newRoomCode() {
@@ -248,7 +257,7 @@ function newRoomCode() {
   let code;
   do {
     code = Array.from({ length: 4 }, () => letters[Math.floor(Math.random() * letters.length)]).join('');
-  } while (rooms.has(code) || phase.rooms.has(code) || ruler.rooms.has(code) || bonanza.rooms.has(code));
+  } while (rooms.has(code) || phase.rooms.has(code) || ruler.rooms.has(code) || bonanza.rooms.has(code) || charters.rooms.has(code));
   return code;
 }
 

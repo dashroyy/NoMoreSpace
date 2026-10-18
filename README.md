@@ -1,13 +1,14 @@
 # Space Arcade
 
-Four free multiplayer games that run in the browser, on one site and one server. The front page is a game picker.
+Five free multiplayer games that run in the browser, on one site and one server. The front page is a game picker.
 
 - **[No More Space](#no-more-space)** (`/nms`): a spooky social-deduction game on a 3D spaceship, 3 to 15 players.
 - **[Phase to Space](docs/PHASE_TO_SPACE.md)** (`/phase`): a space card battler for 2 to 6 players with robots to fill empty seats: recruit a crew, slay Void Beasts and Signal Jam your friends.
 - **[Ruler of the Galaxy](docs/RULER.md)** (`/ruler`): a 3D dice battle for 2 to 6 players (robots fill empty seats), in the spirit of *King of Tokyo*: roll, blast your rivals with lasers and hold the Omni-Throne at the heart of a 3D galaxy.
 - **[Star Bonanza](docs/STAR_BONANZA.md)** (`/bonanza`): a silly trading card game for 3 to 7 players (robots fill empty seats), a cartoon space-farm remake of *Bohnanza*: grow star buddies (one of them farts) on a floating island in a cel-shaded cartoon world, swap them with everyone at once and cash them in for coins.
+- **[Star Charters](docs/STAR_CHARTERS.md)** (`/charters`): a space tile-laying game for 2 to 5 players (robots fill empty seats), in the spirit of *Carcassonne*: lay tiles to build warp lanes and space stations, claim them with tin-rocket probes, open wormholes, slingshot round black holes and grab anomalies, on a 1960s space-age chart table.
 
-The first three share the same fonts and look (Star Bonanza has a cartoon look of its own), and there is an optional custom icon set to replace emoji (`?icons=on`; see [docs/ASSETS.md](docs/ASSETS.md)); older invite and replay links (`/?join=CODE`) still go to No More Space.
+The first three share the same fonts and look (Star Bonanza and Star Charters each have a look of their own), and there is an optional custom icon set to replace emoji (`?icons=on`; see [docs/ASSETS.md](docs/ASSETS.md)); older invite and replay links (`/?join=CODE`) still go to No More Space.
 
 # No More Space
 
@@ -33,7 +34,7 @@ A spooky, slightly silly space spin-off of **Blood on the Clocktower**, played o
 
 ```bash
 npm install
-npm run dev     # http://localhost:3000 (the game picker; No More Space is at /nms, Phase to Space at /phase, Ruler of the Galaxy at /ruler, Star Bonanza at /bonanza)
+npm run dev     # http://localhost:3000 (the game picker; No More Space is at /nms, Phase to Space at /phase, Ruler of the Galaxy at /ruler, Star Bonanza at /bonanza, Star Charters at /charters)
 npm test        # rules tests, including robot playtests at every player count
 ```
 
@@ -46,6 +47,7 @@ server/
   phase/          Phase to Space: cards.js, engine.js (the rules), bots.js, index.js (its own Socket.IO namespace)
   ruler/          Ruler of the Galaxy: data.js, engine.js, bots.js, index.js (the same pattern, namespace /ruler)
   bonanza/        Star Bonanza: data.js, engine.js (a state machine: everyone trades at once), bots.js, index.js (namespace /bonanza)
+  charters/       Star Charters: tiles.js (tiles drawn as 7 x 7 letter maps), board.js (features by union-find), data.js, engine.js, bots.js, index.js (namespace /charters)
   roles.js        the Black Hole Blues roles and the setup table; roles-carnival / -outbreak / -traitors / -extra.js hold the rest (72 in all)
   engine.js       the rules: nights, days, nominations, voting, winning
   storyteller.js  ARIA: balanced role picks, false info, stories, window clues
@@ -56,12 +58,13 @@ server/
   persist.js      saves running games across restarts
   records.js      play stats, bug reports and replays (in data/)
 public/
-  index.html            the game picker; nms.html (No More Space), phase.html (Phase to Space), ruler.html (Ruler of the Galaxy) and bonanza.html (Star Bonanza)
+  index.html            the game picker; nms.html (No More Space), phase.html (Phase to Space), ruler.html (Ruler of the Galaxy), bonanza.html (Star Bonanza) and charters.html (Star Charters)
   css/                  style.css... for No More Space, phase.css and phase-cards.css, plus the shared icons, fonts and typography
   js/main.js            wires No More Space together
   js/phase/             the Phase to Space client (board, prompts, dice, effects)
   js/ruler/             the Ruler of the Galaxy client: scene/ (the 3D galaxy, arena, ships and effects), dice tray, table, prompts
   js/bonanza/           the Star Bonanza client: scene/ (cartoon 3D: the star buddies, the floating farm, the UFO), cards, the Trading Post
+  js/charters/          the Star Charters client: scene/ (the 3D tiles built from their drawings, rockets, the chart table), the dock, the read-outs
   js/icons.js           swaps emoji for the arcade's own icons, in the page and in canvas text
   js/world/             the 3D ship (Three.js): layout, ship, avatars (the astronaut), role models (KayKit characters with a cartoon outline, the procedural Parasite), sky
   js/ui/                HUD, chat, role card, night & drawing, tasks, lobby,
@@ -83,6 +86,7 @@ tools/                  pack-models.mjs and pack-animations.mjs (KayKit packs in
 - 🃏 **[Phase to Space](docs/PHASE_TO_SPACE.md)**: the rules, every card, how the engine and the robots work
 - 👑 **[Ruler of the Galaxy](docs/RULER.md)**: the rules, the contenders, the 3D scene, how to add a card
 - 🌟 **[Star Bonanza](docs/STAR_BONANZA.md)**: the rules, every star buddy and what it pays, trading, the robots, the cartoon farm
+- 🧩 **[Star Charters](docs/STAR_CHARTERS.md)**: the rules, what scores what, wormholes, black holes and anomalies, how tiles are drawn, the robots, the screen
 
 ## Voice chat behind strict networks (optional)
 

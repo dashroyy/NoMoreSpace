@@ -95,6 +95,7 @@ async function counts() {
     set('phase', stats.phase, 'tables', 'table', 'tables');
     set('ruler', stats.ruler, 'tables', 'galaxy', 'galaxies');
     set('bonanza', stats.bonanza, 'tables', 'table', 'tables');
+    set('charters', stats.charters, 'tables', 'table', 'tables');
   } catch {}
 }
 counts();
@@ -110,6 +111,7 @@ async function resume() {
     { key: 'pts-seat', game: 'phase', href: (c) => `/phase`, label: (c) => `🃏 Back to table ${c} (Phase to Space)` },
     { key: 'rotg-seat', game: 'ruler', href: (c) => `/ruler`, label: (c) => `🌌 Back to galaxy ${c} (Ruler of the Galaxy)` },
     { key: 'sbz-seat', game: 'bonanza', href: (c) => `/bonanza`, label: (c) => `🌟 Back to table ${c} (Star Bonanza)` },
+    { key: 'sch-seat', game: 'charters', href: (c) => `/charters`, label: (c) => `🧩 Back to table ${c} (Star Charters)` },
   ];
   for (const s of seats) {
     let seat = null;
@@ -152,7 +154,7 @@ async function join() {
       return;
     }
     msg.className = 'msg ok';
-    const where = { phase: ['/phase', 'Phase to Space'], ruler: ['/ruler', 'Ruler of the Galaxy'], bonanza: ['/bonanza', 'Star Bonanza'], nms: ['/nms', 'No More Space'] }[r.game] || ['/nms', 'No More Space'];
+    const where = { phase: ['/phase', 'Phase to Space'], ruler: ['/ruler', 'Ruler of the Galaxy'], bonanza: ['/bonanza', 'Star Bonanza'], charters: ['/charters', 'Star Charters'], nms: ['/nms', 'No More Space'] }[r.game] || ['/nms', 'No More Space'];
     msg.textContent = `Boarding ${where[1]}…`;
     location.href = `${where[0]}?join=${code}`;
   } catch {

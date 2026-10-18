@@ -71,6 +71,7 @@ a.game:focus-visible { outline: 3px solid var(--accent, var(--phosphor)); outlin
 .game.pts { --accent: #ff6bd6; }
 .game.rotg { --accent: #00f0ff; }
 .game.sbz { --accent: #ffd36b; }
+.game.sch { --accent: #f08a3c; }
 
 .art { position: relative; height: 270px; overflow: hidden; background: radial-gradient(ellipse at 50% 60%, rgba(255, 255, 255, 0.05), transparent 70%); }
 .info { padding: 18px 22px 20px; display: flex; flex-direction: column; gap: 10px; flex: 1; position: relative; z-index: 2; background: linear-gradient(180deg, transparent, rgba(2, 3, 8, 0.7)); }
@@ -195,3 +196,20 @@ a.game:hover .go { transform: translateX(4px); filter: brightness(1.1); }
 .sb-coin { position: absolute; display: grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; border: 3px solid #2d1b4e; background: radial-gradient(circle at 35% 30%, #fff3b0, #ffc531 55%, #e09a00); color: #b87400; font-size: 11px; animation: lumenhop 3s ease-in-out infinite; }
 .c1 { left: calc(50% + 96px); top: 72%; } .c2 { left: calc(50% + 116px); top: 70%; animation-delay: -1s; } .c3 { left: calc(50% - 120px); top: 72%; animation-delay: -2s; }
 @keyframes lumenhop { 50% { transform: translateY(-14px) rotate(20deg); } }
+
+/* Star Charters: tiles of deep space laid on a slant, a lane with its stripes running, a black hole, a tile dropping
+   into place, a little tin rocket and a gem */
+.sch .art { background: radial-gradient(ellipse at 50% 62%, rgba(240, 138, 60, 0.2), transparent 60%), radial-gradient(circle at 18% 18%, rgba(42, 157, 143, 0.2), transparent 42%); }
+.sc-scene { position: absolute; left: 50%; top: 50%; width: 290px; margin: -112px 0 0 -145px; overflow: visible; }
+.sc-burst { transform-origin: 150px 98px; animation: scburst 14s linear infinite; }
+@keyframes scburst { to { transform: rotate(360deg); } }
+.sc-dash { animation: scdash 0.8s linear infinite; }
+@keyframes scdash { to { stroke-dashoffset: -16; } }
+.sc-drop { animation: scdrop 3.2s cubic-bezier(0.5, 0, 0.75, 0) infinite; }
+@keyframes scdrop { 0% { transform: translateY(-46px); opacity: 0; } 15% { opacity: 1; } 40%, 92% { transform: none; opacity: 1; } 100% { opacity: 0; } }
+.sc-rocket { animation: scrocket 2.4s ease-in-out infinite; }
+@keyframes scrocket { 50% { translate: -4px -10px; } }
+.sc-flame { animation: scflame 0.15s steps(2) infinite; }
+@keyframes scflame { 50% { transform: scaleY(0.6); } }
+.sc-gem { animation: scgem 2s ease-in-out infinite; }
+@keyframes scgem { 50% { translate: 0 -8px; } }

@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en-GB">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Star Charters</title>
+    <meta name="description" content="Chart the galaxy one sector at a time: lay tiles, link warp lanes and stations, send out probes and score. A space tile-laying game for 2-5 players, free in your browser." />
+    <meta property="og:title" content="Star Charters" />
+    <meta property="og:description" content="A 1960s space-age tile-laying game: build warp lanes and space stations, open wormholes, slingshot round black holes and grab the anomalies." />
+    <meta name="theme-color" content="#1d2340" />
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cpath d='M32 2l4 24 26 6-26 6-4 24-4-24-26-6 26-6z' fill='%23ffc93c'/%3E%3Ccircle cx='32' cy='32' r='12' fill='%232a9d8f' stroke='%231d2340' stroke-width='3'/%3E%3Cellipse cx='32' cy='32' rx='24' ry='7' fill='none' stroke='%23f08a3c' stroke-width='4' transform='rotate(-20 32 32)'/%3E%3C/svg%3E" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Righteous&family=Nunito:wght@600;700;800;900&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="/css/charters.css" />
+    <script type="importmap">
+      { "imports": { "three": "/vendor/three/three.module.min.js", "three/addons/": "/vendor/three-addons/" } }
+    </script>
+  </head>
+  <body class="on-home">
+    <!-- the chart table: one 3D scene behind every screen -->
+    <div id="stage" aria-hidden="true"></div>
+    <div id="labels"></div>
+    <div id="app">
+      <section id="screen-home" class="screen"></section>
+      <section id="screen-lobby" class="screen" hidden></section>
+      <section id="screen-game" class="screen" hidden></section>
+    </div>
+    <div id="layer-fx" class="layer-fx" aria-hidden="true"></div>
+    <div id="layer-prompt" class="layer-prompt"></div>
+    <div id="layer-modal" class="layer-modal" hidden></div>
+    <div id="toasts" class="toasts" aria-live="polite"></div>
+    <div id="problem" class="problem" role="alert"></div>
+    <div id="warp" class="warp" aria-hidden="true"></div>
+
+    <!-- the start screen: up before any script, so there is something to look at while the 3D engine downloads -->
+    <div id="splash" class="splash">
+      <div class="splash-inner">
+        <div class="logo-lockup">
+          <svg class="emblem" viewBox="0 0 120 120" aria-hidden="true">
+            <path class="burst" d="M60 2l7 44 45 14-45 14-7 44-7-44L8 60l45-14z" fill="#ffc93c" />
+            <circle cx="60" cy="60" r="25" fill="#2a9d8f" stroke="#1d2340" stroke-width="5" />
+            <path d="M44 52a18 18 0 0 1 18-12" fill="none" stroke="#8fe3d8" stroke-width="5" stroke-linecap="round" />
+            <ellipse class="orbit" cx="60" cy="60" rx="50" ry="15" fill="none" stroke="#f08a3c" stroke-width="7" transform="rotate(-20 60 60)" />
+            <circle class="moon" cx="104" cy="44" r="7" fill="#f6efdc" stroke="#1d2340" stroke-width="3" />
+          </svg>
+          <div class="wordmark"><span class="wm-1">Star</span><span class="wm-2">Charters</span></div>
+        </div>
+        <div class="splash-bar"><i id="splash-fill"></i></div>
+        <div class="splash-status" id="splash-status">Unrolling the star charts…</div>
+        <button class="splash-press" id="splash-press" type="button" hidden>Press any key</button>
+      </div>
+      <div class="splash-tip" id="splash-tip"></div>
+      <div class="splash-foot">2–5 captains · play with friends online · robots fill empty seats</div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script type="module" src="/js/charters/main.js"></script>
+  </body>
+</html>
