@@ -19,102 +19,74 @@
 
     <main class="hub">
       <header class="hub-head">
-        <div class="eyebrow">▌ free · online · with friends</div>
         <h1 class="logo">SPACE<span>ARCADE</span></h1>
-        <p class="tagline">Pick a game. Grab your mates. Mind the black hole.</p>
-        <p class="hint">◀ swipe or use the arrow keys ▶</p>
+        <form class="join" id="join" autocomplete="off">
+          <input id="hub-code" maxlength="4" placeholder="CODE" autocapitalize="characters" spellcheck="false" aria-label="Join with a four-letter code" />
+          <button id="hub-join" type="submit">Join ▸</button>
+          <div id="hub-msg" class="msg" role="status"></div>
+        </form>
       </header>
 
       <!-- a game you were in a moment ago -->
       <section id="resume" class="resume" hidden></section>
 
       <section class="stage" aria-roledescription="carousel" aria-label="Choose a game">
-        <button class="nav prev" type="button" aria-label="Previous game">‹</button>
-        <div class="games" id="games" tabindex="0">
-        <a class="game nms" href="/nms" id="g-nms" data-game="nms">
-          <div class="shot">
-            <div class="monitor"><img src="/assets/hub/nms-1.jpg" alt="No More Space gameplay: The bridge at dawn: the crew gathers round the black hole" width="800" height="450" loading="eager" draggable="false" /></div>
-            <div class="shot-tag"><b>▶ Gameplay</b><span>The bridge at dawn: the crew gathers round the black hole</span></div>
-          </div>
-          <div class="info">
-            <div class="kind">🎭 Social deduction</div>
-            <h2>No More Space</h2>
-            <p>Your ship is falling into a black hole and something aboard is <em>not human</em>. Do tasks, lie, vote and find the Parasite before there is no more space.</p>
-            <ul class="facts"><li>3–15 players</li><li>4 stories · 72 roles</li><li>3D ship · voice chat</li></ul>
-            <div class="foot"><span class="live" data-live="nms">&nbsp;</span><span class="go">PLAY ▸</span></div>
-          </div>
-        </a>
-
-        <a class="game pts" href="/phase" id="g-pts" data-game="phase">
-          <div class="shot">
-            <div class="monitor"><img src="/assets/hub/phase-1.jpg" alt="Phase to Space gameplay: A robot rolls for a Void Beast while your hand waits" width="800" height="450" loading="lazy" draggable="false" /></div>
-            <div class="shot-tag"><b>▶ Gameplay</b><span>A robot rolls for a Void Beast while your hand waits</span></div>
-          </div>
-          <div class="info">
-            <div class="kind">🃏 Card battler</div>
-            <h2>Phase to Space</h2>
-            <p>Recruit a wacky space crew, slay Void Beasts and Signal Jam your friends' plans. Roll the dice, play your Boosts and be first to a crew of all six disciplines.</p>
-            <ul class="facts"><li>2–6 players</li><li>93 cards · robots to fill seats</li><li>~15 minutes</li></ul>
-            <div class="foot"><span class="live" data-live="phase">&nbsp;</span><span class="go">PLAY ▸</span></div>
-          </div>
-        </a>
-
-        <a class="game rotg" href="/ruler" id="g-rotg" data-game="ruler">
-          <div class="shot">
-            <div class="monitor"><img src="/assets/hub/ruler-1.jpg" alt="Ruler of the Galaxy gameplay: Dice rolled round the Galactic Core, with the shop on the right" width="800" height="450" loading="lazy" draggable="false" /></div>
-            <div class="shot-tag"><b>▶ Gameplay</b><span>Dice rolled round the Galactic Core, with the shop on the right</span></div>
-          </div>
-          <div class="info">
-            <div class="kind">🎲 Dice brawl</div>
-            <h2>Ruler of the Galaxy</h2>
-            <p>Giant contenders fight over the Galactic Core. Roll the quantum dice, take the Core, survive everyone's lasers and be first to 20 Stars, in a full 3D galaxy.</p>
-            <ul class="facts"><li>2–6 players</li><li>6 contenders · 38 cards</li><li>~20 minutes</li></ul>
-            <div class="foot"><span class="live" data-live="ruler">&nbsp;</span><span class="go">PLAY ▸</span></div>
-          </div>
-        </a>
-
-        <a class="game sbz" href="/bonanza" id="g-sbz" data-game="bonanza">
-          <div class="shot">
-            <div class="monitor"><img src="/assets/hub/bonanza-1.jpg" alt="Star Bonanza gameplay: Trading time on a floating space farm" width="800" height="450" loading="lazy" draggable="false" /></div>
-            <div class="shot-tag"><b>▶ Gameplay</b><span>Trading time on a floating space farm</span></div>
-          </div>
-          <div class="info">
-            <div class="kind">🌟 Silly trading card game</div>
-            <h2>Star Bonanza</h2>
-            <p>Grow grumpy rock stars and party-DJ pop stars on your floating space farm, swap them with everyone at once, and cash them in for coins. The bean-trading classic, gone cartoon and cosmic.</p>
-            <ul class="facts"><li>3–7 players</li><li>12 star buddies (one farts)</li><li>~20 minutes</li></ul>
-            <div class="foot"><span class="live" data-live="bonanza">&nbsp;</span><span class="go">PLAY ▸</span></div>
-          </div>
-        </a>
-
-        <a class="game sch" href="/charters" id="g-sch" data-game="charters">
-          <div class="shot">
-            <div class="monitor"><img src="/assets/hub/charters-1.jpg" alt="Star Charters gameplay: A half-charted map: lanes, stations, a black hole and the next tiles" width="800" height="450" loading="lazy" draggable="false" /></div>
-            <div class="shot-tag"><b>▶ Gameplay</b><span>A half-charted map: lanes, stations, a black hole and the next tiles</span></div>
-          </div>
-          <div class="info">
-            <div class="kind">🧩 Tile-laying</div>
-            <h2>Star Charters</h2>
-            <p>Chart the galaxy one tile at a time: build warp lanes and space stations, open wormholes, slingshot round black holes and claim it all with your probes. The castle-building classic, gone 1960s space age.</p>
-            <ul class="facts"><li>2–5 players</li><li>27 kinds of tile · wormholes</li><li>~10–30 minutes</li></ul>
-            <div class="foot"><span class="live" data-live="charters">&nbsp;</span><span class="go">PLAY ▸</span></div>
-          </div>
-        </a>
+        <div class="games" id="games">
+          <a class="game nms" href="/nms" id="g-nms" data-game="nms" aria-label="Play No More Space">
+            <div class="shots">
+              <img src="/assets/hub/nms-1.jpg" alt="" draggable="false" class="on" />
+            </div>
+            <div class="cap">
+              <div class="kind">🎭 Social deduction · 3–15</div>
+              <h2>No More Space</h2>
+              <div class="foot"><span class="live" data-live="nms">&nbsp;</span><span class="go">PLAY ▸</span></div>
+            </div>
+          </a>
+          <a class="game pts" href="/phase" id="g-pts" data-game="phase" aria-label="Play Phase to Space">
+            <div class="shots">
+              <img src="/assets/hub/phase-1.jpg" alt="" draggable="false" loading="lazy" class="on" />
+            </div>
+            <div class="cap">
+              <div class="kind">🃏 Card battler · 2–6</div>
+              <h2>Phase to Space</h2>
+              <div class="foot"><span class="live" data-live="phase">&nbsp;</span><span class="go">PLAY ▸</span></div>
+            </div>
+          </a>
+          <a class="game rotg" href="/ruler" id="g-rotg" data-game="ruler" aria-label="Play Ruler of the Galaxy">
+            <div class="shots">
+              <img src="/assets/hub/ruler-1.jpg" alt="" draggable="false" loading="lazy" class="on" />
+            </div>
+            <div class="cap">
+              <div class="kind">🎲 Dice brawl · 2–6</div>
+              <h2>Ruler of the Galaxy</h2>
+              <div class="foot"><span class="live" data-live="ruler">&nbsp;</span><span class="go">PLAY ▸</span></div>
+            </div>
+          </a>
+          <a class="game sbz" href="/bonanza" id="g-sbz" data-game="bonanza" aria-label="Play Star Bonanza">
+            <div class="shots">
+              <img src="/assets/hub/bonanza-1.jpg" alt="" draggable="false" loading="lazy" class="on" />
+            </div>
+            <div class="cap">
+              <div class="kind">🌟 Trading cards · 3–7</div>
+              <h2>Star Bonanza</h2>
+              <div class="foot"><span class="live" data-live="bonanza">&nbsp;</span><span class="go">PLAY ▸</span></div>
+            </div>
+          </a>
+          <a class="game sch" href="/charters" id="g-sch" data-game="charters" aria-label="Play Star Charters">
+            <div class="shots">
+              <img src="/assets/hub/charters-1.jpg" alt="" draggable="false" loading="lazy" class="on" />
+            </div>
+            <div class="cap">
+              <div class="kind">🧩 Tile laying · 2–5</div>
+              <h2>Star Charters</h2>
+              <div class="foot"><span class="live" data-live="charters">&nbsp;</span><span class="go">PLAY ▸</span></div>
+            </div>
+          </a>
         </div>
-        <button class="nav next" type="button" aria-label="Next game">›</button>
+        <button class="nav prev" type="button" aria-label="Previous game"></button>
+        <button class="nav next" type="button" aria-label="Next game"></button>
         <div class="dots" id="dots" role="tablist" aria-label="Games"></div>
       </section>
-
-      <section class="join card-lite">
-        <label for="hub-code">Got a code from a friend?</label>
-        <div class="join-row">
-          <input id="hub-code" maxlength="4" placeholder="CODE" autocapitalize="characters" autocomplete="off" spellcheck="false" />
-          <button id="hub-join" type="button">Join ▸</button>
-        </div>
-        <div id="hub-msg" class="msg" role="status"></div>
-      </section>
-
-      <footer class="hub-foot">Every game is free and runs in your browser. Invite links and QR codes from any game work from here too.</footer>
     </main>
 
     <script type="module" src="/js/hub.js"></script>

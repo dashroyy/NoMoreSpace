@@ -65,124 +65,153 @@ if (reduce) frame(performance.now());
 else requestAnimationFrame(frame);
 
 // ---------------------------------------------------------------------------
-// The carousel: swipe, drag, arrow keys, arrows and dots. The slide in the middle is the live one; clicking a
-// slide beside it brings it to the middle, clicking the live one goes to the game.
+// The slideshow: one game at a time, sliding on by itself every few seconds (it waits while you are pointing
+// at it or have just used it). Swipe, drag, the arrow keys, the arrows and the dots move it; it goes round and
+// round. Clicking the game on show plays it; clicking one beside it brings it in.
 // ---------------------------------------------------------------------------
 const track = document.getElementById('games');
 const slides = [...track.querySelectorAll('a.game')];
 const dotsBox = document.getElementById('dots');
-const prev = document.querySelector('.nav.prev');
-const next = document.querySelector('.nav.next');
-const ACCENTS = { nms: '#ff7a3d', phase: '#ff6bd6', rotg: '#00f0ff', sbz: '#ffd36b', sch: '#f08a3c' };
-let current = -1;
-let target = 0; // where the last arrow or key press is heading (so quick presses add up)
-let lastGo = 0;
+const HOLD = 6500; // ms on each game
+const SHOT_HOLD = 3200; // ms on each picture, when a game has more than one
+const n = slides.length;
+let current = 0;
+let paused = false;
+let idleUntil = 0;
+let timer = null;
+dotsBox.style.setProperty('--hold', `${HOLD}ms`);
 
-const names = slides.map((s) => s.querySelector('h2')?.textContent || 'Game');
 const dots = slides.map((s, i) => {
   const b = document.createElement('button');
   b.type = 'button';
   b.setAttribute('role', 'tab');
-  b.setAttribute('aria-label', names[i]);
-  b.addEventListener('click', () => go(i));
+  b.setAttribute('aria-label', s.querySelector('h2')?.textContent || `Game ${i + 1}`);
+  b.append(document.createElement('i'));
+  b.addEventListener('click', () => (touched(), show(i)));
   dotsBox.append(b);
   return b;
 });
 
-function go(i) {
-  i = Math.max(0, Math.min(slides.length - 1, i));
-  target = i;
-  lastGo = Date.now();
-  const s = slides[i];
-  track.scrollTo({ left: s.offsetLeft - (track.clientWidth - s.offsetWidth) / 2, behavior: reduce ? 'auto' : 'smooth' });
+// where slide k sits from the one on show (-2 .. 2: it goes round)
+function offOf(k) {
+  let off = k - current;
+  if (off > n / 2) off -= n;
+  if (off < -n / 2) off += n;
+  return off;
 }
 
-function setCurrent(i) {
-  if (i === current) return;
-  current = i;
+function show(i) {
+  current = ((i % n) + n) % n;
   slides.forEach((s, k) => {
-    s.classList.toggle('active', k === i);
-    s.setAttribute('aria-current', k === i ? 'true' : 'false');
-    s.tabIndex = k === i ? 0 : -1;
+    const off = offOf(k);
+    s.style.setProperty('--off', off);
+    s.classList.toggle('active', off === 0);
+    s.classList.toggle('far', Math.abs(off) > 1);
+    s.tabIndex = off === 0 ? 0 : -1;
+    s.setAttribute('aria-hidden', String(off !== 0));
   });
   dots.forEach((d, k) => {
-    d.classList.toggle('on', k === i);
-    d.setAttribute('aria-selected', String(k === i));
+    d.classList.toggle('on', k === current);
+    d.setAttribute('aria-selected', String(k === current));
   });
-  prev.disabled = i === 0;
-  next.disabled = i === slides.length - 1;
-  const key = [...slides[i].classList].find((c) => ACCENTS[c]);
-  document.body.style.setProperty('--accent-now', ACCENTS[key] || '#6cf0ff');
+  // restart the fill on the active dot
+  dotsBox.classList.remove('playing');
+  void dotsBox.offsetWidth;
+  if (!reduce && !paused) dotsBox.classList.add('playing');
+  const accent = getComputedStyle(slides[current]).getPropertyValue('--accent').trim();
+  document.body.style.setProperty('--accent-now', accent || '#6cf0ff');
+  schedule();
 }
 
-function nearest() {
-  const mid = track.scrollLeft + track.clientWidth / 2;
-  let best = 0;
-  let bestD = Infinity;
-  slides.forEach((s, i) => {
-    const d = Math.abs(s.offsetLeft + s.offsetWidth / 2 - mid);
-    if (d < bestD) {
-      bestD = d;
-      best = i;
-    }
-  });
-  return best;
+function schedule() {
+  clearTimeout(timer);
+  if (reduce) return;
+  timer = setTimeout(() => {
+    if (paused || Date.now() < idleUntil) return schedule();
+    show(current + 1);
+  }, Math.max(HOLD, idleUntil - Date.now()));
 }
-track.addEventListener('scroll', () => {
-  const n = nearest();
-  setCurrent(n);
-  if (Date.now() - lastGo > 1200) target = n; // (a swipe or drag: follow it)
-}, { passive: true });
-prev.addEventListener('click', () => go(target - 1));
-next.addEventListener('click', () => go(target + 1));
+// someone is using it: wait a while before sliding on again
+function touched() {
+  idleUntil = Date.now() + 12000;
+  dotsBox.classList.remove('playing');
+}
+
+track.addEventListener('pointerenter', (e) => {
+  if (e.pointerType !== 'mouse') return;
+  paused = true;
+  dotsBox.classList.remove('playing');
+});
+track.addEventListener('pointerleave', () => {
+  paused = false;
+  schedule();
+});
+document.querySelector('.nav.prev').addEventListener('click', () => (touched(), show(current - 1)));
+document.querySelector('.nav.next').addEventListener('click', () => (touched(), show(current + 1)));
 addEventListener('keydown', (e) => {
   if (e.target.closest?.('input, textarea')) return;
-  if (e.key === 'ArrowRight') go(target + 1);
-  else if (e.key === 'ArrowLeft') go(target - 1);
-  else if (e.key === 'Home') go(0);
-  else if (e.key === 'End') go(slides.length - 1);
+  if (e.key === 'ArrowRight') show(current + 1);
+  else if (e.key === 'ArrowLeft') show(current - 1);
   else return;
+  touched();
   e.preventDefault();
 });
-addEventListener('resize', () => go(target));
 
-// a mouse drags the track like a finger would (touch already scrolls by itself)
+// swipe (or drag with the mouse): the slides follow the finger, and let go past a little way to change
 let drag = null;
+let justDragged = false;
 track.addEventListener('pointerdown', (e) => {
-  if (e.pointerType !== 'mouse' || e.button !== 0) return;
-  drag = { x: e.clientX, left: track.scrollLeft, moved: false };
+  if (e.pointerType === 'mouse' && e.button !== 0) return;
+  drag = { x: e.clientX, y: e.clientY, dx: 0, moved: false, id: e.pointerId };
 });
 addEventListener('pointermove', (e) => {
-  if (!drag) return;
-  const dx = e.clientX - drag.x;
-  if (!drag.moved && Math.abs(dx) > 6) {
+  if (!drag || e.pointerId !== drag.id) return;
+  drag.dx = e.clientX - drag.x;
+  if (!drag.moved && Math.abs(drag.dx) > 8 && Math.abs(drag.dx) > Math.abs(e.clientY - drag.y)) {
     drag.moved = true;
     track.classList.add('dragging');
+    touched();
   }
-  if (drag.moved) track.scrollLeft = drag.left - dx;
+  if (drag.moved) {
+    const w = slides[current].offsetWidth + 40;
+    slides.forEach((s, k) => s.style.setProperty('--off', offOf(k) + drag.dx / w));
+  }
 });
-addEventListener('pointerup', () => {
+const endDrag = () => {
   if (!drag) return;
-  const moved = drag.moved;
+  const d = drag;
   drag = null;
+  if (!d.moved) return;
   track.classList.remove('dragging');
-  if (moved) {
-    justDragged = true;
-    setTimeout(() => (justDragged = false), 60);
-    go(nearest());
-  }
-});
-let justDragged = false;
-for (const [i, s] of slides.entries()) {
+  justDragged = true;
+  setTimeout(() => (justDragged = false), 80);
+  show(current + (d.dx < -50 ? 1 : d.dx > 50 ? -1 : 0));
+};
+addEventListener('pointerup', endDrag);
+addEventListener('pointercancel', endDrag);
+slides.forEach((s, i) => {
   s.addEventListener('click', (e) => {
-    if (justDragged || i !== current) {
+    if (justDragged || !s.classList.contains('active')) {
       e.preventDefault();
-      if (!justDragged) go(i);
+      if (!justDragged) {
+        touched();
+        show(i);
+      }
     }
   });
-}
-setCurrent(0);
-track.scrollLeft = 0;
+});
+
+// a game with more than one picture flicks through them while it is on show
+setInterval(() => {
+  if (reduce) return;
+  const imgs = [...slides[current].querySelectorAll('.shots img')];
+  if (imgs.length < 2) return;
+  const on = imgs.findIndex((im) => im.classList.contains('on'));
+  imgs[on].classList.remove('on');
+  imgs[(on + 1) % imgs.length].classList.add('on');
+}, SHOT_HOLD);
+
+show(0);
 
 // ---------------------------------------------------------------------------
 // Live counts
@@ -249,14 +278,14 @@ async function join() {
   const code = input.value.toUpperCase().trim();
   msg.className = 'msg';
   if (code.length !== 4) {
-    msg.textContent = 'Codes are 4 letters.';
+    msg.textContent = '4 letters';
     return;
   }
   msg.textContent = 'Looking…';
   try {
     const r = await fetch(`/api/code?code=${encodeURIComponent(code)}`, { cache: 'no-store' }).then((x) => x.json());
     if (!r.game) {
-      msg.textContent = 'No game with that code right now. Check the letters?';
+      msg.textContent = 'No game with that code';
       return;
     }
     msg.className = 'msg ok';
@@ -264,10 +293,12 @@ async function join() {
     msg.textContent = `Boarding ${where[1]}…`;
     location.href = `${where[0]}?join=${code}`;
   } catch {
-    msg.textContent = 'Could not reach the server. Try again.';
+    msg.textContent = 'Offline? Try again';
   }
 }
-document.getElementById('hub-join').addEventListener('click', join);
-input.addEventListener('keydown', (e) => e.key === 'Enter' && join());
+document.getElementById('join').addEventListener('submit', (e) => {
+  e.preventDefault();
+  join();
+});
 const params = new URLSearchParams(location.search);
 if (params.get('code')) input.value = params.get('code').toUpperCase().slice(0, 4);
