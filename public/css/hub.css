@@ -54,7 +54,7 @@ body::after {
 @keyframes nudge { 50% { transform: translateY(-2px); } }
 
 /* ---- the games ---- */
-.games { width: 100%; display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 22px; perspective: 1400px; }
+/* (the old one-row grid became the carousel at the bottom of this file) */
 .game {
   position: relative; display: flex; flex-direction: column; overflow: hidden; color: inherit; text-decoration: none; min-height: 520px;
   border: 1px solid rgba(108, 240, 255, 0.25); background: linear-gradient(180deg, rgba(10, 16, 34, 0.92), rgba(4, 6, 14, 0.95));
@@ -213,3 +213,74 @@ a.game:hover .go { transform: translateX(4px); filter: brightness(1.1); }
 @keyframes scflame { 50% { transform: scaleY(0.6); } }
 .sc-gem { animation: scgem 2s ease-in-out infinite; }
 @keyframes scgem { 50% { translate: 0 -8px; } }
+
+
+/* ===== the game picker: a side-scrolling carousel with a gameplay screen on every slide ===== */
+body { --accent-now: #6cf0ff; }
+body::before { content: ''; position: fixed; inset: 0; z-index: 1; pointer-events: none; background: radial-gradient(ellipse 70% 55% at 50% 52%, color-mix(in srgb, var(--accent-now) 22%, transparent), transparent 70%); transition: background 0.6s; }
+.hub { max-width: none; width: 100%; padding: 26px 0 26px; gap: 14px; }
+.hub-head { padding: 0 20px; }
+.logo { font-size: clamp(1.7rem, 5vw, 3.2rem); }
+.hint { margin: 4px 0 0; font-family: var(--font-title); font-size: 0.62rem; letter-spacing: 0.2em; text-transform: uppercase; color: var(--muted); animation: blink 2.4s infinite; }
+.resume { padding: 0 20px; }
+.join, .hub-foot { margin-inline: 20px; }
+
+.stage { position: relative; width: 100%; --slide: min(1040px, 88vw); }
+.games {
+  display: flex; gap: 26px; overflow-x: auto; overflow-y: hidden; padding: 26px calc((100% - var(--slide)) / 2) 22px;
+  scroll-snap-type: x mandatory; scroll-behavior: smooth; scrollbar-width: none; outline: none; overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+}
+.games::-webkit-scrollbar { display: none; }
+.games.dragging { scroll-snap-type: none; scroll-behavior: auto; cursor: grabbing; }
+.games.dragging a { pointer-events: none; }
+.game {
+  flex: 0 0 var(--slide); min-height: 0; scroll-snap-align: center; display: grid; grid-template-columns: 1.55fr 1fr; align-items: stretch;
+  transform: scale(0.84); opacity: 0.4; filter: saturate(0.5) blur(0.6px); transition: transform 0.45s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.45s, filter 0.45s, box-shadow 0.25s, border-color 0.25s;
+  user-select: none; -webkit-user-drag: none;
+}
+.game.active { transform: none; opacity: 1; filter: none; border-color: var(--accent, var(--phosphor)); box-shadow: 0 0 0 1px var(--accent, var(--phosphor)), 0 0 60px color-mix(in srgb, var(--accent, #6cf0ff) 40%, transparent); }
+a.game:hover { box-shadow: none; }
+a.game.active:hover { box-shadow: 0 0 0 1px var(--accent), 0 0 80px color-mix(in srgb, var(--accent, #6cf0ff) 55%, transparent); }
+.shot { position: relative; min-width: 0; display: flex; flex-direction: column; padding: 18px 0 14px 18px; gap: 10px; }
+.monitor { position: relative; overflow: hidden; border: 3px solid #1c2342; border-radius: 6px; background: #000; box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.12), 0 14px 40px rgba(0, 0, 0, 0.6); aspect-ratio: 16 / 9; }
+.monitor img { display: block; width: 100%; height: 100%; object-fit: cover; transform: scale(1.02); transform-origin: 50% 40%; }
+.game.active .monitor img { animation: drift 14s ease-in-out infinite alternate; }
+@keyframes drift { from { transform: scale(1.02) translate(0, 0); } to { transform: scale(1.1) translate(-1.5%, -1.5%); } }
+.monitor::after { content: ''; position: absolute; inset: 0; pointer-events: none; background: repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.14) 0 1px, transparent 1px 3px), linear-gradient(115deg, transparent 40%, rgba(255, 255, 255, 0.07) 50%, transparent 60%); }
+.shot-tag { display: flex; flex-direction: column; gap: 2px; font-size: 1rem; color: #aeb6dc; }
+.shot-tag b { font-family: var(--font-title); font-weight: 400; font-size: 0.7rem; letter-spacing: 0.16em; text-transform: uppercase; color: var(--accent, var(--phosphor)); }
+.info { padding: 22px 24px 22px 22px; background: linear-gradient(90deg, transparent, rgba(2, 3, 8, 0.55)); }
+.info p { font-size: 1.1rem; }
+
+.nav { position: absolute; top: 50%; z-index: 5; width: 54px; height: 54px; margin-top: -40px; display: grid; place-items: center; padding: 0 0 6px; font: 400 2.2rem/1 var(--font-title); color: #02141d; cursor: pointer; background: var(--accent-now); border: 0; clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px); opacity: 0.92; transition: transform 0.15s, opacity 0.2s, filter 0.2s; }
+.nav:hover { transform: scale(1.1); filter: brightness(1.12); }
+.nav:disabled { opacity: 0.18; cursor: default; transform: none; }
+.nav.prev { left: max(10px, calc(50% - var(--slide) / 2 - 76px)); }
+.nav.next { right: max(10px, calc(50% - var(--slide) / 2 - 76px)); }
+.dots { display: flex; justify-content: center; gap: 10px; padding-top: 2px; }
+.dots button { width: 12px; height: 12px; padding: 0; border: 1px solid rgba(255, 255, 255, 0.5); background: transparent; cursor: pointer; transform: rotate(45deg); transition: background 0.2s, transform 0.2s, border-color 0.2s; }
+.dots button.on { background: var(--accent-now); border-color: var(--accent-now); transform: rotate(45deg) scale(1.35); }
+.dots button:focus-visible, .nav:focus-visible { outline: 3px solid #fff; outline-offset: 3px; }
+
+@media (max-width: 900px) {
+  .stage { --slide: 86vw; }
+  .game { grid-template-columns: 1fr; }
+  .shot { padding: 12px 12px 0; }
+  .shot-tag span { display: none; }
+  .info { padding: 10px 16px 16px; background: linear-gradient(180deg, transparent, rgba(2, 3, 8, 0.6)); }
+  .info p { font-size: 1rem; }
+  .nav { display: none; }
+  .join, .hub-foot { margin-inline: 16px; }
+}
+@media (max-width: 560px) { .hint { display: none; } .games { gap: 14px; } .facts li { font-size: 0.85rem; } }
+@media (prefers-reduced-motion: reduce) { .games { scroll-behavior: auto; } }
+
+/* a compact header so the slide fits on a laptop screen, and arrows drawn in CSS */
+.eyebrow { display: none; }
+.logo { margin: 0; font-size: clamp(1.5rem, 4vw, 2.6rem); }
+.logo span { display: inline; margin-left: 0.3em; }
+.tagline { margin: 2px 0 0; font-size: 1.15rem; }
+.nav { font-size: 0; }
+.nav::before { content: ''; width: 16px; height: 16px; border: solid #02141d; border-width: 0 0 5px 5px; transform: translateX(4px) rotate(45deg); }
+.nav.next::before { transform: translateX(-4px) rotate(-135deg); }

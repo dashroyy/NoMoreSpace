@@ -65,18 +65,124 @@ if (reduce) frame(performance.now());
 else requestAnimationFrame(frame);
 
 // ---------------------------------------------------------------------------
-// Cards tilt towards the pointer
+// The carousel: swipe, drag, arrow keys, arrows and dots. The slide in the middle is the live one; clicking a
+// slide beside it brings it to the middle, clicking the live one goes to the game.
 // ---------------------------------------------------------------------------
-for (const card of document.querySelectorAll('a.game')) {
-  card.addEventListener('pointermove', (e) => {
-    if (e.pointerType !== 'mouse') return;
-    const r = card.getBoundingClientRect();
-    const x = (e.clientX - r.left) / r.width - 0.5;
-    const y = (e.clientY - r.top) / r.height - 0.5;
-    card.style.transform = `rotateY(${x * 7}deg) rotateX(${-y * 6}deg) translateZ(8px)`;
-  });
-  card.addEventListener('pointerleave', () => (card.style.transform = ''));
+const track = document.getElementById('games');
+const slides = [...track.querySelectorAll('a.game')];
+const dotsBox = document.getElementById('dots');
+const prev = document.querySelector('.nav.prev');
+const next = document.querySelector('.nav.next');
+const ACCENTS = { nms: '#ff7a3d', phase: '#ff6bd6', rotg: '#00f0ff', sbz: '#ffd36b', sch: '#f08a3c' };
+let current = -1;
+let target = 0; // where the last arrow or key press is heading (so quick presses add up)
+let lastGo = 0;
+
+const names = slides.map((s) => s.querySelector('h2')?.textContent || 'Game');
+const dots = slides.map((s, i) => {
+  const b = document.createElement('button');
+  b.type = 'button';
+  b.setAttribute('role', 'tab');
+  b.setAttribute('aria-label', names[i]);
+  b.addEventListener('click', () => go(i));
+  dotsBox.append(b);
+  return b;
+});
+
+function go(i) {
+  i = Math.max(0, Math.min(slides.length - 1, i));
+  target = i;
+  lastGo = Date.now();
+  const s = slides[i];
+  track.scrollTo({ left: s.offsetLeft - (track.clientWidth - s.offsetWidth) / 2, behavior: reduce ? 'auto' : 'smooth' });
 }
+
+function setCurrent(i) {
+  if (i === current) return;
+  current = i;
+  slides.forEach((s, k) => {
+    s.classList.toggle('active', k === i);
+    s.setAttribute('aria-current', k === i ? 'true' : 'false');
+    s.tabIndex = k === i ? 0 : -1;
+  });
+  dots.forEach((d, k) => {
+    d.classList.toggle('on', k === i);
+    d.setAttribute('aria-selected', String(k === i));
+  });
+  prev.disabled = i === 0;
+  next.disabled = i === slides.length - 1;
+  const key = [...slides[i].classList].find((c) => ACCENTS[c]);
+  document.body.style.setProperty('--accent-now', ACCENTS[key] || '#6cf0ff');
+}
+
+function nearest() {
+  const mid = track.scrollLeft + track.clientWidth / 2;
+  let best = 0;
+  let bestD = Infinity;
+  slides.forEach((s, i) => {
+    const d = Math.abs(s.offsetLeft + s.offsetWidth / 2 - mid);
+    if (d < bestD) {
+      bestD = d;
+      best = i;
+    }
+  });
+  return best;
+}
+track.addEventListener('scroll', () => {
+  const n = nearest();
+  setCurrent(n);
+  if (Date.now() - lastGo > 1200) target = n; // (a swipe or drag: follow it)
+}, { passive: true });
+prev.addEventListener('click', () => go(target - 1));
+next.addEventListener('click', () => go(target + 1));
+addEventListener('keydown', (e) => {
+  if (e.target.closest?.('input, textarea')) return;
+  if (e.key === 'ArrowRight') go(target + 1);
+  else if (e.key === 'ArrowLeft') go(target - 1);
+  else if (e.key === 'Home') go(0);
+  else if (e.key === 'End') go(slides.length - 1);
+  else return;
+  e.preventDefault();
+});
+addEventListener('resize', () => go(target));
+
+// a mouse drags the track like a finger would (touch already scrolls by itself)
+let drag = null;
+track.addEventListener('pointerdown', (e) => {
+  if (e.pointerType !== 'mouse' || e.button !== 0) return;
+  drag = { x: e.clientX, left: track.scrollLeft, moved: false };
+});
+addEventListener('pointermove', (e) => {
+  if (!drag) return;
+  const dx = e.clientX - drag.x;
+  if (!drag.moved && Math.abs(dx) > 6) {
+    drag.moved = true;
+    track.classList.add('dragging');
+  }
+  if (drag.moved) track.scrollLeft = drag.left - dx;
+});
+addEventListener('pointerup', () => {
+  if (!drag) return;
+  const moved = drag.moved;
+  drag = null;
+  track.classList.remove('dragging');
+  if (moved) {
+    justDragged = true;
+    setTimeout(() => (justDragged = false), 60);
+    go(nearest());
+  }
+});
+let justDragged = false;
+for (const [i, s] of slides.entries()) {
+  s.addEventListener('click', (e) => {
+    if (justDragged || i !== current) {
+      e.preventDefault();
+      if (!justDragged) go(i);
+    }
+  });
+}
+setCurrent(0);
+track.scrollLeft = 0;
 
 // ---------------------------------------------------------------------------
 // Live counts

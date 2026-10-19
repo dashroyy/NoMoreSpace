@@ -22,19 +22,19 @@
         <div class="eyebrow">▌ free · online · with friends</div>
         <h1 class="logo">SPACE<span>ARCADE</span></h1>
         <p class="tagline">Pick a game. Grab your mates. Mind the black hole.</p>
+        <p class="hint">◀ swipe or use the arrow keys ▶</p>
       </header>
 
       <!-- a game you were in a moment ago -->
       <section id="resume" class="resume" hidden></section>
 
-      <section class="games" aria-label="Choose a game">
+      <section class="stage" aria-roledescription="carousel" aria-label="Choose a game">
+        <button class="nav prev" type="button" aria-label="Previous game">‹</button>
+        <div class="games" id="games" tabindex="0">
         <a class="game nms" href="/nms" id="g-nms" data-game="nms">
-          <div class="art" aria-hidden="true">
-            <div class="hole"><div class="tilt"><i class="disk d1"></i><i class="disk d2"></i></div><i class="lens"></i><i class="core"></i></div>
-            <span class="orbit o1"><b>🚀</b></span>
-            <span class="orbit o2"><b>👾</b></span>
-            <span class="orbit o3"><b>🧑‍🚀</b></span>
-            <span class="ping p1">✦</span><span class="ping p2">✦</span>
+          <div class="shot">
+            <div class="monitor"><img src="/assets/hub/nms-1.jpg" alt="No More Space gameplay: The bridge at dawn: the crew gathers round the black hole" width="800" height="450" loading="eager" draggable="false" /></div>
+            <div class="shot-tag"><b>▶ Gameplay</b><span>The bridge at dawn: the crew gathers round the black hole</span></div>
           </div>
           <div class="info">
             <div class="kind">🎭 Social deduction</div>
@@ -46,15 +46,9 @@
         </a>
 
         <a class="game pts" href="/phase" id="g-pts" data-game="phase">
-          <div class="art" aria-hidden="true">
-            <div class="fan">
-              <div class="mini c1"><img src="/assets/phase/art/slab.webp" alt="" /><u>Marine</u></div>
-              <div class="mini c2"><img src="/assets/phase/art/kraken.webp" alt="" /><u>Void Beast</u></div>
-              <div class="mini c3"><img src="/assets/phase/art/karaoke.webp" alt="" /><u>Broadcaster</u></div>
-            </div>
-            <div class="dice d-a"><i></i><i></i><i></i><i></i><i></i><i></i></div>
-            <div class="dice d-b"><i></i><i></i><i></i><i></i><i></i><i></i></div>
-            <span class="ping p1">✦</span><span class="ping p2">✦</span><span class="ping p3">✦</span>
+          <div class="shot">
+            <div class="monitor"><img src="/assets/hub/phase-1.jpg" alt="Phase to Space gameplay: A robot rolls for a Void Beast while your hand waits" width="800" height="450" loading="lazy" draggable="false" /></div>
+            <div class="shot-tag"><b>▶ Gameplay</b><span>A robot rolls for a Void Beast while your hand waits</span></div>
           </div>
           <div class="info">
             <div class="kind">🃏 Card battler</div>
@@ -66,13 +60,9 @@
         </a>
 
         <a class="game rotg" href="/ruler" id="g-rotg" data-game="ruler">
-          <div class="art" aria-hidden="true">
-            <div class="galaxy-art"><i class="g-arm a1"></i><i class="g-arm a2"></i><i class="g-ring r1"></i><i class="g-ring r2"></i><i class="g-core"></i></div>
-            <span class="orbit q1"><b>🤖</b></span>
-            <span class="orbit q2"><b>🦑</b></span>
-            <span class="orbit q3"><b>☀️</b></span>
-            <span class="zap z1"></span><span class="zap z2"></span>
-            <span class="ping p1">✦</span><span class="ping p2">✦</span><span class="ping p3">✦</span>
+          <div class="shot">
+            <div class="monitor"><img src="/assets/hub/ruler-1.jpg" alt="Ruler of the Galaxy gameplay: Dice rolled round the Galactic Core, with the shop on the right" width="800" height="450" loading="lazy" draggable="false" /></div>
+            <div class="shot-tag"><b>▶ Gameplay</b><span>Dice rolled round the Galactic Core, with the shop on the right</span></div>
           </div>
           <div class="info">
             <div class="kind">🎲 Dice brawl</div>
@@ -84,28 +74,9 @@
         </a>
 
         <a class="game sbz" href="/bonanza" id="g-sbz" data-game="bonanza">
-          <div class="art" aria-hidden="true">
-            <svg class="sb-scene" viewBox="0 0 300 230">
-              <polygon points="122,92 178,92 214,188 86,188" fill="#fff3a8" opacity="0.35" />
-              <path d="M44 184 Q150 290 256 184" fill="#8a7cc4" stroke="#2d1b4e" stroke-width="5" stroke-linejoin="round" />
-              <ellipse cx="150" cy="182" rx="112" ry="28" fill="#7fe0a8" stroke="#2d1b4e" stroke-width="5" />
-              <ellipse cx="104" cy="182" rx="34" ry="10" fill="#7a4a2c" stroke="#2d1b4e" stroke-width="4" />
-              <ellipse cx="196" cy="182" rx="34" ry="10" fill="#7a4a2c" stroke="#2d1b4e" stroke-width="4" />
-              <circle cx="58" cy="176" r="9" fill="#3fc48a" stroke="#2d1b4e" stroke-width="3" /><circle cx="246" cy="178" r="8" fill="#ff5a6e" stroke="#2d1b4e" stroke-width="3" />
-              <g class="sb-ufo">
-                <ellipse cx="150" cy="70" rx="26" ry="22" fill="#a8f4ff" stroke="#2d1b4e" stroke-width="4" />
-                <circle cx="150" cy="66" r="12" fill="#7dff8a" stroke="#2d1b4e" stroke-width="3" /><circle cx="145" cy="64" r="3" fill="#14121f" /><circle cx="155" cy="64" r="3" fill="#14121f" />
-                <ellipse cx="150" cy="88" rx="58" ry="15" fill="#d4d9ff" stroke="#2d1b4e" stroke-width="5" />
-                <ellipse cx="150" cy="86" rx="58" ry="6" fill="#ff7ac6" stroke="#2d1b4e" stroke-width="3" />
-                <circle cx="112" cy="90" r="4" fill="#ffe066" /><circle cx="150" cy="96" r="4" fill="#7ff0ff" /><circle cx="188" cy="90" r="4" fill="#ffe066" />
-              </g>
-            </svg>
-            <svg class="sb-buddy b1" viewBox="0 0 120 120"><path d="M60 8l14 30 32 4-23 23 6 33-29-16-29 16 6-33L14 42l32-4z" fill="#ff5a4e" stroke="#2d1b4e" stroke-width="7" stroke-linejoin="round"/><ellipse cx="49" cy="58" rx="5" ry="7" fill="#2d1b4e"/><ellipse cx="71" cy="58" rx="5" ry="7" fill="#2d1b4e"/><circle cx="47" cy="55" r="2" fill="#fff"/><circle cx="69" cy="55" r="2" fill="#fff"/><path d="M51 70q9 8 18 0" fill="none" stroke="#2d1b4e" stroke-width="4" stroke-linecap="round"/><ellipse cx="40" cy="69" rx="5" ry="3" fill="#ff8fb8"/><ellipse cx="80" cy="69" rx="5" ry="3" fill="#ff8fb8"/><path d="M38 26a22 22 0 0 1 44 0z" fill="#ffcf2e" stroke="#2d1b4e" stroke-width="5"/></svg>
-            <svg class="sb-buddy b2" viewBox="0 0 120 120"><path d="M60 8l14 30 32 4-23 23 6 33-29-16-29 16 6-33L14 42l32-4z" fill="#a66bff" stroke="#2d1b4e" stroke-width="7" stroke-linejoin="round"/><ellipse cx="49" cy="58" rx="5" ry="7" fill="#2d1b4e"/><ellipse cx="71" cy="58" rx="5" ry="7" fill="#2d1b4e"/><circle cx="47" cy="55" r="2" fill="#fff"/><circle cx="69" cy="55" r="2" fill="#fff"/><path d="M51 70q9 8 18 0" fill="none" stroke="#2d1b4e" stroke-width="4" stroke-linecap="round"/><ellipse cx="40" cy="69" rx="5" ry="3" fill="#ff8fb8"/><ellipse cx="80" cy="69" rx="5" ry="3" fill="#ff8fb8"/><path d="M24 48a36 36 0 0 1 72 0" fill="none" stroke="#2b2b3a" stroke-width="7"/><rect x="14" y="42" width="14" height="22" rx="5" fill="#ff4fd8" stroke="#2d1b4e" stroke-width="4"/><rect x="92" y="42" width="14" height="22" rx="5" fill="#ff4fd8" stroke="#2d1b4e" stroke-width="4"/></svg>
-            <svg class="sb-buddy b3" viewBox="0 0 120 120"><path d="M60 8l14 30 32 4-23 23 6 33-29-16-29 16 6-33L14 42l32-4z" fill="#3fe0d0" stroke="#2d1b4e" stroke-width="7" stroke-linejoin="round"/><ellipse cx="49" cy="58" rx="5" ry="7" fill="#2d1b4e"/><ellipse cx="71" cy="58" rx="5" ry="7" fill="#2d1b4e"/><circle cx="47" cy="55" r="2" fill="#fff"/><circle cx="69" cy="55" r="2" fill="#fff"/><path d="M51 70q9 8 18 0" fill="none" stroke="#2d1b4e" stroke-width="4" stroke-linecap="round"/><ellipse cx="40" cy="69" rx="5" ry="3" fill="#ff8fb8"/><ellipse cx="80" cy="69" rx="5" ry="3" fill="#ff8fb8"/><rect x="20" y="0" width="80" height="6" rx="3" fill="#a7afc2" stroke="#2d1b4e" stroke-width="3"/><rect x="16" y="-8" width="12" height="22" rx="3" fill="#3a3f55"/><rect x="92" y="-8" width="12" height="22" rx="3" fill="#3a3f55"/></svg>
-            <svg class="sb-buddy b4" viewBox="0 0 120 120"><path d="M60 8l14 30 32 4-23 23 6 33-29-16-29 16 6-33L14 42l32-4z" fill="#ffd23f" stroke="#2d1b4e" stroke-width="7" stroke-linejoin="round"/><ellipse cx="49" cy="58" rx="5" ry="7" fill="#2d1b4e"/><ellipse cx="71" cy="58" rx="5" ry="7" fill="#2d1b4e"/><circle cx="47" cy="55" r="2" fill="#fff"/><circle cx="69" cy="55" r="2" fill="#fff"/><path d="M51 70q9 8 18 0" fill="none" stroke="#2d1b4e" stroke-width="4" stroke-linecap="round"/><ellipse cx="40" cy="69" rx="5" ry="3" fill="#ff8fb8"/><ellipse cx="80" cy="69" rx="5" ry="3" fill="#ff8fb8"/></svg>
-            <span class="sb-coin c1">★</span><span class="sb-coin c2">★</span><span class="sb-coin c3">★</span>
-            <span class="ping p1">✦</span><span class="ping p2">✦</span><span class="ping p3">✦</span>
+          <div class="shot">
+            <div class="monitor"><img src="/assets/hub/bonanza-1.jpg" alt="Star Bonanza gameplay: Trading time on a floating space farm" width="800" height="450" loading="lazy" draggable="false" /></div>
+            <div class="shot-tag"><b>▶ Gameplay</b><span>Trading time on a floating space farm</span></div>
           </div>
           <div class="info">
             <div class="kind">🌟 Silly trading card game</div>
@@ -117,36 +88,9 @@
         </a>
 
         <a class="game sch" href="/charters" id="g-sch" data-game="charters">
-          <div class="art" aria-hidden="true">
-            <svg class="sc-scene" viewBox="0 0 300 230">
-              <path class="sc-burst" d="M150 18l9 66 62 14-62 14-9 66-9-66-62-14 62-14z" fill="#ffc93c" opacity="0.28" />
-              <g transform="translate(150 132) scale(1 0.58) rotate(45)">
-                <rect x="-64" y="-64" width="62" height="62" rx="5" fill="#1c2547" stroke="#e8d6ab" stroke-width="5" />
-                <path d="M-64 -64h40l-40 40z" fill="#f3ecd9" stroke="#2a9d8f" stroke-width="4" stroke-linejoin="round" />
-                <rect x="0" y="-64" width="62" height="62" rx="5" fill="#1c2547" stroke="#e8d6ab" stroke-width="5" />
-                <path d="M-2 -33h64" stroke="#ffc93c" stroke-width="7" stroke-linecap="round" />
-                <path class="sc-dash" d="M-2 -33h64" stroke="#ff9a1f" stroke-width="7" stroke-dasharray="6 10" />
-                <rect x="-64" y="0" width="62" height="62" rx="5" fill="#1c2547" stroke="#e8d6ab" stroke-width="5" />
-                <circle cx="-33" cy="31" r="21" fill="none" stroke="#ff9a6a" stroke-width="6" opacity="0.8" />
-                <circle cx="-33" cy="31" r="12" fill="#030308" />
-                <circle cx="-48" cy="12" r="1.8" fill="#fff" /><circle cx="-14" cy="50" r="1.5" fill="#fff" /><circle cx="40" cy="-14" r="1.6" fill="#fff" />
-              </g>
-              <g class="sc-drop">
-                <g transform="translate(150 132) scale(1 0.58) rotate(45)">
-                  <rect x="0" y="0" width="62" height="62" rx="5" fill="#1c2547" stroke="#e8d6ab" stroke-width="5" />
-                  <path d="M31 0v62" stroke="#ffc93c" stroke-width="7" stroke-linecap="round" />
-                  <circle cx="31" cy="31" r="12" fill="none" stroke="#c27bff" stroke-width="5" />
-                </g>
-              </g>
-              <g class="sc-rocket" transform="translate(206 58) rotate(18)">
-                <path d="M0 -26c10 8 12 22 9 34H-9c-3-12-1-26 9-34z" fill="#e5484d" stroke="#1d2340" stroke-width="3" />
-                <path d="M-9 0l-9 14 9-4zM9 0l9 14-9-4z" fill="#e5484d" stroke="#1d2340" stroke-width="3" stroke-linejoin="round" />
-                <circle cx="0" cy="-8" r="4" fill="#56d0c6" stroke="#1d2340" stroke-width="2" />
-                <path class="sc-flame" d="M-5 9h10l-5 14z" fill="#ffb15a" />
-              </g>
-              <g class="sc-gem" transform="translate(78 64)"><path d="M0 -14l10 14-10 14-10-14z" fill="#36d6e7" stroke="#1d2340" stroke-width="2.5" /></g>
-            </svg>
-            <span class="ping p1">✦</span><span class="ping p2">✦</span><span class="ping p3">✦</span>
+          <div class="shot">
+            <div class="monitor"><img src="/assets/hub/charters-1.jpg" alt="Star Charters gameplay: A half-charted map: lanes, stations, a black hole and the next tiles" width="800" height="450" loading="lazy" draggable="false" /></div>
+            <div class="shot-tag"><b>▶ Gameplay</b><span>A half-charted map: lanes, stations, a black hole and the next tiles</span></div>
           </div>
           <div class="info">
             <div class="kind">🧩 Tile-laying</div>
@@ -156,6 +100,9 @@
             <div class="foot"><span class="live" data-live="charters">&nbsp;</span><span class="go">PLAY ▸</span></div>
           </div>
         </a>
+        </div>
+        <button class="nav next" type="button" aria-label="Next game">›</button>
+        <div class="dots" id="dots" role="tablist" aria-label="Games"></div>
       </section>
 
       <section class="join card-lite">
