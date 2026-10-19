@@ -28,8 +28,8 @@ const write = (k, v) => {
 const LOGO = document.querySelector('#splash .logo-lockup')?.cloneNode(true);
 export const logoLockup = () => LOGO?.cloneNode(true) || el('div', { className: 'logo-lockup' }, el('div', { className: 'wordmark' }, el('span', { className: 'wm-1' }, 'Star'), el('span', { className: 'wm-2' }, 'Bonanza')));
 
-// a big chunky menu button with an emoji, a title and a line of explanation
-const bigButton = (emoji, title, sub, kind, onClick) => btn([el('span', { className: 'bb-ico' }, emoji), el('span', { className: 'bb-text' }, el('b', {}, title), el('small', {}, sub))], onClick, `bigbtn ${kind}`, { dataset: { sfx: 'none' } });
+// a big chunky menu button: an emoji and a title (the explanation is a tooltip, not more text on screen)
+const bigButton = (emoji, title, sub, kind, onClick) => btn([el('span', { className: 'bb-ico' }, emoji), el('span', { className: 'bb-text' }, el('b', {}, title))], onClick, `bigbtn ${kind}`, { title: sub, dataset: { sfx: 'none' } });
 
 export function buildHome(root, { world }) {
   let name = read(NAME_KEY);
@@ -47,7 +47,7 @@ export function buildHome(root, { world }) {
     'div',
     { className: 'home' },
     el('header', { className: 'home-top' }, el('a', { className: 'arcade-link', href: '/' }, icon('back'), el('span', {}, 'All games')), el('div', { className: 'home-top-right' }, badge, btn(icon('sliders'), () => openSettings(), 'icon-btn', { title: 'Settings', 'aria-label': 'Settings' }))),
-    el('div', { className: 'home-col' }, el('div', { className: 'home-logo' }, peekers, logoLockup()), el('p', { className: 'home-tag' }, 'Grow silly star buddies. Swap them with your friends. Cash them in!'), body),
+    el('div', { className: 'home-col' }, el('div', { className: 'home-logo' }, peekers, logoLockup()), body),
     el('footer', { className: 'home-foot' }, online, el('span', { className: 'version' }, VERSION)),
   );
   root.replaceChildren(frame);
@@ -135,7 +135,7 @@ export function buildHome(root, { world }) {
       const join = () => value().length === 4 && go('join', { code: value() });
       const joinBtn = btn([el('span', {}, 'Hop in!'), icon('next')], join, 'gold big', { disabled: true, dataset: { sfx: 'none' } });
       setTimeout(() => (code ? fill(code) : boxes[0].focus()), 60);
-      return el('div', { className: 'sub-panel panel' }, el('h2', {}, '🔑 Join a farm'), el('p', { className: 'muted' }, 'Type the four letters your friend gave you.'), el('div', { className: 'code-boxes' }, ...boxes), el('div', { className: 'sub-actions' }, backBtn(), joinBtn));
+      return el('div', { className: 'sub-panel panel' }, el('h2', {}, '🔑 Join a farm'), el('div', { className: 'code-boxes' }, ...boxes), el('div', { className: 'sub-actions' }, backBtn(), joinBtn));
     },
 
     practice() {

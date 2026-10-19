@@ -175,12 +175,11 @@ function seatHint(state) {
   if (selectMode?.kind === 'puppet') return '🎭 Click a player to puppet.';
   if (state.phase === 'nominations' && !state.nomination && you.alive && !you.isCaptain) {
     const me = player(you.id);
-    if (me && !me.nominatedSomeone) return `☝️ Press Nominate (or click a player here) to ${themeInfo().banishNominate}`;
-    return 'You have already nominated today.';
+    if (me && !me.nominatedSomeone) return '☝️ Nominate someone';
+    return '✔ Nominated';
   }
-  if (state.phase === 'nominations' && !state.nomination) return 'Waiting for nominations…';
-  if (state.phase === 'roam') return 'Explore the ship. Talk privately in rooms. Do tasks!';
-  if (state.phase === 'meeting') return 'Share what you know. Nominations open soon.';
+  if (state.phase === 'nominations' && !state.nomination) return '⏳ Nominations…';
+  if (state.phase === 'meeting') return '🗣️ Talk it over';
   return '';
 }
 

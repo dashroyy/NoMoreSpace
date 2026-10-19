@@ -5,7 +5,7 @@ import { openModal } from './codex.js';
 import { el, btn } from './ui.js';
 
 const KEY = 'sch-settings';
-const DEFAULTS = { master: 80, music: 45, effects: 80, muted: false, quality: 'high', shake: true, hints: true };
+const DEFAULTS = { master: 80, music: 45, effects: 80, muted: false, quality: 'high', shake: true, hints: false };
 
 function load() {
   try {

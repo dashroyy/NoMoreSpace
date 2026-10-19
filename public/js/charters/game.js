@@ -536,7 +536,7 @@ function renderDock(state) {
     const o = ui.sel && optionFor(ui.sel.x, ui.sel.y, ui.sel.r);
     const turns = ui.sel ? optionsAt(ui.sel.x, ui.sel.y).length : 0;
     main.append(
-      el('div', { className: 'dock-say' }, ui.sel ? 'Happy with it? Place it!' : t.extra ? '⏩ Warp boost: another tile!' : 'Your turn! Tap a glowing square', el('small', {}, ui.sel ? (turns > 1 ? `It fits ${turns} ways here: turn it with ⟲ ⟳.` : 'It only fits this way round here.') : `${uniqueSpots().length} places it fits. Turn it with ⟲ ⟳ first if you like.`)),
+      el('div', { className: 'dock-say' }, ui.sel ? 'Place it!' : t.extra ? '⏩ Bonus tile!' : 'Your turn! Pick a square', el('small', {}, ui.sel ? (turns > 1 ? `It fits ${turns} ways here: turn it with ⟲ ⟳.` : 'It only fits this way round here.') : `${uniqueSpots().length} places it fits. Turn it with ⟲ ⟳ first if you like.`)),
       el(
         'div',
         { className: 'dock-btns' },
@@ -553,17 +553,17 @@ function renderDock(state) {
     const any = me.probes > 0 || me.dread > 0;
     const say = ui.recallMode
       ? ui.recall
-        ? 'That one comes home. End your turn!'
-        : 'Tap one of your probes to call it home'
+        ? 'Coming home!'
+        : 'Pick a probe to call home'
       : ui.target
         ? ui.target.done
-          ? `It finishes it: +${ui.target.pts} right away!`
+          ? `+${ui.target.pts} now!`
           : `${ui.unit === 'dread' ? 'Dreadnought' : 'Probe'} to the ${KIND_WORD[ui.target.k].toLowerCase()}${ui.target.assist ? ' (slingshot!)' : ''}`
         : !any
-          ? 'Your whole fleet is out there.'
+          ? 'Fleet all out'
           : o.targets.length
-            ? 'Send a probe? Tap a marker'
-            : 'Nowhere free to send a probe on this one.';
+            ? 'Send a probe?'
+            : 'No room for a probe';
     const sub = ui.recallMode ? 'Burns 1 thruster fuel. The probe scores nothing.' : ui.target ? (ui.target.k === 'V' ? 'It will lie in the void until the end of the game.' : 'Most probes on a feature wins it when it is finished.') : 'Or end your turn without one.';
     main.append(
       el('div', { className: 'dock-say' }, say, el('small', {}, sub)),
@@ -578,16 +578,16 @@ function renderDock(state) {
               el('button', { type: 'button', className: ui.unit === 'dread' ? 'on' : '', disabled: me.dread < 1, title: 'Counts as two probes', onclick: () => ((ui.unit = 'dread'), sfx('select'), renderDock(store.state)) }, '🛸 Dreadnought'),
             )
           : null,
-        me.fuel > 0 && mine ? btn(ui.recallMode ? 'Send a probe instead' : `⛽ Call one home (${me.fuel})`, () => ((ui.recallMode = !ui.recallMode), (ui.target = null), (ui.recall = null), sfx('select'), drawMarkers(), renderDock(store.state)), 'small', { dataset: { sfx: 'none' } }) : null,
+        me.fuel > 0 && mine ? btn(ui.recallMode ? '🚀 Probe' : `⛽ Recall ×${me.fuel}`, () => ((ui.recallMode = !ui.recallMode), (ui.target = null), (ui.recall = null), sfx('select'), drawMarkers(), renderDock(store.state)), 'small', { dataset: { sfx: 'none' } }) : null,
         btn([icon('back'), el('span', {}, 'Back')], back, 'ghost small', { dataset: { sfx: 'none' } }),
-        btn([el('span', {}, ui.target || ui.recall ? 'End turn' : 'End turn, no probe'), icon('check')], endTurn, 'gold', { dataset: { sfx: 'none' } }),
+        btn([el('span', {}, 'End turn'), icon('check')], endTurn, 'gold', { dataset: { sfx: 'none' } }),
       ),
       keyHints([[['Enter'], 'End turn'], [['⌫'], 'Back']]),
     );
   } else if (ui.mode === 'sending') {
     main.append(el('div', { className: 'dock-wait' }, el('i', { className: 'spinner' }), el('div', { className: 'dock-say' }, 'Transmitting…')));
   } else if (t.done && t.pid === state.you.id) {
-    main.append(el('div', { className: 'dock-say' }, '✔ Done!', el('small', {}, 'Watch the others chart their sectors.')));
+    main.append(el('div', { className: 'dock-say' }, '✔ Done!'));
   } else {
     const hex = colourHex(who?.colour);
     main.append(el('div', { className: 'dock-wait', style: { '--c': hex } }, el('i', { className: 'spinner' }), el('div', { className: 'dock-say' }, el('span', { className: 'who', style: { '--c': hex } }, who ? `${who.avatar} ${who.name}` : 'Someone'), t.extra ? ' takes a bonus turn…' : ' is charting…', el('small', {}, state.you.isSpectator ? 'You are watching this game.' : `${matchMedia('(hover: none)').matches ? 'Tap' : 'Point at'} anything on the map to see what it is worth.`))));

@@ -4,21 +4,9 @@
 import { el } from '../util.js';
 import { store } from '../store.js';
 import { sfx } from '../audio.js';
-import { menuList, dialog, btn, askName, keyHints } from './menu.js';
+import { menuList, dialog, btn, askName } from './menu.js';
 import { getCallsign, setCallsign } from './callsign.js';
 
-// the line under the logo: a different one each visit
-const TAGLINES = [
-  'The ship is falling into a black hole. Something aboard is not human. Find it before there is no more space.',
-  'Somebody on this ship is a Parasite. Somebody else is just really bad at tasks. Good luck telling them apart.',
-  'You are trapped on a doomed ship with your friends. One of them is lying. Probably more than one.',
-  'Do your tasks. Trust nobody. Pet the cat. Vote wisely, or at least loudly.',
-  'Black hole outside, liar inside, noodles in the galley. A perfectly normal Tuesday.',
-  'Everybody is a suspect and nobody has an alibi. Except the hamster. The hamster is fine.',
-  'Meetings, accusations and one deeply suspicious hat. Welcome aboard.',
-  'The airlock is always open. The vote is always close. The Parasite is always hungry.',
-];
-const tagline = () => TAGLINES[Math.floor(Math.random() * TAGLINES.length)];
 
 // the four scripts, in the order the practice screen shows them
 const SCRIPT_ORDER = ['classic', 'carnival', 'outbreak', 'traitors'];
@@ -91,7 +79,7 @@ export function buildHome(root, handlers) {
     };
     const d = dialog({
       title: 'Launch a new ship',
-      body: el('div', {}, el('p', { className: 'muted' }, 'Who runs the game?'), el('div', { className: 'opt-grid', role: 'radiogroup', 'aria-label': 'Who runs the game?' }, ...cards), el('p', { className: 'hint' }, '3–15 players · best with 7+ · voice chat is optional')),
+      body: el('div', {}, el('p', { className: 'muted' }, 'Who runs the game?'), el('div', { className: 'opt-grid', role: 'radiogroup', 'aria-label': 'Who runs the game?' }, ...cards)),
       actions: [btn('Cancel', () => (sfx('back'), d.close()), 'quiet', { dataset: { sfx: 'none' } }), btn('🚀 Launch ship', go, 'go')],
     });
   }
@@ -198,13 +186,13 @@ export function buildHome(root, handlers) {
 
   // ---------------- the menu ----------------
   const menu = menuList([
-    { emoji: '🚀', label: 'Launch a ship', sub: 'Host a game and invite your crew', onClick: openLaunch },
-    { emoji: '🔑', label: 'Board a ship', sub: 'Join friends with a 4-letter code', onClick: () => openJoin() },
-    { emoji: '🤖', label: 'Practice', sub: 'Learn the ropes against robots', onClick: openPractice },
-    { id: 'home-public', emoji: '🌐', label: 'Public ships', sub: 'Find a game to join', onClick: () => h.publicShips() },
-    { id: 'home-profile', emoji: '👤', label: 'Profile & spacesuit', sub: 'Your stats, unlocks and look', onClick: () => h.profile() },
-    { id: 'home-wiki', emoji: '📖', label: 'The Ship’s Wiki', sub: 'Every role and every rule', onClick: () => h.wiki() },
-    { id: 'home-settings', emoji: '⚙️', label: 'Settings', sub: 'Sound, text size and graphics', onClick: () => h.settings() },
+    { emoji: '🚀', label: 'Launch a ship', onClick: openLaunch },
+    { emoji: '🔑', label: 'Board a ship', onClick: () => openJoin() },
+    { emoji: '🤖', label: 'Practice', onClick: openPractice },
+    { id: 'home-public', emoji: '🌐', label: 'Public ships', onClick: () => h.publicShips() },
+    { id: 'home-profile', emoji: '👤', label: 'Profile & spacesuit', onClick: () => h.profile() },
+    { id: 'home-wiki', emoji: '📖', label: 'The Ship’s Wiki', onClick: () => h.wiki() },
+    { id: 'home-settings', emoji: '⚙️', label: 'Settings', onClick: () => h.settings() },
   ]);
 
   const logo = el('h1', { className: 'nm-logo' }, el('span', { className: 'l1' }, 'NO MORE'), el('span', { className: 'l2' }, 'SPACE'));
@@ -218,11 +206,10 @@ export function buildHome(root, handlers) {
     el(
       'div',
       { className: 'nm-col' },
-      el('div', { className: 'nm-top' }, logo, el('p', { className: 'nm-tag' }, tagline())),
+      el('div', { className: 'nm-top' }, logo),
       callsign,
       menu,
-      el('div', { className: 'nm-foot' }, music, bug, el('span', { className: 'nm-count' }, '3–15 players')),
-      keyHints([[['↑', '↓'], 'Choose'], [['Enter'], 'Select'], [['Esc'], 'Back']]),
+      el('div', { className: 'nm-foot' }, music, bug),
     ),
   );
   root.replaceChildren(home);

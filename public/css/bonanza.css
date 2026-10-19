@@ -710,3 +710,9 @@ button.scard:hover { transform: translateY(-8px) rotate(-2deg); }
 
 /* the farm behind the menus is scenery: its name tags stay away */
 body.on-home #labels, body.on-lobby #labels { opacity: 0; }
+
+/* keyboard hints off: the keys still work, the screen stays clean */
+.keyhints, .nm-keyhints, .home-hints { display: none !important; }
+
+/* less to read: house rules are just their names (How to play has the rest) */
+.rr-text small, .rules-note, .home-tag { display: none; }

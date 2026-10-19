@@ -69,17 +69,15 @@ export function buildHome(root) {
       'div',
       { className: 'home-wrap' },
       el('h1', { className: 'logo' }, 'PHASE', el('span', {}, 'TO SPACE')),
-      el('p', { className: 'tagline' }, 'Recruit a crew. Slay the Void. Signal Jam your friends.'),
       el(
         'div',
         { className: 'panel home-card' },
         el('label', {}, 'Your name', name),
         create,
         practice,
-        el('div', { className: 'divider' }, el('span', {}, 'or join friends')),
+        el('div', { className: 'divider' }, el('span', {}, 'or')),
         el('div', { className: 'row' }, code, join),
       ),
-      el('p', { className: 'foot' }, '2–6 players · about 15 minutes · robots fill empty seats'),
       el('div', { className: 'home-links' }, btn('How to play', { icon: 'book', className: 'small', onClick: () => openRules() }), btn('Card codex', { icon: 'joker', className: 'small', onClick: () => openCodex() }), soundBtn, musicBtn),
     ),
   );

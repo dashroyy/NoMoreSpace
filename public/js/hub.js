@@ -242,11 +242,11 @@ setInterval(counts, 15000);
 async function resume() {
   const box = document.getElementById('resume');
   const seats = [
-    { key: 'nms-seat', game: 'nms', href: (c) => `/nms`, label: (c) => `🚀 Back to your ship ${c} (No More Space)` },
-    { key: 'pts-seat', game: 'phase', href: (c) => `/phase`, label: (c) => `🃏 Back to table ${c} (Phase to Space)` },
-    { key: 'rotg-seat', game: 'ruler', href: (c) => `/ruler`, label: (c) => `🌌 Back to galaxy ${c} (Ruler of the Galaxy)` },
-    { key: 'sbz-seat', game: 'bonanza', href: (c) => `/bonanza`, label: (c) => `🌟 Back to table ${c} (Star Bonanza)` },
-    { key: 'sch-seat', game: 'charters', href: (c) => `/charters`, label: (c) => `🧩 Back to table ${c} (Star Charters)` },
+    { key: 'nms-seat', game: 'nms', href: (c) => `/nms`, label: () => `🚀 ↩ No More Space` },
+    { key: 'pts-seat', game: 'phase', href: (c) => `/phase`, label: () => `🃏 ↩ Phase to Space` },
+    { key: 'rotg-seat', game: 'ruler', href: (c) => `/ruler`, label: () => `🌌 ↩ Ruler of the Galaxy` },
+    { key: 'sbz-seat', game: 'bonanza', href: (c) => `/bonanza`, label: () => `🌟 ↩ Star Bonanza` },
+    { key: 'sch-seat', game: 'charters', href: (c) => `/charters`, label: () => `🧩 ↩ Star Charters` },
   ];
   for (const s of seats) {
     let seat = null;

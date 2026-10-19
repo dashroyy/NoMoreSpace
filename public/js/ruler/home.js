@@ -88,12 +88,12 @@ export function buildHome(root, { world }) {
   const views = {
     main() {
       const menu = menuList([
-        { label: 'Play online', sub: 'Host a galaxy and invite friends with a code', onClick: () => go('create', {}) },
-        { label: 'Join a galaxy', sub: 'Got a four-letter code? Jump in', onClick: () => show('join') },
-        { label: 'Practice', sub: 'You against the robots, right now', onClick: () => show('practice') },
-        { label: 'Contenders', sub: 'Meet the six titans and choose yours', onClick: () => show('select') },
-        { label: 'How to play', sub: 'The rules, with pictures', onClick: () => openRules() },
-        { label: 'Settings', sub: 'Sound, music and graphics', onClick: () => openSettings() },
+        { label: 'Play online', onClick: () => go('create', {}) },
+        { label: 'Join a galaxy', onClick: () => show('join') },
+        { label: 'Practice', onClick: () => show('practice') },
+        { label: 'Contenders', onClick: () => show('select') },
+        { label: 'How to play', onClick: () => openRules() },
+        { label: 'Settings', onClick: () => openSettings() },
       ]);
       hints.replaceChildren(
         keyHints([
@@ -145,7 +145,7 @@ export function buildHome(root, { world }) {
           [['Esc'], 'Back'],
         ]),
       );
-      const panel = el('div', { className: 'sub-panel' }, el('div', { className: 'eyebrow' }, 'Join a galaxy'), el('h2', {}, 'Enter the code'), el('p', { className: 'muted' }, 'Four letters, from whoever is hosting.'), el('div', { className: 'code-boxes' }, ...boxes), el('div', { className: 'sub-actions' }, backBtn(), joinBtn));
+      const panel = el('div', { className: 'sub-panel' }, el('div', { className: 'eyebrow' }, 'Join a galaxy'), el('h2', {}, 'Enter the code'), el('div', { className: 'code-boxes' }, ...boxes), el('div', { className: 'sub-actions' }, backBtn(), joinBtn));
       setTimeout(() => (code ? fill(code) : boxes[0].focus()), 60);
       return panel;
     },

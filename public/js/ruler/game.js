@@ -209,7 +209,7 @@ function renderPlates(state) {
 }
 
 function renderTicker(state) {
-  const lines = state.log.filter((l) => !['emote', 'roll', 'resolve'].includes(l.k)).slice(-5);
+  const lines = state.log.filter((l) => !['emote', 'roll', 'resolve'].includes(l.k)).slice(-2); // (just what happened last: the 3D shows the rest)
   const last = lines.length ? lines[lines.length - 1].seq : 0;
   if (built.ticker.dataset.last === String(last)) return;
   built.ticker.dataset.last = String(last);
@@ -249,9 +249,9 @@ function renderConsole(state, prev) {
   let line;
   if (!t) line = state.phase === 'ended' ? 'The battle is over' : 'Between turns…';
   else if (t.ghost) line = `👻 ${p?.name}'s ghost ship haunts the galaxy`;
-  else if (mine && !t.rolled) line = 'Your turn: roll the quantum dice!';
-  else if (mine) line = t.rollsLeft ? 'Tap the dice you want to keep, then roll the rest (or resolve)' : 'Resolve your dice';
-  else if (myPrompt(state, 'buy')) line = 'Spend your Dark Matter in the Bazaar, then finish your turn';
+  else if (mine && !t.rolled) line = 'Your turn: roll!';
+  else if (mine) line = t.rollsLeft ? 'Tap dice to keep' : 'Resolve your dice';
+  else if (myPrompt(state, 'buy')) line = 'Shop, then end turn';
   else if (t.stage === 'buy') line = `${p?.name} is shopping in the Bazaar…`;
   else if (t.stage === 'resolve') line = `${p?.name}'s dice are counted…`;
   else line = `${p?.name} is rolling…`;
@@ -282,7 +282,7 @@ function renderPreview(state) {
   if (pv.evolve) chips.push(el('span', { className: 'chip green' }, '🧬 Evolution!'));
   if (pv.damage) chips.push(el('span', { className: 'chip red', innerHTML: `${faceSvg('laser', '1.1em')} <b>${pv.damage}</b> damage → ${pv.targets.map((id) => player(id)?.name).join(', ')}` }));
   if (pv.shards) chips.push(el('span', { className: 'chip violet', innerHTML: `${faceSvg('shard', '1.1em')} <b>+${pv.shards}</b>` }));
-  if (pv.enter) chips.push(el('span', { className: 'chip gold' }, '👑 You will take the empty Core'));
+  if (pv.enter) chips.push(el('span', { className: 'chip gold' }, '👑 Take the Core'));
   if (!chips.length) chips.push(el('span', { className: 'chip muted' }, 'Nothing yet: keep rolling!'));
   box.replaceChildren(...chips);
 }
@@ -373,6 +373,6 @@ function renderBazaar(state) {
       document.body.classList.remove('bazaar-open');
       send('respond', { rid: prompt.rid, answer: { action: 'done' } }).catch((e) => problem(e.message));
     } }, '✓ End turn'));
-  } else foot.push(el('div', { className: 'muted small-text' }, 'You can shop at the end of your turn.'));
+  }
   built.bazaarFoot.replaceChildren(...foot);
 }

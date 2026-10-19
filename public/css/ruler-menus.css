@@ -436,3 +436,6 @@ button.icon-btn.small-icon .ico { width: 16px; height: 16px; }
 /* while the start screen is up, nothing else shows through it */
 #app, #labels { transition: opacity 0.8s var(--ease); }
 body:has(#splash:not(.out)) #app, body:has(#splash:not(.out)) #labels { opacity: 0; pointer-events: none; }
+
+/* keyboard hints off: the keys still work, the screen stays clean */
+.keyhints, .nm-keyhints, .home-hints { display: none !important; }

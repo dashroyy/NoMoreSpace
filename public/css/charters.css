@@ -480,3 +480,10 @@ kbd { display: inline-block; min-width: 24px; padding: 3px 6px; border: 2px soli
   .telemetry { display: none; }
   .drawer { top: 112px; bottom: 170px; }
 }
+
+/* keyboard hints off: the keys still work, the screen stays clean */
+.keyhints, .nm-keyhints, .home-hints { display: none !important; }
+
+/* less to read: the dock says what to do in two or three words, the house rules are just their names, and the
+   seats just names (the details are in How to play) */
+.dock-say small, .rr-text small, .seat-who small { display: none; }

@@ -381,8 +381,7 @@ function onPhaseChange(state, prev, world, reveal) {
     case 'roam':
       hideStory(); // (the dawn story is still up if everyone was ready early)
       sfx('chime');
-      phaseBanner('🔦 Explore the ship', 'Press M (🚀 Rooms) to teleport. Only people in your room hear you.', 5000);
-      systemLine('🔦 Explore time! Press M or tap 🚀 Rooms to teleport into a room. Only people in the same room can read your chat, so meet up with someone for a private talk.');
+      phaseBanner('🔦 Explore the ship', 'M: teleport · only your room hears you', 5000);
       break;
     case 'lastwords': {
       sfx('drumroll');

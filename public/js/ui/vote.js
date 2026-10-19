@@ -148,7 +148,7 @@ export function renderVote(state) {
       counting
         ? `✋ ${yesRevealed} YES so far · needs ${needed(state)}${state.block?.id ? ` (to beat ${name(state.block.id)})` : ''}`
         : `${nom.cast?.length || 0} of ${eligible} have voted · needs ${needed(state)} YES${state.block?.id ? ` to beat ${name(state.block.id)}` : ''}`),
-    voter && !counting ? el('div', { className: 'hint' }, cast ? 'You can change your vote until the count starts.' : 'Not voting counts as NO. Votes stay secret until the count.') : null,
+    voter && !counting ? el('div', { className: 'hint' }, cast ? 'You can still change it' : 'No vote = NO') : null,
     note ? el('div', { className: 'hint' }, note) : null,
     speaker ? el('button', { className: 'small', onclick: () => send('done-speaking').catch(() => {}) }, '🎤 I\'m done speaking') : null,
     you.isController && !counting && !speaker ? el('button', { className: 'small ghost', onclick: () => send('done-speaking').catch(() => {}) }, '⏩ Skip ahead') : null,

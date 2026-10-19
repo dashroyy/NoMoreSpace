@@ -209,3 +209,6 @@ body.has-menu #btn-settings, body.has-menu #btn-wiki, body.has-menu #btn-tts, bo
   .nm-logo, .nm-logo .l2, .sp-press, .nm-warp.go { animation: none !important; }
   .nm-home.enter .nm-item, .nm-home.enter .nm-top, .nm-home.enter .nm-callsign, .nm-home.enter .nm-foot, .nm-home.enter .nm-keyhints { animation: none; }
 }
+
+/* keyboard hints off: the keys still work, the screen stays clean */
+.keyhints, .nm-keyhints, .home-hints { display: none !important; }

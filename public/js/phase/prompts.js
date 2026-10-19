@@ -91,7 +91,7 @@ function showCaptain(p) {
   );
   const body = el('div', { className: 'cap-row' }, cards);
   layer().replaceChildren(
-    el('div', { className: 'overlay' }, el('div', { className: 'panel captain-pick' }, el('div', { className: 'eyebrow' }, 'Mission briefing'), el('h2', {}, 'Choose your Captain'), el('p', { className: 'hint' }, 'They count as one of your six disciplines and give you a power all game.'), body, timerBar(p))),
+    el('div', { className: 'overlay' }, el('div', { className: 'panel captain-pick' }, el('div', { className: 'eyebrow' }, 'Mission briefing'), el('h2', {}, 'Choose your Captain'), body, timerBar(p))),
   );
 }
 

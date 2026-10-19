@@ -478,3 +478,11 @@ body.shake .game-wrap { animation: shake 0.45s; }
   .total { font-size: 34px; }
 }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
+
+/* the cards drifting round the title screen are pictures, not reading: no rules text on them */
+.home-fan .text { visibility: hidden; }
+/* the ship log shows only what just happened (the last few lines), bigger, instead of a wall of history */
+.side .log { justify-content: flex-end; overflow: hidden; font-size: 16px; }
+.side .log > .log-line:not(:nth-last-child(-n + 4)) { display: none; }
+.side .log > .log-line:nth-last-child(4) { opacity: 0.45; }
+.side .log > .log-line:nth-last-child(3) { opacity: 0.7; }

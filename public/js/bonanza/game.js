@@ -1,5 +1,6 @@
 // Star Bonanza: the game screen, over the space farm. Along the top, sticker chips for every farmer (coins, cards in
-// hand, their patches). At the bottom, Zorp the alien farmer says what to do right now in a speech bubble, and under
+// hand, their patches). At the bottom, Zorp the alien farmer says what to do right now in a speech bubble (a few words;
+// the longer explanation is the bubble's tooltip), and under
 // him are your hand of star cards (in the order you were dealt them, each with its coin table, like the real bean
 // cards) and your patches, as wooden planters: tap one to plant, tap Harvest to cash it in. On the right, while the
 // UFO has beamed stars down, the Trading Post: the stars on offer, everyone's deals and a deal-maker for your own.
@@ -291,7 +292,7 @@ function renderTodo(state) {
   box.className = `todo ${tone} ${fresh ? 'talk' : ''}`;
   box.replaceChildren(
     el('div', { className: 'zorp', innerHTML: ZORP, title: 'Zorp, your alien farm hand' }),
-    el('div', { className: 'bubble' }, art, el('div', { className: 'todo-text' }, el('h3', {}, title), sub ? el('p', {}, sub) : null, quip ? el('p', { className: 'quip' }, `“${quip}”`) : null), extra),
+    el('div', { className: 'bubble', title: sub || '' }, art, el('div', { className: 'todo-text' }, el('h3', {}, title), quip ? el('p', { className: 'quip' }, `“${quip}”`) : null), extra),
     el('div', { className: 'todo-timer', hidden: !t?.deadline || state.phase !== 'playing' }, el('span', { className: 'tt-ico' }, '⏰'), el('span', { className: 'tt-n' }), el('div', { className: 'timer' }, el('i', { className: 'timer-fill' }))),
     actions.length ? el('div', { className: 'todo-actions' }, ...actions) : null,
   );
@@ -317,7 +318,7 @@ function renderHand(state) {
   const sig = JSON.stringify([hand.map((c) => c.uid), [...ui.sel], trading]);
   if (built.hand.dataset.sig === sig) return;
   built.hand.dataset.sig = sig;
-  built.handHead.replaceChildren(el('b', {}, '🃏 Your hand'), el('span', { className: 'muted' }, state.you.isSpectator ? 'you are watching' : hand.length ? (trading ? 'tap cards to offer them' : 'in the order you got them: no sorting!') : 'empty'));
+  built.handHead.replaceChildren(el('b', {}, '🃏 Your hand'));
   built.hand.classList.toggle('picking', trading);
   let dealt = 0;
   const live = new Set(hand.map((c) => c.uid));
@@ -381,8 +382,8 @@ function renderNurseries(state) {
         'div',
         { className: 'n-info' },
         el('b', {}, d ? d.name : 'Empty patch'),
-        d ? el('small', {}, h.lumens ? ['Worth ', coins(h.lumens)] : 'Worth nothing yet') : el('small', {}, target ? 'plant here!' : 'grows one kind of star'),
-        d ? el('small', { className: 'n-next' }, h.next ? [`${h.next.more} more → `, coins(h.next.lumens)] : 'as good as it gets!') : null,
+        d ? el('small', {}, h.lumens ? ['= ', coins(h.lumens)] : '= 0') : null,
+        d ? el('small', { className: 'n-next' }, h.next ? [`${h.next.more} more → `, coins(h.next.lumens)] : '★ max') : null,
       ),
       f.n ? btn(h.ok ? (h.lumens ? ['Harvest! +', coins(h.lumens)] : 'Harvest (nothing)') : '🔒 Lonely star', () => harvest(i), `small ${h.ok ? (h.lumens ? 'gold' : 'pink') : ''}`, { disabled: !h.ok, title: h.ok ? '' : 'A patch with one star is safe while another patch has more', dataset: { sfx: 'none' } }) : null,
     );

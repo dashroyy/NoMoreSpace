@@ -119,8 +119,8 @@ function whoText() {
     const hear = world.hearers();
     const room = ROOMS.find((r) => r.id === world.room);
     const where = room ? `${ROOM_ICONS[room.id]} ${room.name}` : '🚶 Corridor';
-    if (world.blackout) return `${where} · 🌑 Blackout! You can't see who is listening`;
-    if (!hear.length) return `${where} · 🔇 Nobody can hear you · press M to teleport to someone`;
+    if (world.blackout) return `${where} · 🌑 Blackout!`;
+    if (!hear.length) return `${where} · 🔇 Nobody hears you`;
     return `${where} · 🔒 Private chat with ${hear.map(name).join(', ')}`;
   }
   if (s.phase === 'lobby' || s.phase === 'ended') return '📢 Everyone on the ship hears you';

@@ -266,60 +266,35 @@ function updateCountdown() {
 // "What do I do now?"
 // ---------------------------------------------------------------------------
 
-// One line per role for the day, in plain words.
-const ROLE_DAY = {
-  comms: 'One of your two players is that Crew role. Ask them both what they are.',
-  archivist: 'You know a Drifter (or that there are none). Check who claims what.',
-  security: 'One of your two players is a Saboteur. Watch whose story is weakest.',
-  navigator: 'Your number says how many evil players sit side by side. Look at the seats.',
-  engineer: 'Your number comes at dawn. Find out who sits next to you.',
-  scanner: 'Share your scans carefully. A "yes" might be the ghost signal.',
-  coroner: 'Tonight you learn what the airlocked player really was.',
-  medic: 'Decide who to shield tonight. Protect whoever knows the most.',
-  blackbox: 'If you die tonight you get one role check. Who would you look at?',
-  sentinel: 'If a Crew player nominates you, they get zapped. Use it to prove yourself.',
-  gunner: 'You have one shot all game. Only fire when you are fairly sure.',
-  marine: 'The Parasite cannot kill you at night, so you can say risky things.',
-  firstofficer: 'With 3 left and no airlocking, the crew wins. Keep yourself alive.',
-  droid: 'You can only vote when your master votes. Pick a good master tonight.',
-  drunk: 'Share what you learned, but remember: not every honest player is right.',
-  stowaway: 'You might look evil to some abilities. Explain early that you are good.',
-  ambassador: 'If you are airlocked, the crew loses. Do not get nominated!',
-  hacker: 'Blend in. Pick a believable bluff and back the Parasite up.',
-  mimic: 'You saw the Manifest. Use it to make perfect bluffs, quietly.',
-  incubator: 'Stay unsuspicious. If the Parasite dies, you take over.',
-  smuggler: 'There are extra Drifters aboard. A Drifter is a safe bluff.',
-  jester: 'Your victim is seeing things today. Enjoy the chaos you caused.',
-  parasite: 'Pick a believable bluff, point suspicion elsewhere and stay calm.',
-};
 
 function todo(state) {
+  // (two or three words: the role card and the wiki hold the details)
   const you = state.you || {};
   if (!you.id || state.phase === 'lobby' || state.phase === 'ended') return '';
-  if (you.isCaptain) return '👨‍✈️ Run the show from the Command Station.';
-  if (you.isSpectator) return '👀 You are watching from the gallery. You join the crew at the next rematch.';
+  if (you.isCaptain) return '👨‍✈️ Run the show';
+  if (you.isSpectator) return '👀 Watching';
   const r = role(you.role);
   if (you.alive === false) {
-    if (state.phase === 'night') return '👻 Gossip with the other ghosts and place your bet.';
-    if (state.phase === 'roam') return `👻 Haunt the living (${you.haunts?.left ?? 0} left) and bet on the Parasite.`;
-    return you.ghostVote ? '👻 You still have one ghost vote. Save it for when it matters.' : '👻 Watch, react and keep your bet up to date.';
+    if (state.phase === 'night') return '👻 Gossip & bet';
+    if (state.phase === 'roam') return `👻 Haunt (${you.haunts?.left ?? 0} left)`;
+    return you.ghostVote ? '👻 1 ghost vote left' : '👻 Watch & bet';
   }
   switch (state.phase) {
     case 'night':
-      return you.prompt && !you.prompt.done ? `🌙 Choose your ${r?.name || ''} target before dawn.` : '🌙 Sleep tight, or paint something for the walls.';
+      return you.prompt && !you.prompt.done ? '🌙 Pick your target' : '🌙 Sleep, or paint';
     case 'dawn':
-      return '☀️ Who died? Think about who gains from it.';
+      return '☀️ Who died?';
     case 'roam':
-      return `${r ? `${r.icon} ` : ''}${ROLE_DAY[you.role] || 'Explore, talk in rooms and do tasks.'}`;
+      return `${r ? `${r.icon} ` : ''}Explore & do tasks`;
     case 'meeting':
-      return '🗣️ Share what you know, and tell everyone your claim (C).';
+      return '🗣️ Share your claim (C)';
     case 'nominations':
-      if (state.nomination) return state.nomination.stage === 'count' ? '🕐 Watch the votes being revealed.' : '🗳️ Vote YES or NO (Y / N) before the count.';
-      return player(you.id)?.nominatedSomeone ? '⏭️ Press Ready when you have nothing more to say.' : '☝️ Nominate a suspect, or press Ready.';
+      if (state.nomination) return state.nomination.stage === 'count' ? '🕐 Counting votes' : '🗳️ Vote: Y / N';
+      return player(you.id)?.nominatedSomeone ? '⏭️ Ready?' : '☝️ Nominate, or Ready';
     case 'lastwords':
-      return state.lastWords?.id === you.id ? '🎤 Your last words! Type them in the chat.' : '🎤 Listen to the last words, and react!';
+      return state.lastWords?.id === you.id ? '🎤 Your last words!' : '🎤 Last words';
     case 'dusk':
-      return '🌇 The day is over. Night is coming.';
+      return '🌇 Night is coming';
     default:
       return '';
   }
