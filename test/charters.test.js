@@ -488,6 +488,29 @@ test('the arcade page lists Star Charters, counts its tables and takes you back 
   assert.ok(hub.includes(`'${key}'`), 'the hub reads the seat key the game saves');
 });
 
+test('Starcade: every game on the front page plays a clip that exists, and clips can be fetched in byte ranges', async () => {
+  const html = fs.readFileSync(path.join(ROOT, 'public/index.html'), 'utf8');
+  assert.match(html, /STAR<span>CADE<\/span>/);
+  const clips = [...html.matchAll(/<video[^>]*src="\/assets\/hub\/([\w-]+\.webm)"[^>]*poster="\/assets\/hub\/([\w-]+\.webp)"/g)];
+  assert.strictEqual(clips.length, 5, 'one clip per game');
+  for (const [, clip, poster] of clips) {
+    assert.ok(fs.existsSync(path.join(ROOT, 'public/assets/hub', clip)), clip);
+    assert.ok(fs.existsSync(path.join(ROOT, 'public/assets/hub', poster)), poster);
+  }
+  const port = await listen();
+  const res = await new Promise((resolve, reject) => {
+    http.get({ port, path: `/assets/hub/${clips[0][1]}`, headers: { Range: 'bytes=0-99' } }, (r) => {
+      let n = 0;
+      r.on('data', (c) => (n += c.length));
+      r.on('end', () => resolve({ status: r.statusCode, type: r.headers['content-type'], range: r.headers['content-range'], n }));
+    }).on('error', reject);
+  });
+  assert.strictEqual(res.status, 206);
+  assert.strictEqual(res.type, 'video/webm');
+  assert.match(res.range, /^bytes 0-99\/\d+$/);
+  assert.strictEqual(res.n, 100);
+});
+
 test.after(() => {
   server.close();
 });

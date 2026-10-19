@@ -74,13 +74,17 @@ const MIME_TYPES = {
   '.glb': 'model/gltf-binary',
   '.gltf': 'model/gltf+json',
   '.ico': 'image/x-icon',
+  '.webp': 'image/webp',
+  '.webm': 'video/webm',
+  '.jpg': 'image/jpeg',
 };
 
 // ---------------------------------------------------------------------------
 // 1. Files
 // ---------------------------------------------------------------------------
 
-function sendFile(res, baseDir, relative, cache) {
+// (req is passed for files that may be asked for in pieces: a browser plays a video by asking for byte ranges)
+function sendFile(res, baseDir, relative, cache, req = null) {
   const filePath = path.normalize(path.join(baseDir, relative));
   if (!filePath.startsWith(baseDir + path.sep)) {
     res.writeHead(403).end('Forbidden');
@@ -91,10 +95,22 @@ function sendFile(res, baseDir, relative, cache) {
       res.writeHead(404).end('Not found');
       return;
     }
-    res.writeHead(200, {
-      'Content-Type': MIME_TYPES[path.extname(filePath)] || 'application/octet-stream',
-      'Cache-Control': cache,
-    });
+    const type = MIME_TYPES[path.extname(filePath)] || 'application/octet-stream';
+    const range = req && /^bytes=(\d*)-(\d*)$/.exec(req.headers.range || '');
+    if (range && (range[1] || range[2])) {
+      const size = data.length;
+      let start = range[1] ? Number(range[1]) : size - Number(range[2]);
+      let end = range[1] && range[2] ? Math.min(size - 1, Number(range[2])) : size - 1;
+      start = Math.max(0, start);
+      if (start > end || start >= size) {
+        res.writeHead(416, { 'Content-Range': `bytes */${size}` }).end();
+        return;
+      }
+      res.writeHead(206, { 'Content-Type': type, 'Cache-Control': cache, 'Accept-Ranges': 'bytes', 'Content-Range': `bytes ${start}-${end}/${size}`, 'Content-Length': end - start + 1 });
+      res.end(data.subarray(start, end + 1));
+      return;
+    }
+    res.writeHead(200, { 'Content-Type': type, 'Cache-Control': cache, 'Accept-Ranges': 'bytes' });
     res.end(data);
   });
 }
@@ -224,7 +240,7 @@ const server = http.createServer((req, res) => {
     return;
   }
   if (url.pathname.startsWith('/assets/')) {
-    sendFile(res, path.join(PUBLIC_DIR, 'assets'), url.pathname.slice('/assets/'.length), 'public, max-age=86400'); // models and textures: they only change with a release
+    sendFile(res, path.join(PUBLIC_DIR, 'assets'), url.pathname.slice('/assets/'.length), 'public, max-age=86400', req); // models and textures: they only change with a release
     return;
   }
   if (url.pathname.startsWith('/vendor/three/')) {

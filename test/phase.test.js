@@ -288,7 +288,7 @@ const get = (p) =>
   );
 
 test('the front page is the game picker and old invite links still reach No More Space', async () => {
-  assert.match((await get('/')).body, /Space Arcade/);
+  assert.match((await get('/')).body, /Starcade/);
   assert.match((await get('/nms')).body, /No More Space/);
   assert.match((await get('/phase')).body, /Phase to Space/);
   const old = await get('/?join=ABCD');

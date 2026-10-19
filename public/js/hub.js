@@ -65,15 +65,14 @@ if (reduce) frame(performance.now());
 else requestAnimationFrame(frame);
 
 // ---------------------------------------------------------------------------
-// The slideshow: one game at a time, sliding on by itself every few seconds (it waits while you are pointing
+// The slideshow: one game at a time, each playing a clip of real gameplay, sliding on by itself every few seconds (it waits while you are pointing
 // at it or have just used it). Swipe, drag, the arrow keys, the arrows and the dots move it; it goes round and
 // round. Clicking the game on show plays it; clicking one beside it brings it in.
 // ---------------------------------------------------------------------------
 const track = document.getElementById('games');
 const slides = [...track.querySelectorAll('a.game')];
 const dotsBox = document.getElementById('dots');
-const HOLD = 6500; // ms on each game
-const SHOT_HOLD = 3200; // ms on each picture, when a game has more than one
+const HOLD = 9000; // ms on each game (about one play-through of its clip)
 const n = slides.length;
 let current = 0;
 let paused = false;
@@ -110,6 +109,18 @@ function show(i) {
     s.tabIndex = off === 0 ? 0 : -1;
     s.setAttribute('aria-hidden', String(off !== 0));
   });
+  // only the game on show plays its clip (the others wait, and do not even download until they are needed)
+  slides.forEach((s, k) => {
+    const v = s.querySelector('video');
+    if (!v) return;
+    if (k === current) {
+      v.preload = 'auto';
+      if (!reduce) v.play().catch(() => {});
+    } else v.pause();
+  });
+  // and the next one starts loading, so it is ready to slide in
+  const nextV = slides[(current + 1) % n].querySelector('video');
+  if (nextV && nextV.preload === 'none') nextV.preload = 'metadata';
   dots.forEach((d, k) => {
     d.classList.toggle('on', k === current);
     d.setAttribute('aria-selected', String(k === current));
@@ -200,16 +211,6 @@ slides.forEach((s, i) => {
     }
   });
 });
-
-// a game with more than one picture flicks through them while it is on show
-setInterval(() => {
-  if (reduce) return;
-  const imgs = [...slides[current].querySelectorAll('.shots img')];
-  if (imgs.length < 2) return;
-  const on = imgs.findIndex((im) => im.classList.contains('on'));
-  imgs[on].classList.remove('on');
-  imgs[(on + 1) % imgs.length].classList.add('on');
-}, SHOT_HOLD);
 
 show(0);
 

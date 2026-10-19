@@ -1,4 +1,4 @@
-# Space Arcade
+# Starcade
 
 Five free multiplayer games that run in the browser, on one site and one server. The front page is a game picker.
 

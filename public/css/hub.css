@@ -1,4 +1,4 @@
-/* Space Arcade: the game picker. A slideshow of real gameplay, one game at a time, sliding by on its own; the
+/* Starcade (the arcade): the game picker. A slideshow of real gameplay, one game at a time, sliding by on its own; the
    old-CRT look of the arcade around it (scanlines, a drifting starfield, pixel fonts). As little text as possible. */
 :root {
   --bg: #04050c;
@@ -35,7 +35,7 @@ body::after {
 /* ---- top bar: the logo, and join with a code ---- */
 .hub-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 16px clamp(16px, 4vw, 48px) 0; }
 .logo { margin: 0; font-family: var(--font-display); font-weight: 400; font-size: clamp(1.1rem, 2.6vw, 1.8rem); line-height: 1; color: #eaf6ff; text-shadow: 0 0 18px rgba(108, 240, 255, 0.55); white-space: nowrap; }
-.logo span { margin-left: 0.35em; color: var(--blood); text-shadow: 0 0 18px rgba(255, 46, 77, 0.7); }
+.logo span { color: var(--blood); text-shadow: 0 0 18px rgba(255, 46, 77, 0.7); }
 .join { position: relative; display: flex; gap: 8px; }
 .join input { width: 120px; padding: 8px 10px; font: 1.3rem var(--font-body); letter-spacing: 0.3em; text-align: center; text-transform: uppercase; color: var(--text); background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(108, 240, 255, 0.3); outline: none; }
 .join input:focus { border-color: var(--phosphor); }
@@ -61,18 +61,16 @@ body::after {
 .game.active { transform: translateX(0) scale(1); opacity: 1; filter: none; z-index: 2; }
 .game.far { opacity: 0; pointer-events: none; }
 .games.dragging .game { transition: none; }
-.shots, .shots img { position: absolute; inset: 0; width: 100%; height: 100%; }
+.shots, .shots video { position: absolute; inset: 0; width: 100%; height: 100%; }
 .shots { background: #000; }
-.shots img { object-fit: cover; opacity: 0; transition: opacity 1.2s; }
-.shots img.on { opacity: 1; }
-.game.active .shots img.on { animation: drift 9s ease-in-out infinite alternate; }
-@keyframes drift { from { transform: scale(1.02); } to { transform: scale(1.09) translate(-1.2%, -1%); } }
+.shots video { object-fit: cover; }
 .game::after { content: ''; position: absolute; inset: 0; pointer-events: none; box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--accent, #6cf0ff) 70%, transparent); }
 
 /* the title, laid over the bottom of the picture */
 .cap { position: absolute; left: 0; right: 0; bottom: 0; display: flex; align-items: flex-end; gap: 16px; padding: 80px clamp(16px, 3vw, 34px) clamp(14px, 2.4vw, 28px); background: linear-gradient(180deg, transparent, rgba(2, 3, 10, 0.88) 70%); }
-.kind { position: absolute; left: clamp(16px, 3vw, 34px); bottom: calc(clamp(14px, 2.4vw, 28px) + clamp(1.6rem, 4vw, 3rem) + 14px); font-family: var(--font-title); font-size: 0.72rem; letter-spacing: 0.16em; text-transform: uppercase; color: var(--accent); }
-.cap h2 { flex: 1; margin: 0; font-family: var(--font-display); font-weight: 400; font-size: clamp(1.6rem, 4vw, 3rem); line-height: 1; color: #fff; text-shadow: 0 0 22px color-mix(in srgb, var(--accent) 70%, transparent), 0 3px 0 rgba(0, 0, 0, 0.6); }
+.title { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 10px; }
+.kind { font-family: var(--font-title); font-size: 0.72rem; letter-spacing: 0.16em; text-transform: uppercase; color: var(--accent); }
+.cap h2 { margin: 0; font-family: var(--font-display); font-weight: 400; font-size: clamp(1.6rem, 4vw, 3rem); line-height: 1; color: #fff; text-shadow: 0 0 22px color-mix(in srgb, var(--accent) 70%, transparent), 0 3px 0 rgba(0, 0, 0, 0.6); }
 .foot { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
 .go { padding: 14px 26px; font-size: 1rem; background: var(--accent); transition: transform 0.15s, filter 0.15s; }
 .game.active:hover .go { transform: scale(1.06); filter: brightness(1.12); }
@@ -108,7 +106,6 @@ body::after {
   .games { height: auto; aspect-ratio: auto; height: min(118vw, 62vh); }
   .game { clip-path: none; border-radius: 14px; }
   .cap { flex-direction: column; align-items: stretch; gap: 10px; }
-  .kind { position: static; order: -1; }
   .foot { flex-direction: row; align-items: center; justify-content: space-between; }
   .go { padding: 14px 30px; }
   .nav { display: none; }
