@@ -262,6 +262,25 @@ function nightTargets(g, p, prompt, brain) {
     case 'guardian':
       list = ranked(others.filter((t) => t.id !== p.lastPick), (t) => infoClaim(t) - suspicion(g, p, t, brain));
       break;
+    case 'blacksmith':
+      // forge the Shield for a trusted info role (or wait for one to speak up)
+      if (Math.random() < 0.4 && g.night < 3) return [];
+      list = ranked(others, (t) => infoClaim(t) - suspicion(g, p, t, brain));
+      break;
+    case 'airlocktech': {
+      // rig the hatch for the Demon, or for a teammate under fire
+      const mates = pool.filter((t) => team.has(t.id) && t.id !== p.lastPick);
+      const demon = mates.find((t) => ROLES[t.role].type === 'parasite');
+      list = demon ? [demon] : ranked(mates.length ? mates : pool.filter((t) => t.id !== p.lastPick), (t) => (g.stats.yesReceived[t.id] || 0) * 0.2);
+      break;
+    }
+    case 'mutagen':
+      // whoever has a fever (or told the table so) bursts tonight
+      list = ranked(others.filter((t) => !team.has(t.id)), (t) => (t.infected != null ? 2 : 0) + infoClaim(t));
+      break;
+    case 'avenger':
+      list = ranked(others.filter((t) => !team.has(t.id)), (t) => infoClaim(t) + (g.stats.nominations?.[t.id] || 0) * 0.2);
+      break;
     case 'carrier':
     case 'bioterrorist':
       // infect someone healthy who claims to know things
@@ -528,7 +547,9 @@ function runBots(room, now, api, dt = 0.25) {
     // a dead Clown throws a pie (a robot has no way to be sure who is good, so it is a coin flip, like for anyone)
     if (g.wish && g.wish.id === p.id && now > b.actAt) {
       const living = g.players.filter((t) => t.alive && t.id !== p.id);
-      if (living.length) act(() => g.chooseWish(p.id, pick(living).id, now));
+      // a Stargazer points at whoever it suspects most (a good pick kills a crewmate)
+      const target = g.wish.role === 'stargazer' ? mostSuspicious(g, p, b, living)?.[0] || pick(living) : pick(living);
+      if (living.length) act(() => g.chooseWish(p.id, target.id, now));
     }
     if (g.phase === 'lobby' && Math.random() < 0.002) api.emote(p.id, pick(['dance', 'wave', 'scooby', 'scuba', 'jump']));
 
@@ -566,6 +587,11 @@ function runBots(room, now, api, dt = 0.25) {
         b.offerAt = undefined;
         act(() => g.chooseOffer(p.id, Math.random() < 0.45, now));
       }
+    }
+
+    // the Showboat: on the block, it shouts its role (airlock it now and evil wins)
+    if (p.role === 'showboat' && p.alive && (g.block?.id === p.id || g.nomination?.nominee === p.id) && !(g.claims[p.id]?.role === 'showboat' && g.claims[p.id].day === g.day) && Math.random() < 0.02) {
+      act(() => g.setClaim(p.id, 'showboat', 'Go on then. Airlock me.'));
     }
 
     // the Jackpot's wheel: evil robots always choose to live; a good one sometimes sacrifices itself

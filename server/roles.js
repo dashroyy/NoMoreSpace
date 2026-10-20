@@ -305,6 +305,7 @@ Object.assign(ROLES, require('./roles-extra').EXTRA_ROLES);
 // Two more Demons for every script (the Singularity, the Leech, the Fire Eater, the Jackpot, the Mould, the Husk,
 // the Count and the Poisoner).
 Object.assign(ROLES, require('./roles-demons').DEMON_ROLES);
+Object.assign(ROLES, require('./roles-wave4').WAVE4_ROLES);
 
 // Blood on the Clocktower's setup table, extended down to 3 players ("Short Haul").
 //               crew drifters saboteurs parasite

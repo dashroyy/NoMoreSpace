@@ -54,12 +54,100 @@ const KAYKIT = {
   barker: ['orcbrute', 2.5], sniffer: ['werewolf_wolf', 1.8], cupbearer: ['farmer_b', 1.85],
   daredevil: ['barbarian', 2.0], conspiracy: ['druid', 1.9], mime: ['skeleton_minion', 1.9], antibody: ['frostgolem', 2.4],
   mastermind: ['blackknight', 2.4], jammer: ['robot_gtn', 2.4], framer: ['skeleton_warrior', 1.9], pickpocket: ['skeleton_rogue', 1.9], pharmacist: ['monstrosity', 2.4],
+  // the fourth wave (see server/roles-wave4.js)
+  mentor: ['mage', 1.9], stargazer: ['witch', 1.9], airlocktech: ['robot_gtn_forgotten', 2.4],
+  strongman: ['barbarian_large', 2.5], heartthrob: ['protagonist_b', 1.85], showboat: ['animatronic_creepy', 1.9],
+  pathologist: ['lorekeeper', 1.9], superspreader: ['farmer_b', 1.85], mutagen: ['skeleton_golem', 2.4],
+  blacksmith: ['paladin_with_helmet', 1.95], courtfool: ['clown', 1.9], avenger: ['blackknight', 2.4],
 };
 // these characters use the bigger skeleton ("Rig_Large"), so they need its own idle animation
-const LARGE_RIG = new Set(['blackknight', 'clanker', 'frostgolem', 'monstrosity', 'robot_gtn', 'orcbrute']);
+const LARGE_RIG = new Set(['blackknight', 'clanker', 'frostgolem', 'monstrosity', 'robot_gtn', 'orcbrute', 'robot_gtn_forgotten', 'barbarian_large', 'skeleton_golem']);
 
 // what a character holds in its right hand, built pointing up from the palm
 const ROLE_PROPS = {
+  // the fourth wave
+  mentor: () => {
+    // a thick old book
+    const g = new THREE.Group();
+    part(g, new THREE.BoxGeometry(0.26, 0.34, 0.08), m(0x6b2a1a), 0, 0.2, 0);
+    part(g, new THREE.BoxGeometry(0.24, 0.32, 0.085), m(0xf0e6c8), 0.012, 0.2, 0);
+    part(g, new THREE.BoxGeometry(0.06, 0.06, 0.09), m(0xffc233, { metalness: 0.8, roughness: 0.3 }), 0, 0.28, 0);
+    return g;
+  },
+  stargazer: () => {
+    // a brass telescope
+    const g = new THREE.Group();
+    part(g, new THREE.CylinderGeometry(0.035, 0.05, 0.5, 10), m(0xc9a24a, { metalness: 0.85, roughness: 0.25 }), 0, 0.28, 0, [0.4, 0, 0]);
+    part(g, new THREE.CircleGeometry(0.048, 12), glow(0x9ad8ff, 1.2), 0, 0.51, 0.1, [-1.17, 0, 0]);
+    return g;
+  },
+  airlocktech: () => {
+    // a big orange wrench
+    const g = new THREE.Group();
+    part(g, new THREE.BoxGeometry(0.08, 0.7, 0.04), m(0xff7a1a), 0, 0.35, 0);
+    part(g, new THREE.TorusGeometry(0.11, 0.045, 6, 12, Math.PI * 1.4), m(0x9aa4b8, { metalness: 0.8, roughness: 0.3 }), 0, 0.76, 0, [0, 0, -0.5]);
+    return g;
+  },
+  strongman: () => {
+    // a kettlebell, hanging from the fist
+    const g = new THREE.Group();
+    part(g, new THREE.TorusGeometry(0.07, 0.022, 8, 14), m(0x2a2a30), 0, -0.02, 0);
+    part(g, new THREE.SphereGeometry(0.15, 14, 12), m(0x14141c, { roughness: 0.4 }), 0, -0.2, 0);
+    part(g, new THREE.CircleGeometry(0.06, 12), m(0xe8203a), 0, -0.2, 0.151);
+    return g;
+  },
+  heartthrob: () => {
+    // a red rose
+    const g = new THREE.Group();
+    part(g, new THREE.CylinderGeometry(0.012, 0.012, 0.45, 6), m(0x2f8a3a), 0, 0.22, 0);
+    part(g, new THREE.SphereGeometry(0.07, 10, 8), m(0xd7263d), 0, 0.48, 0, null, [1, 1.2, 1]);
+    part(g, new THREE.SphereGeometry(0.05, 6, 4), m(0x2f8a3a), 0.05, 0.25, 0, null, [1.4, 0.4, 0.8]);
+    return g;
+  },
+  showboat: () => {
+    // a microphone
+    const g = new THREE.Group();
+    part(g, new THREE.CylinderGeometry(0.03, 0.025, 0.3, 10), m(0x14141c), 0, 0.15, 0);
+    part(g, new THREE.SphereGeometry(0.075, 12, 10), m(0xc9cfd8, { metalness: 0.9, roughness: 0.3 }), 0, 0.35, 0);
+    return g;
+  },
+  pathologist: () => {
+    // a magnifying glass
+    const g = new THREE.Group();
+    part(g, new THREE.CylinderGeometry(0.022, 0.022, 0.3, 8), m(0x5a3a1a), 0, 0.15, 0);
+    part(g, new THREE.TorusGeometry(0.11, 0.022, 8, 20), m(0xc9a24a, { metalness: 0.85, roughness: 0.25 }), 0, 0.41, 0);
+    part(g, new THREE.CircleGeometry(0.1, 16), m(0xcfe9ff, { transparent: true, opacity: 0.5 }), 0, 0.41, 0);
+    return g;
+  },
+  superspreader: () => {
+    // a crumpled hanky
+    const g = new THREE.Group();
+    part(g, new THREE.SphereGeometry(0.12, 8, 6), m(0xf4f4f0, { flatShading: true }), 0, 0.1, 0, [0.5, 0.3, 0.2], [1, 0.7, 0.9]);
+    return g;
+  },
+  mutagen: () => {
+    // a bubbling green flask
+    const g = new THREE.Group();
+    part(g, new THREE.SphereGeometry(0.13, 14, 12), m(0xcfe9ff, { transparent: true, opacity: 0.5 }), 0, 0.15, 0);
+    part(g, new THREE.SphereGeometry(0.11, 12, 10), glow(0x7dff3a, 1.4), 0, 0.13, 0);
+    part(g, new THREE.CylinderGeometry(0.035, 0.035, 0.14, 8), m(0xcfe9ff, { transparent: true, opacity: 0.5 }), 0, 0.32, 0);
+    return g;
+  },
+  blacksmith: () => {
+    // a smith's hammer
+    const g = new THREE.Group();
+    part(g, new THREE.CylinderGeometry(0.025, 0.03, 0.55, 8), m(0x6b4a2a), 0, 0.27, 0);
+    part(g, new THREE.BoxGeometry(0.26, 0.12, 0.12), m(0x3a3a44, { metalness: 0.8, roughness: 0.35 }), 0, 0.58, 0);
+    return g;
+  },
+  avenger: () => {
+    // a black sword
+    const g = new THREE.Group();
+    part(g, new THREE.BoxGeometry(0.06, 0.75, 0.015), m(0x2a2a36, { metalness: 0.9, roughness: 0.2 }), 0, 0.5, 0);
+    part(g, new THREE.BoxGeometry(0.22, 0.04, 0.04), m(0xb0102a), 0, 0.12, 0);
+    part(g, new THREE.CylinderGeometry(0.02, 0.02, 0.12, 6), m(0x14141c), 0, 0.05, 0);
+    return g;
+  },
   medic: () => {
     const g = new THREE.Group();
     part(g, new THREE.CylinderGeometry(0.05, 0.05, 0.4, 10), m(0xcfe9ff, { transparent: true, opacity: 0.55 }), 0, 0.25, 0);
@@ -385,6 +473,21 @@ const characterId = (file) => `characters/${file}`;
 
 // what a character wears on its head: built with the brim at the bottom and the head's width as 1, so they fit any character
 const ROLE_HEADS = {
+  courtfool: () => {
+    // a jester's cap: three floppy points with bells
+    const g = new THREE.Group();
+    part(g, new THREE.SphereGeometry(0.52, 18, 10, 0, Math.PI * 2, 0, Math.PI / 2), m(0x7a2a8a), 0, 0, 0, null, [1, 0.7, 1]);
+    [[-1, 0xe8203a], [0, 0xffd23f], [1, 0x2f8a3a]].forEach(([k, c]) => {
+      const tip = new THREE.Group();
+      tip.position.set(k * 0.24, 0.22, 0);
+      tip.rotation.z = -k * 1.0;
+      part(tip, new THREE.ConeGeometry(0.12, 0.42, 10), m(c), 0, 0.21, 0);
+      part(tip, new THREE.SphereGeometry(0.055, 10, 8), m(0xffc233, { metalness: 0.8, roughness: 0.3 }), 0, 0.44, 0);
+      g.add(tip);
+    });
+    g.userData.sink = 0.15;
+    return g;
+  },
   magician: () => {
     const g = new THREE.Group();
     part(g, new THREE.CylinderGeometry(0.7, 0.7, 0.04, 20), m(0x14141c), 0, 0.02, 0);

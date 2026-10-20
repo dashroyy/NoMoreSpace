@@ -19,13 +19,13 @@
 const CLASSIC_ROLES = [
   // crew
   'comms', 'archivist', 'security', 'navigator', 'engineer', 'scanner', 'coroner', 'medic', 'blackbox', 'sentinel', 'gunner', 'marine', 'firstofficer',
-  'quartermaster', 'diagnostics', 'pathfinder', 'peacekeeper',
+  'quartermaster', 'diagnostics', 'pathfinder', 'peacekeeper', 'mentor',
   // drifters
   'droid', 'drunk', 'stowaway', 'ambassador',
-  'daredevil', 'conspiracy', 'mime',
+  'daredevil', 'conspiracy', 'mime', 'stargazer',
   // saboteurs
   'hacker', 'mimic', 'incubator', 'smuggler', 'jester',
-  'mastermind', 'jammer', 'framer',
+  'mastermind', 'jammer', 'framer', 'airlocktech',
   // the Parasite (and, sometimes, the Cuckoo, the Singularity or the Leech)
   'parasite', 'cuckoo', 'singularity', 'leech',
 ];
@@ -34,13 +34,13 @@ const CARNIVAL_ROLE_IDS = [
   // crew
   'engineer', 'scanner', 'coroner', 'medic', 'blackbox', 'firstofficer', 'gunner',
   'liontamer', 'acrobat', 'palmreader', 'tickettaker', 'stagehand', 'magician',
-  'barker', 'pathfinder',
+  'barker', 'pathfinder', 'strongman',
   // drifters
   'drunk', 'stowaway', 'clown', 'actor',
-  'daredevil', 'mime', 'conspiracy',
+  'daredevil', 'mime', 'conspiracy', 'heartthrob',
   // saboteurs
   'hacker', 'incubator', 'knifethrower', 'stagedouble', 'hexer',
-  'jammer', 'framer', 'pickpocket',
+  'jammer', 'framer', 'pickpocket', 'showboat',
   // the Demon: one of these four is in play
   'parasite', 'reflection', 'fireeater', 'jackpot',
 ];
@@ -49,13 +49,13 @@ const OUTBREAK_ROLE_IDS = [
   // crew
   'engineer', 'scanner', 'coroner', 'blackbox', 'firstofficer', 'gunner', 'comms', 'security',
   'vaccinator', 'tracer', 'hazmat', 'donor', 'sensor',
-  'quartermaster', 'diagnostics', 'pathfinder', 'peacekeeper', 'sniffer',
+  'quartermaster', 'diagnostics', 'pathfinder', 'peacekeeper', 'sniffer', 'pathologist',
   // drifters
   'drunk', 'stowaway', 'patientzero', 'hypochondriac',
-  'daredevil', 'antibody',
+  'daredevil', 'antibody', 'superspreader',
   // saboteurs
   'hacker', 'incubator', 'bioterrorist', 'quack', 'sporehost',
-  'mastermind', 'pickpocket', 'pharmacist',
+  'mastermind', 'pickpocket', 'pharmacist', 'mutagen',
   // the Demon: the Carrier, the Mould or the Husk
   'carrier', 'mould', 'husk',
 ];
@@ -64,12 +64,12 @@ const TRAITORS_ROLE_IDS = [
   // the Faithful
   'comms', 'archivist', 'security', 'navigator', 'engineer', 'coroner', 'blackbox',
   'seer', 'daggerbearer', 'guardian', 'loyalist',
-  'quartermaster', 'pathfinder', 'cupbearer',
+  'quartermaster', 'pathfinder', 'cupbearer', 'blacksmith',
   // drifters
-  'drunk', 'stowaway', 'conspiracy',
+  'drunk', 'stowaway', 'conspiracy', 'courtfool',
   // the Traitors
   'recruiter', 'mole', 'blackmailer', 'hacker',
-  'framer', 'pickpocket',
+  'framer', 'pickpocket', 'avenger',
   // the Head Traitor (or, sometimes, the Count or the Poisoner)
   'headtraitor', 'count', 'poisoner',
 ];

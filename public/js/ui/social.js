@@ -154,6 +154,9 @@ function describe(e) {
     case 'mastermind': return '🧠 The Parasite was airlocked, but the game goes on: a Mastermind is aboard. One more day, and the crew must airlock a Saboteur.';
     case 'pie': return `🥧 ${name(e.a)} the Clown threw a pie at ${name(e.t)}${e.evil ? ' (an infiltrator: the crew loses!)' : ' (a good player)'}.`;
     case 'revive': return `✨ ${name(e.id)} came back from the dead!`;
+    case 'star': return `🌠 ${name(e.a)} the Stargazer pointed at ${name(e.t)}${e.good ? `, and ${name(e.t)} died.` : ': nothing happened.'}`;
+    case 'rigged': return `🔧 ${name(e.id)} was airlocked, but the hatch had been rigged: still alive!`;
+    case 'fool': return `🃏 ${name(e.id)} was the Court Fool. The Traitors murder twice tonight!`;
     case 'jackpot': return `🎰 The Jackpot's wheel: ${e.dying.length ? e.dying.map(name).join(' and ') + ' died' : 'nobody died'}.`;
     case 'poison': return `☠️ ${name(e.id)} dropped dead at dinner: POISONED!`;
     case 'leech': return `🩸 ${name(e.host)} died, and ${name(e.id)} the Leech shrivelled up with them!`;

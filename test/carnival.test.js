@@ -258,7 +258,7 @@ test('Magician: brings a dead Crew member back once, wastes the trick on anyone 
   g.applyDraft(9300);
   assert.ok(reader.alive, 'the Palm Reader is back');
   assert.ok(g.dawn.revived.includes(reader.id));
-  assert.match(g.dawn.story, /back from the void|glitter|alive again/);
+  assert.match(g.dawn.story, /back|alive again|reappears|Ta-da/); // (any of the Magician's revive lines)
   assert.ok(reader.notes.some((n) => /BACK from the dead/.test(n.text)));
   assert.strictEqual(reader.ghostVote, false);
   // it is used up

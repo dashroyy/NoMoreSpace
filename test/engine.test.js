@@ -477,7 +477,7 @@ test('autopilot plays complete games at every player count', () => {
         if (g.phase === 'night') {
           for (const [pid, prompt] of Object.entries(g.prompts)) {
             if (g.choices[pid] || g.draft) continue;
-            const pool = g.players.filter((t) => (prompt.target === 'any' || t.alive) && !(prompt.notSelf && t.id === pid));
+            const pool = g.players.filter((t) => (prompt.target === 'any' || t.alive) && !(prompt.notSelf && t.id === pid) && !(prompt.notRepeat && g.get(pid).lastPick === t.id));
             g.submitChoice(pid, st.sample(pool, prompt.choose, random).map((t) => t.id), now);
           }
           if (g.blackbox && !g.blackbox.target) g.submitChoice(g.blackbox.id, [g.players[0].id], now);

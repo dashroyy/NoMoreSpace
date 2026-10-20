@@ -285,6 +285,32 @@ How often each turns up is in `scripts.js` (`demonChance`): the script's own fir
 - **Tests**: `test/demons.test.js` covers each Demon's rules and plays robot games with each one at 7, 10 and 13
   players.
 
+## 🆕 The fourth wave: a Crew role, a Drifter and a Saboteur for every script
+
+Each one makes a moment the whole table sees, and uses screens the game already has (the night picker, the claim
+button, the Clown's last-act screen). Cards in `server/roles-wave4.js`, rules in `engine.js` (search the id),
+tests in `test/wave4.test.js`.
+
+| Script | Role | Type | BotC | What it does |
+|---|---|---|---|---|
+| Black Hole Blues | 🧓 Mentor | Crew | Grandmother | Starts knowing a good player and their role. If the Parasite kills them, the Mentor dies too. |
+| | 🌠 Stargazer | Drifter | Moonchild | When they die, they point at a living player: if that player is good, they die too. |
+| | 🔧 Airlock Tech | Saboteur | Devil's Advocate | Each night rigs the hatch for a player (not the same twice running): if they are airlocked tomorrow, they walk back out. |
+| Cosmic Carnival | 🏋️ Strongman | Crew | Tea Lady | While both living neighbours are good, the Parasite cannot kill them. |
+| | 💘 Heartthrob | Drifter | Sweetheart | When they die, a random player is heartbroken: their ability is broken for the rest of the game. |
+| | 🎤 Showboat | Saboteur | Goblin | Claims "Showboat" with the claim button and is airlocked the same day: evil wins. |
+| Outbreak | 🔬 Pathologist | Crew | Sage | Dying at night (killed or burst), learns the Demon is 1 of 2 players. Its own fever does not spoil this. |
+| | 🤧 Superspreader | Drifter | — | When they burst, both living neighbours are infected. |
+| | 🧪 Mutagen | Saboteur | — | Each night picks a player: if they are infected, they burst tonight, even if a Vaccinator gets there. |
+| Citadel | ⚒️ Blacksmith | Crew | — | Once per game forges a Shield for a guest: it stops the next murder on them, whenever that is. |
+| | 🃏 Court Fool | Drifter | — | If banished, the Traitors murder two guests that night. |
+| | 🗡️ Avenger | Saboteur | Godfather | Only wakes on a night after a Traitor was banished: then kills a guest. |
+
+Their characters: Mage, Witch, the rusty 4GTN robot (new), Barbarian (big, new), Protagonist B, the creepy
+Animatronic, Lorekeeper, Farmer B, Skeleton Golem (new), Paladin with helmet, Clown in a jester's cap, Black
+Knight; most hold a prop (a book, a telescope, a wrench, a dumbbell, a rose, a microphone, a magnifying glass, a
+hanky, a flask, a hammer, a sword).
+
 ## Making a new script
 
 1. Add roles to a `roles-<name>.js` file (the same fields as in `roles.js`) and merge them in `roles.js`.

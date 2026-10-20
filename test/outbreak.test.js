@@ -68,7 +68,7 @@ test('Outbreak deals valid casts for every player count: always one of its Demon
   assert.ok(SCRIPTS.outbreak.roles.every((r) => ROLES[r]), 'every role exists');
   assert.deepStrictEqual(SCRIPTS.outbreak.demons, ['carrier', 'mould', 'husk']);
   const outbreakOnly = Object.keys(ROLES).filter((r) => inScript(r, 'outbreak') && !inScript(r, 'classic') && !inScript(r, 'carnival'));
-  assert.strictEqual(outbreakOnly.length, 16);
+  assert.strictEqual(outbreakOnly.length, 19);
   for (let n = SCRIPTS.outbreak.minPlayers; n <= 15; n++) {
     for (let seed = 1; seed <= 20; seed++) {
       const roles = st.pickRoles(n, seeded(seed), 'outbreak');

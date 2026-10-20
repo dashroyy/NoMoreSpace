@@ -4,6 +4,10 @@ import { store, send, role, suitHex, serverNow } from '../store.js';
 import { sfx } from '../audio.js';
 
 const INSTRUCTIONS = {
+  airlocktech: () => 'Rig the airlock for a player: if they are airlocked tomorrow, they survive. (Not the same player twice in a row.)',
+  mutagen: () => 'Choose a player. If they are infected, they burst tonight.',
+  blacksmith: () => 'Once per game: forge a Shield for a guest. It saves them from one murder. Or wait.',
+  avenger: () => 'A Traitor was banished today. Choose a guest to die tonight.',
   singularity: (prompt) => (prompt?.charged ? '🌀 Fully charged: choose 3 victims!' : 'Choose a victim. Or choose YOURSELF to charge up: nobody dies tonight, then 3 tomorrow.'),
   leech: () => (store.state?.night === 1 ? 'Choose your host. Their ability breaks, and you cannot die while they live.' : 'Choose a victim. (Not your host!)'),
   fireeater: () => 'Choose 2 victims to burn.',
