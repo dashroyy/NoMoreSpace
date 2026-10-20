@@ -81,9 +81,9 @@ function finishDay(g, now = 3000) {
   g.beginNight(now + 1);
 }
 
-test('the Citadel deals valid casts: always the Head Traitor, never the Recruit, and it needs 7 players', () => {
+test('the Citadel deals valid casts: always one of its Demons, never the Recruit, and it needs 7 players', () => {
   assert.ok(SCRIPTS.traitors.roles.every((r) => ROLES[r]), 'every role exists');
-  assert.deepStrictEqual(SCRIPTS.traitors.demons, ['headtraitor']);
+  assert.deepStrictEqual(SCRIPTS.traitors.demons, ['headtraitor', 'count', 'poisoner']);
   assert.ok(!SCRIPTS.traitors.roles.includes('recruit'), 'the Recruit only ever comes from an offer');
   assert.strictEqual(SCRIPTS.traitors.minPlayers, 7);
   for (let n = 7; n <= 15; n++) {
@@ -91,7 +91,7 @@ test('the Citadel deals valid casts: always the Head Traitor, never the Recruit,
       const roles = st.pickRoles(n, seeded(seed), 'traitors');
       assert.strictEqual(roles.length, n);
       assert.ok(roles.every((r) => inScript(r, 'traitors')), `${n} players, seed ${seed}`);
-      assert.ok(roles.includes('headtraitor'));
+      assert.strictEqual(roles.filter((r) => SCRIPTS.traitors.demons.includes(r)).length, 1);
       assert.strictEqual(st.validateRoles(roles, n, 'traitors'), null);
     }
   }

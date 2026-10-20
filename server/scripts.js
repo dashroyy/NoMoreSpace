@@ -26,8 +26,8 @@ const CLASSIC_ROLES = [
   // saboteurs
   'hacker', 'mimic', 'incubator', 'smuggler', 'jester',
   'mastermind', 'jammer', 'framer',
-  // the Parasite (and, sometimes, the Cuckoo)
-  'parasite', 'cuckoo',
+  // the Parasite (and, sometimes, the Cuckoo, the Singularity or the Leech)
+  'parasite', 'cuckoo', 'singularity', 'leech',
 ];
 
 const CARNIVAL_ROLE_IDS = [
@@ -41,8 +41,8 @@ const CARNIVAL_ROLE_IDS = [
   // saboteurs
   'hacker', 'incubator', 'knifethrower', 'stagedouble', 'hexer',
   'jammer', 'framer', 'pickpocket',
-  // the Demon: one of these two is in play
-  'parasite', 'reflection',
+  // the Demon: one of these four is in play
+  'parasite', 'reflection', 'fireeater', 'jackpot',
 ];
 
 const OUTBREAK_ROLE_IDS = [
@@ -56,8 +56,8 @@ const OUTBREAK_ROLE_IDS = [
   // saboteurs
   'hacker', 'incubator', 'bioterrorist', 'quack', 'sporehost',
   'mastermind', 'pickpocket', 'pharmacist',
-  // the Demon
-  'carrier',
+  // the Demon: the Carrier, the Mould or the Husk
+  'carrier', 'mould', 'husk',
 ];
 
 const TRAITORS_ROLE_IDS = [
@@ -70,8 +70,8 @@ const TRAITORS_ROLE_IDS = [
   // the Traitors
   'recruiter', 'mole', 'blackmailer', 'hacker',
   'framer', 'pickpocket',
-  // the Head Traitor
-  'headtraitor',
+  // the Head Traitor (or, sometimes, the Count or the Poisoner)
+  'headtraitor', 'count', 'poisoner',
 ];
 
 const SCRIPTS = {
@@ -86,12 +86,13 @@ const SCRIPTS = {
       'The crew wins by airlocking the Parasite.',
       'Evil wins when only 2 players are left alive.',
       'Sometimes (6+ players) the Demon is the Cuckoo instead: once per game it can jump into a Drifter, who wakes up evil.',
+      'In bigger games (7+) it might be the Singularity, which can skip a night to charge up and then kill 3, or the Leech, which hides in a host: it cannot die while the host lives, and dies when the host dies.',
       'A Mastermind aboard (7+ players) means airlocking the Parasite is not the end: the crew gets one more day, and must airlock a Saboteur in it.',
     ],
     roles: CLASSIC_ROLES,
-    demons: ['parasite', 'cuckoo'],
-    // the Cuckoo only shows up in bigger games, and not every time
-    demonChance: { cuckoo: 0.3 },
+    demons: ['parasite', 'cuckoo', 'singularity', 'leech'],
+    // the others only show up in bigger games, and not every time (each is tried in turn, last first)
+    demonChance: { cuckoo: 0.3, singularity: 0.22, leech: 0.22 },
     narrator: 'ARIA, ship AI',
     // the disaster the story is about, and the words every screen uses for it
     theme: {
@@ -132,11 +133,12 @@ const SCRIPTS = {
       'The Stage Double: the crew cannot win while the Stage Double and their good twin are both alive. If the good twin is airlocked, evil wins.',
       'One of two Demons is aboard: the Parasite or the Reflection. If it is the Reflection (7+ players), every clue the Crew receives is FALSE, and evil wins if a day ends with nobody airlocked.',
       'So always airlock someone: a day with no airlocking is a gift to the Reflection.',
+      'Or it might be the Fire Eater (kills 2 a night, and sometimes spits one back out alive) or the Jackpot: 3 players go on its wheel each night, and at dawn each chooses LIVE or DIE. If all 3 choose to live, all 3 die.',
     ],
     roles: CARNIVAL_ROLE_IDS,
-    demons: ['parasite', 'reflection'],
-    // the Reflection only shows up in bigger games, and not every time
-    demonChance: { reflection: 0.4 },
+    demons: ['parasite', 'reflection', 'fireeater', 'jackpot'],
+    // the others only show up in bigger games, and not every time (each is tried in turn, last first)
+    demonChance: { reflection: 0.35, fireeater: 0.22, jackpot: 0.22 },
     narrator: 'ARIA, Ringmaster of the Big Top',
     // little stories that show what a game of this script is like (the wiki lists them)
     moments: [
@@ -197,9 +199,12 @@ const SCRIPTS = {
       'The Carrier does not kill. It infects a player each night. An infected player is told at once, and bursts (dies) when the NEXT night ends, unless cured.',
       'While infected, a player\'s abilities malfunction: their information is false and their protections fail.',
       'The Vaccinator cures the infected, or shields a healthy player. Find the sick in time: but beware the Quack Doctor, whose fake fevers sound just like the real thing, and the Black-Market Pharmacist, whose fake cures do nothing at all.',
+      'Sometimes the Demon is not the Carrier: the Mould kills, and its spores make the nearest Crew on each side of it malfunction; the Husk only kills after a day with no death, and gets back up the first time it dies.',
     ],
     roles: OUTBREAK_ROLE_IDS,
-    demons: ['carrier'],
+    demons: ['carrier', 'mould', 'husk'],
+    // in bigger games the Demon might be one that kills instead of infecting
+    demonChance: { mould: 0.25, husk: 0.25 },
     narrator: 'ARIA, Station Containment AI',
     // little stories that show what a game of this script is like (the wiki lists them)
     moments: [
@@ -261,9 +266,11 @@ const SCRIPTS = {
       'Complete missions (tasks) to grow the Prize Pot. Each day, whoever completed the most missions wins a Shield: the Traitors cannot murder them that night.',
       'A banished guest is unmasked: everyone learns whether they were Faithful or a Traitor.',
       'A Recruiter can offer a Faithful a place among the Traitors. They have one minute to accept or refuse.',
+      'Sometimes the murderer is the Count, whose first bite turns a Faithful into a Traitor, or the Poisoner: nobody dies in the night, but the poisoned guest drops dead at the end of the next day unless the Poisoner is banished first.',
     ],
     roles: TRAITORS_ROLE_IDS,
-    demons: ['headtraitor'],
+    demons: ['headtraitor', 'count', 'poisoner'],
+    demonChance: { count: 0.25, poisoner: 0.25 },
     narrator: 'ARIA, Lady of the Citadel',
     // the show's own rules, for the engine (see Game.mech)
     mechanics: { evilInfoMin: 5, revealBanished: true, dailyShield: true, prizePot: 500, winRule: 'traitors', succession: true },

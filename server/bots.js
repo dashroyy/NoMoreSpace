@@ -227,7 +227,27 @@ function nightTargets(g, p, prompt, brain) {
     case 'parasite':
     case 'headtraitor':
     case 'reflection':
+    case 'fireeater':
+    case 'jackpot':
+    case 'mould':
+    case 'husk':
+    case 'poisoner':
       list = ranked(others.filter((t) => !team.has(t.id)), infoClaim); // hunt whoever claims to know things
+      break;
+    case 'singularity':
+      // charge up now and then, while there are plenty of players left to take
+      if (!prompt.charged && g.aliveCount() >= 6 && Math.random() < 0.3) return [p.id];
+      list = ranked(others.filter((t) => !team.has(t.id)), infoClaim);
+      break;
+    case 'leech':
+      // first night: latch onto someone the crew trusts (they will not airlock them); after that, never the host
+      list = !g.leech
+        ? ranked(others.filter((t) => !team.has(t.id)), (t) => -suspicion(g, p, t, brain))
+        : ranked(others.filter((t) => !team.has(t.id) && t.id !== g.leech.host), infoClaim);
+      break;
+    case 'count':
+      // the first bite turns someone, so bite the most trusted Faithful
+      list = ranked(others.filter((t) => !team.has(t.id)), (t) => (g.countBit ? infoClaim(t) : -suspicion(g, p, t, brain)));
       break;
     case 'recruiter':
       // offer the cloak to someone who has been accused a lot: they may not say no
@@ -545,6 +565,15 @@ function runBots(room, now, api, dt = 0.25) {
       if (now > b.offerAt) {
         b.offerAt = undefined;
         act(() => g.chooseOffer(p.id, Math.random() < 0.45, now));
+      }
+    }
+
+    // the Jackpot's wheel: evil robots always choose to live; a good one sometimes sacrifices itself
+    if (g.jackpot?.ids.includes(p.id) && !(p.id in g.jackpot.picks)) {
+      b.wheelAt ??= now + (4000 + Math.random() * 18_000) * tempo;
+      if (now > b.wheelAt) {
+        b.wheelAt = undefined;
+        act(() => g.chooseJackpot(p.id, evil(p) || Math.random() > 0.35, now));
       }
     }
 

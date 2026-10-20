@@ -439,6 +439,7 @@ io.on('connection', (socket) => {
   // a dead Clown's pie
   on('wish', ({ target }) => game().chooseWish(me, String(target)));
   on('offer', ({ accept }) => game().chooseOffer(me, !!accept));
+  on('jackpot', ({ live }) => game().chooseJackpot(me, !!live));
   on('public', ({ on: value }) => game().setPublic(me, value));
   // the public ships list for the title screen
   on('list-public', () => {

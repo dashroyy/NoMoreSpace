@@ -5,6 +5,7 @@ import { loadModels, cloneSkinned, clipsOf } from './assets.js';
 import { buildParasite } from './parasite.js';
 import { outlineEach, outlineSkinned } from './outline.js';
 import { Avatar } from './avatar.js';
+import { buildDemon, buildHusk } from './demons.js';
 
 const m = (color, extra = {}) => new THREE.MeshStandardMaterial({ color, roughness: 0.6, metalness: 0.05, ...extra });
 const glow = (color, intensity = 1.5) => new THREE.MeshStandardMaterial({ color, emissive: color, emissiveIntensity: intensity });
@@ -651,6 +652,19 @@ export function buildRoleModel(roleId, accentHex = '#ffffff') {
       root = g;
       break;
     }
+    // ---------------- the newer Demons (see demons.js) ----------------
+    case 'singularity':
+    case 'leech':
+    case 'fireeater':
+    case 'jackpot':
+    case 'mould':
+    case 'count':
+    case 'poisoner':
+      root = buildDemon(roleId, accentHex, anim);
+      break;
+    case 'husk':
+      root = buildHusk(suited, accentHex, anim);
+      break;
     case 'parasite':
     default: {
       // the Parasite unmasked: see parasite.js

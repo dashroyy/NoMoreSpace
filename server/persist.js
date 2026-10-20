@@ -56,6 +56,8 @@ function deserialize(text, now = Date.now()) {
     g.wish ??= null;
     g.pot ??= 0;
     g.offer ??= null;
+    g.jackpot ??= null;
+    shift(g.jackpot, 'until');
     g.gagged ??= null;
     g.activeFloor = now;
     g.afk = new Set();

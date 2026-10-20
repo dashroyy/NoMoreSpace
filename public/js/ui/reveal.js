@@ -196,7 +196,7 @@ export class Reveal {
         for (const d of ch.deaths || []) steps.push({ dur: 2.4, focus: d.id, caption: d.cause === 'burst' ? `🦠 ${name(d.id)} burst in a cloud of glowing spores.` : `💀 ${name(d.id)} did not wake up.`, enter: () => this.kill(d.id, d.anim) });
       }
       if (ch.k === 'day') {
-        const interesting = ch.events.filter((e) => ['nomination', 'execute', 'shot', 'sentinel', 'become-parasite', 'story', 'system', 'net', 'jam', 'mastermind', 'pie', 'hexed', 'spores', 'shield', 'recruited'].includes(e.k) && !(e.k === 'nomination' && e.result === 'safe' && e.votes < 2));
+        const interesting = ch.events.filter((e) => ['nomination', 'execute', 'shot', 'sentinel', 'become-parasite', 'story', 'system', 'net', 'jam', 'mastermind', 'pie', 'hexed', 'spores', 'shield', 'recruited', 'jackpot', 'poisoned', 'leech-hold'].includes(e.k) && !(e.k === 'nomination' && e.result === 'safe' && e.votes < 2));
         if (!interesting.length) continue;
         steps.push({ dur: 2, chapter: `DAY ${ch.n}`, caption: '', overview: true, enter: () => { sfx('dawn'); this.lighting('day'); } });
         for (const e of interesting) {
@@ -246,7 +246,13 @@ export class Reveal {
           net: `🦑 The Parasite (${name(e.a)}) struck at ${name(e.t)}... and the Acrobat's safety net caught them! 🤸`,
           shield: `🗡️ The Head Traitor (${name(e.a)}) struck at ${name(e.t)}... but a Shield held!`,
           hop: `🪺 The Cuckoo (${name(e.a)}) laid its egg in ${name(e.to)}, and died in the hatching!`,
-        }[e.result];
+          charge: `🌀 The Singularity (${name(e.a)}) took nobody tonight... it was CHARGING UP.`,
+          latch: `🩸 The Leech (${name(e.a)}) latched onto ${name(e.t)}'s spine.`,
+          wheel: `🎰 The Jackpot (${name(e.a)}) put ${(e.picks || []).map(name).join(', ')} on the wheel!`,
+          poison: `☠️ The Poisoner (${name(e.a)}) slipped something into ${name(e.t)}'s glass...`,
+          bite: `🧛 The Count (${name(e.a)}) sank its fangs into ${name(e.t)}...`,
+        }[e.result]?.replace('🦑 The Parasite', R[role(e.a)]?.type === 'parasite' && role(e.a) !== 'parasite' ? `${R[role(e.a)].icon} ${R[role(e.a)].name}` : '🦑 The Parasite');
+        if (!text) return null;
         return { dur: 3, focus: e.a, beam: [e.a, e.result === 'starpass' || e.result === 'hop' ? e.to || e.a : e.t, 0xc77dff], caption: text, enter: () => sfx('death') };
       }
       case 'info': {
@@ -257,6 +263,12 @@ export class Reveal {
         const verdict = e.role === 'conspiracy' ? (e.truthful ? '✔ a lucky tip!' : '✘ a wrong tip: that is how it goes') : e.role === 'pickpocket' ? (e.truthful ? '✔ a perfect copy' : '✘ nothing but lint (glitched)') : e.truthful ? '✔ TRUE' : drunk ? '✘ FALSE (they were the Space Drunk)' : mirror && R[who?.startRole]?.type === 'crew' ? '✘ FALSE (the Reflection\'s mirror lies!)' : e.sick ? '✘ FALSE (they were infected)' : '✘ FALSE (glitched by the Hacker)';
         return { dur: 3, focus: e.a, caption: `${r.icon} ${name(e.a)} the ${r.name} learned: “${e.text}” — ${verdict}`, enter: () => sfx(e.truthful ? 'blip' : 'buzz') };
       }
+      case 'spit':
+        return { dur: 3, focus: e.t, beam: [e.a, e.t, 0xff7a2a], caption: `🔥 The Fire Eater coughed... and spat ${name(e.t)} back out, ALIVE!`, enter: () => { sfx('fanfare'); this.revive?.(e.t); } };
+      case 'husk-rise':
+        return { dur: 3.2, focus: e.id, caption: `🧟 ${name(e.id)} the Husk got back up!`, enter: () => { sfx('doom'); this.revive?.(e.id); } };
+      case 'recruited':
+        return e.bite ? { dur: 3.2, focus: e.t, beam: [e.a, e.t, 0xb0102a], caption: `🧛 ${name(e.t)} rose as a TRAITOR!`, enter: () => { sfx('death'); this.transform(e.t, 'recruit'); } } : null;
       case 'blackbox':
         return { dur: 3, focus: e.a, beam: [e.a, e.t, 0xffb547], caption: `📼 ${name(e.a)}'s Black Box flickered: “${e.text}” ${e.truthful ? '✔' : '✘ (false)'}`, enter: () => sfx('blip') };
       case 'become-parasite':
@@ -341,6 +353,12 @@ export class Reveal {
         return { dur: 2.4, focus: e.id, caption: `🛡️ ${name(e.id)} won the day's Shield for their missions.`, enter: () => sfx('chime') };
       case 'recruited':
         return { dur: 3.2, focus: e.t, beam: [e.a, e.t, 0xd9a0ff], caption: e.accepted ? `🐍 ${name(e.t)} accepted the offer and became a Traitor!` : `✋ ${name(e.t)} refused the offer.`, enter: () => { sfx(e.accepted ? 'death' : 'chime'); if (e.accepted) this.transform(e.t, 'recruit'); } };
+      case 'jackpot':
+        return { dur: 3.6, focus: e.dying[0] || e.ids[0], caption: e.story, enter: () => { sfx('doom'); for (const id of e.dying) this.kill(id, 'confetti'); } };
+      case 'poisoned':
+        return { dur: 3.2, focus: e.id, beam: [e.by, e.id, 0x7dff3a], caption: `☠️ ${name(e.id)} collapsed at the dinner table: POISONED by ${name(e.by)}!`, enter: () => { sfx('death'); this.kill(e.id); } };
+      case 'leech-hold':
+        return e.story ? { dur: 3.4, focus: e.id, caption: `🩸 ${e.story}`, enter: () => sfx('doom') } : null;
       case 'spores':
         return { dur: 3, focus: e.id, beam: [e.id, e.t, 0x7dff3a], caption: `🍄 As ${name(e.id)} the Spore Host went out of the airlock, a cloud of spores caught ${name(e.t)}!`, enter: () => sfx('death') };
       case 'jam':

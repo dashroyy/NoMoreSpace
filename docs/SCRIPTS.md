@@ -256,6 +256,35 @@ These need a live ship, so they would not work on a table:
 
 Robots know every new role: they compare a suspect with someone trusted (Quartermaster), frame whoever the crew listens to (Framer), read an info role's mail (Pickpocket), lay the egg in a Drifter (Cuckoo), jam an outsider (Signal Jammer), and the Mime stays silent. `test/newroles.test.js` covers every role's rules, plays about 100 whole games with each new role forced into a real cast, and plays a robot game for every role and script. `test/characters.test.js` checks that no two roles on one script share a 3D model.
 
+## 😈 The third wave: two new Demons for every script
+
+Each script had one or two Demons, so after a few games everyone knew exactly what was hunting them. Every script
+now has two more. Each borrows a Blood on the Clocktower Demon whose trick makes a **loud, public moment** in an
+online game (a night where nobody dies, a body that gets back up, three players gambling at dawn), and each gets
+its own 3D model for the end-of-game reveal (`public/js/world/demons.js`). They are in `server/roles-demons.js`;
+the rules are in `engine.js` (search for the role's id).
+
+| Script | Demon | BotC | What it does |
+|---|---|---|---|
+| Black Hole Blues | 🌀 The Singularity | Po | Kills one a night, or chooses ITSELF to charge up: nobody dies, then it takes 3 the next night. |
+| Black Hole Blues | 🩸 The Leech | Lleech | Night 1: latches onto a host (their ability breaks). Can't die while the host lives (airlocked, it crawls back in through the vent); dies when the host dies. |
+| Cosmic Carnival | 🔥 The Fire Eater | Shabaloth | Kills two a night. Sometimes (35%) one of last night's victims is spat back out alive. |
+| Cosmic Carnival | 🎰 The Jackpot | Al-Hadikhia | Puts 3 players on a wheel. At dawn everyone sees the reels spin; each of the 3 secretly picks LIVE or DIE (30 s). DIE dies; if all 3 pick LIVE, all 3 die. No answer counts as LIVE. |
+| Outbreak | 🍄 The Mould | No Dashii | Kills one a night. Its spores break the nearest Crew player on each side of it at the table. |
+| Outbreak | 🧟 The Husk | Zombuul | Only feeds after a day with no death. The first time it dies it gets back up at the next dawn (nobody takes over meanwhile, and the crew has not won yet). |
+| Citadel | 🧛 The Count | Fang Gu (sort of) | Its first bite on a Faithful (not a Loyalist, not Shielded or guarded) turns them into a Traitor instead of killing them. After that it murders. |
+| Citadel | ☠️ The Poisoner | the show's "murder in plain sight" | Poisons a guest at night. Nobody dies at night; the victim drops dead as the next day ends, unless the Poisoner is banished first. |
+
+How often each turns up is in `scripts.js` (`demonChance`): the script's own first Demon is still the most common.
+
+- **The wheel** is the only new screen: `public/js/ui/jackpot.js`. Everyone sees three spinning reels with the
+  three players' colours and names, and who has chosen (not what). The three get two big buttons. Robots on the
+  wheel: evil always picks LIVE; good picks DIE about a third of the time.
+- **Broken abilities** (the Mould's spores, the Leech's host) go through `broken()`, so every info role, protector
+  and the Marine is affected exactly like a Hacker glitch.
+- **Tests**: `test/demons.test.js` covers each Demon's rules and plays robot games with each one at 7, 10 and 13
+  players.
+
 ## Making a new script
 
 1. Add roles to a `roles-<name>.js` file (the same fields as in `roles.js`) and merge them in `roles.js`.

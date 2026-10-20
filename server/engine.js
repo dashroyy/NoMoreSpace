@@ -147,6 +147,16 @@ class Game {
     this.mastermind = null; // the Mastermind's extra day after the Parasite is airlocked: { id, day }
     this.mastermindDone = false; // it only happens once
     this.cuckooHopped = false; // the Cuckoo has used its one jump
+    // the newer Demons (see roles-demons.js)
+    this.leech = null; // the Leech and its host: { id, host }
+    this.singularityCharged = false; // the Singularity charged up last night: it chooses 3 tonight
+    this.fireLast = []; // who the Fire Eater burned last night (one may be spat back out)
+    this.jackpot = null; // the Jackpot's wheel at dawn: { ids, picks: pid -> live?, until }
+    this.huskRise = null; // the Husk is dead, but gets back up: { id, at: night }
+    this.huskRisen = false; // and it only does that once
+    this.lastDayDeath = null; // the last day someone died on (the Husk only feeds after a day without one)
+    this.countBit = false; // the Count's first bite has turned someone
+    this.poisoned = null; // the Poisoner's victim, who drops dead as the day ends: { id, by }
     this.shipEvent = null; // the Captain's fun: { kind, until }
     this.awards = null;
     this.startedAt = null;
@@ -209,7 +219,40 @@ class Game {
   // Ability does not work: the Space Drunk always, glitched players for a night and a day.
   // In the Outbreak script, infected players' abilities malfunction too.
   broken(p, glitch = this.glitch) {
-    return p.role === 'drunk' || p.infected != null || (!!glitch && glitch.id === p.id);
+    return p.role === 'drunk' || p.infected != null || (!!glitch && glitch.id === p.id) || this.spored(p) || this.hosted(p);
+  }
+
+  // The Mould's spores reach the nearest living Crew player on each side of it.
+  sporeTargets() {
+    const mould = this.players.find((o) => o.alive && o.role === 'mould');
+    if (!mould) return [];
+    const n = this.players.length;
+    const i = this.players.indexOf(mould);
+    const found = [];
+    for (const step of [-1, 1]) {
+      for (let k = 1; k < n; k++) {
+        const o = this.players[(i + step * k + n * n) % n];
+        if (o !== mould && o.alive && ROLES[o.role].type === 'crew') {
+          if (!found.includes(o.id)) found.push(o.id);
+          break;
+        }
+      }
+    }
+    return found;
+  }
+
+  spored(p) {
+    return ROLES[p.role]?.type === 'crew' && this.players.some((o) => o.alive && o.role === 'mould') && this.sporeTargets().includes(p.id);
+  }
+
+  // The Leech's host: their ability malfunctions while the Leech lives.
+  hosted(p) {
+    return !!this.leech && this.leech.host === p.id && !!this.get(this.leech.id)?.alive && this.get(this.leech.id).role === 'leech';
+  }
+
+  // The Leech cannot die while its host lives.
+  leechHeld(p) {
+    return !!this.leech && this.leech.id === p.id && p.role === 'leech' && !!this.get(this.leech.host)?.alive;
   }
 
   // What the Contact Tracer sees: the infected, and the Hypochondriac who only thinks so.
@@ -314,6 +357,7 @@ class Game {
       lastwords: 15,
       wish: 40, // a dead Clown has this long to pick a target for their pie
       offer: 60, // a recruited guest has this long to accept or refuse
+      jackpot: 30, // players on the Jackpot's wheel have this long to choose to live or die
       dusk: 9,
     }[kind];
     return Math.round(seconds * 1000 * this.pace);
@@ -520,9 +564,13 @@ class Game {
     if (ROLES[p.believed].type === 'parasite' && this.night < this.firstKillNight && !def.first) return null;
     if (def.once && p.used) return null; // a once-per-game ability that has been used
     if (def.target === 'dead' && !this.players.some((o) => !o.alive)) return null; // nobody to choose yet
+    if (p.believed === 'husk' && this.lastDayDeath === this.night - 1) return null; // somebody died today: the Husk goes hungry
+    const charged = p.believed === 'singularity' && this.singularityCharged;
+    // never ask for more players than are left to choose from
+    const pool = def.target === 'dead' || def.target === 'any' ? Infinity : this.aliveCount() - (charged || def.notSelf ? 1 : 0);
     return {
-      role: p.believed, choose: def.choose, notSelf: !!def.notSelf, target: def.target || TARGET_RULE[p.believed] || 'alive',
-      once: !!def.once, notRepeat: !!def.notRepeat,
+      role: p.believed, choose: Math.min(charged ? 3 : def.choose, Math.max(1, pool)), notSelf: charged || !!def.notSelf, target: def.target || TARGET_RULE[p.believed] || 'alive',
+      once: !!def.once, notRepeat: !!def.notRepeat, charged: charged || undefined,
     };
   }
 
@@ -549,6 +597,22 @@ class Game {
   }
 
   beginNight(now) {
+    // the Poisoner's victim drops dead at the end of the day (unless the Poisoner was banished first)
+    if (this.poisoned) {
+      const victim = this.get(this.poisoned.id);
+      const by = this.get(this.poisoned.by);
+      this.poisoned = null;
+      if (victim?.alive && by?.alive && this.isDemon(by)) {
+        this.kill(victim, 'poison');
+        this.ev({ k: 'poisoned', id: victim.id, by: by.id });
+        this.logEvent({ k: 'poison', id: victim.id });
+        this.announce(`☠️ ${victim.name} clutches their throat and collapses at the dinner table. POISONED!`, 'death');
+        if (this.checkWin()) {
+          this.end(now);
+          return;
+        }
+      }
+    }
     this.night += 1;
     this.awardShield();
     this.deathGuesses = {};
@@ -976,19 +1040,97 @@ class Game {
       }
     }
 
-    // The Parasite strikes.
+    // The Parasite strikes. Every Demon does something of its own here; the plain "choose a victim" ones share the end.
     const parasite = this.players.find((p) => p.alive && this.isDemon(p));
     d.parasiteId = parasite?.id || null;
     if (parasite && parasite.role !== 'carrier' && choice(parasite)) {
-      const target = this.get(choice(parasite)[0]);
-      const kill = (victim, result, extra = {}) => d.events.push({ k: 'kill', a: parasite.id, t: target.id, result, victim: victim?.id, ...extra });
+      const picks = choice(parasite).map((id) => this.get(id)).filter(Boolean);
+      const target = picks[0];
+      const kill = (victim, result, extra = {}, t = target) => d.events.push({ k: 'kill', a: parasite.id, t: t.id, result, victim: victim?.id, ...extra });
       const safe = (p) => p.id === d.protectedId || (p.role === 'marine' && !broken(p));
-      if (d.tamed) {
+      // whatever stops a murder: today's Shield, the Medic or Guardian, the Marine, the Acrobat's net (true if it held)
+      const stopped = (t) => {
+        if (t.shield === N && !d.shieldUsed?.includes(t.id)) {
+          // the guest holding today's Shield: the murder fails (and they are told)
+          (d.shieldUsed ||= []).push(t.id);
+          d.messages.push({ to: t.id, role: 'shield', text: '🛡️ Something struck at you in the night... and your Shield held! You are safe.', truthful: true });
+          kill(null, 'shield', {}, t);
+          return true;
+        }
+        if (t.id === d.protectedId) {
+          kill(null, 'protected', {}, t);
+          return true;
+        }
+        if (t.role === 'marine' && !broken(t)) {
+          kill(null, 'marine', {}, t);
+          return true;
+        }
+        if (t.role === 'acrobat' && !t.netUsed && !broken(t) && !d.netUsed?.includes(t.id)) {
+          // the Acrobat's safety net: caught this time, and used up
+          (d.netUsed ||= []).push(t.id);
+          say(t, 'acrobat', 'Something struck at you in the night... and your safety net caught you! The net is used up now.', true);
+          kill(null, 'net', {}, t);
+          return true;
+        }
+        return false;
+      };
+      // a murder that got past the protections (the First Officer might dodge it, and someone else dies instead)
+      const through = (t, cause = 'parasite') => {
+        if (t.role === 'firstofficer' && !broken(t) && this.random() < 0.5) {
+          const others = this.alive().filter((p) => p !== parasite && p !== t && !d.deaths.some((x) => x.id === p.id));
+          const swap = others.length ? st.pick(others, this.random) : null;
+          if (swap && !safe(swap)) {
+            d.deaths.push({ id: swap.id, cause });
+            kill(swap, 'bounced', {}, t);
+          } else {
+            kill(null, 'bounced-safe', {}, t);
+          }
+          return;
+        }
+        d.deaths.push({ id: t.id, cause });
+        kill(t, 'died', {}, t);
+      };
+      const strike = (t, cause) => {
+        if (!t.alive || d.deaths.some((x) => x.id === t.id)) return;
+        if (!stopped(t)) through(t, cause);
+      };
+      if (parasite.role === 'leech' && !this.leech) {
+        // the first night: the Leech latches onto its host (nothing stops this, not even a glitch)
+        d.leechHost = target.id;
+        kill(null, 'latch');
+      } else if (d.tamed) {
         const tamer = this.get(d.tamed);
         kill(null, 'tamed', { by: tamer.id });
         say(parasite, 'liontamer', `CRACK! ${tamer.name} is the Lion Tamer, and guessed who you are. You were stopped tonight.`, true);
       } else if (broken(parasite)) {
         kill(null, 'glitched');
+      } else if (parasite.role === 'singularity') {
+        // choosing itself charges it up: nobody dies tonight, and tomorrow night it takes three
+        if (target === parasite) {
+          d.charge = true;
+          kill(null, 'charge');
+        } else {
+          d.charge = false;
+          for (const t of picks) strike(t, 'singularity');
+        }
+      } else if (parasite.role === 'fireeater') {
+        for (const t of picks) strike(t, 'fire');
+      } else if (parasite.role === 'jackpot') {
+        // three players go on the wheel: they choose to live or die at dawn
+        d.jackpot = picks.map((p) => p.id);
+        kill(null, 'wheel', { picks: d.jackpot });
+      } else if (parasite.role === 'poisoner') {
+        // murder in plain sight: they drop dead at the end of the next day
+        if (!stopped(target)) {
+          d.poison = target.id;
+          kill(null, 'poison');
+        }
+      } else if (parasite.role === 'count' && !this.countBit && teamOf(target.role) === 'crew' && target.role !== 'loyalist') {
+        // the Count's first bite turns a Faithful into a Traitor instead of killing them
+        if (!stopped(target)) {
+          d.bite = target.id;
+          kill(null, 'bite');
+        }
       } else if (target === parasite) {
         // Jumping hosts: the Parasite dies and a Saboteur takes over.
         d.deaths.push({ id: parasite.id, cause: 'starpass' });
@@ -996,38 +1138,23 @@ class Game {
         const heir = minions.find((p) => p.role === 'incubator') || st.pick(minions, this.random);
         d.starpass = heir ? { from: parasite.id, to: heir.id, role: parasite.role } : null;
         kill(parasite, 'starpass', { to: heir?.id });
-      } else if (target.shield === N && !d.shieldUsed?.includes(target.id)) {
-        // the guest holding today's Shield: the murder fails (and they are told)
-        (d.shieldUsed ||= []).push(target.id);
-        d.messages.push({ to: target.id, role: 'shield', text: '🛡️ Something struck at you in the night... and your Shield held! You are safe.', truthful: true });
-        kill(null, 'shield');
-      } else if (target.id === d.protectedId) {
-        kill(null, 'protected');
-      } else if (target.role === 'marine' && !broken(target)) {
-        kill(null, 'marine');
-      } else if (target.role === 'acrobat' && !target.netUsed && !broken(target)) {
-        // the Acrobat's safety net: caught this time, and used up
-        (d.netUsed ||= []).push(target.id);
-        say(target, 'acrobat', 'Something struck at you in the night... and your safety net caught you! The net is used up now.', true);
-        kill(null, 'net');
+      } else if (stopped(target)) {
+        // (stopped() has logged what saved them)
       } else if (parasite.role === 'cuckoo' && !this.cuckooHopped && target.alive && ROLES[target.role].type === 'drifter') {
         // the Cuckoo lays its egg in a Drifter: the Cuckoo dies, and THEY hatch into the new Cuckoo
         d.deaths.push({ id: parasite.id, cause: 'starpass' });
         d.starpass = { from: parasite.id, to: target.id, role: 'cuckoo', hop: true };
         kill(parasite, 'hop', { to: target.id });
-      } else if (target.role === 'firstofficer' && !broken(target) && this.random() < 0.5) {
-        // The First Officer might be saved, with someone else dying instead.
-        const others = this.alive().filter((p) => p !== parasite && p !== target);
-        const swap = others.length ? st.pick(others, this.random) : null;
-        if (swap && !safe(swap)) {
-          d.deaths.push({ id: swap.id, cause: 'parasite' });
-          kill(swap, 'bounced');
-        } else {
-          kill(null, 'bounced-safe');
-        }
       } else {
-        d.deaths.push({ id: target.id, cause: 'parasite' });
-        kill(target, 'died');
+        through(target);
+      }
+    }
+    // The Fire Eater: sometimes, one of the players it burned last night is spat back out, alive.
+    if (parasite?.role === 'fireeater' && !broken(parasite)) {
+      const spat = (this.fireLast || []).map((id) => this.get(id)).filter((o) => o && !o.alive);
+      if (spat.length && this.random() < 0.35) {
+        d.spit = st.pick(spat, this.random).id;
+        d.events.push({ k: 'spit', a: parasite.id, t: d.spit });
       }
     }
     // The Recruiter's once-a-game offer: a Faithful is invited to become a Traitor (they answer at dawn).
@@ -1313,8 +1440,35 @@ class Game {
       const p = this.get(id);
       if (!p.alive) continue;
       this.kill(p, cause);
+      if (p.alive) continue; // (the Leech, while its host lives)
       deaths.push({ id, cause, anim: d.anims[id] || (cause === 'burst' ? 'melted' : st.nightDeathAnim(this.random)) });
     }
+    // the Fire Eater remembers who it burned tonight (one of them might be spat back out tomorrow)
+    this.fireLast = deaths.filter((x) => x.cause === 'fire').map((x) => x.id);
+    // the Leech latches on (the host is not told)
+    if (d.leechHost && this.get(d.parasiteId)?.alive) {
+      const host = this.get(d.leechHost);
+      this.leech = { id: d.parasiteId, host: host.id };
+      this.tell(this.get(d.parasiteId), `🩸 You latched onto ${host.name}. Their ability malfunctions now. While ${host.name} lives you cannot die, and if ${host.name} dies, so do you.`, { kind: 'evil' });
+    }
+    if (d.charge != null) this.singularityCharged = d.charge;
+    if (d.charge) this.tell(this.get(d.parasiteId), '🌀 You are charging up. Nobody died tonight. Tomorrow night you choose 3 players.', { kind: 'evil' });
+    // the Count's bite: a Faithful rises as a Traitor
+    if (d.bite && this.get(d.bite)?.alive) {
+      const v = this.get(d.bite);
+      const traitors = this.players.filter((x) => x.alive && teamOf(x.role) === 'infiltrators' && x.id !== v.id);
+      this.countBit = true;
+      v.role = 'recruit';
+      v.believed = 'recruit';
+      this.tell(v, `🧛 Two cold pinpricks on your neck, and the world goes red... The Count has bitten you. You are a TRAITOR now. Your fellow Traitors: ${traitors.map((x) => x.name).join(', ') || 'nobody left'}. Say nothing.`, { kind: 'evil' });
+      for (const t of traitors) this.tell(t, `🧛 The Count bit ${v.name}: they are one of you now.`, { kind: 'evil' });
+      this.ev({ k: 'recruited', t: v.id, a: d.parasiteId, accepted: true, bite: true });
+    }
+    // the Poisoner's victim walks about all day, not knowing (see beginNight)
+    if (d.poison && this.get(d.poison)?.alive) this.poisoned = { id: d.poison, by: d.parasiteId };
+    // the Jackpot's wheel: three players choose to live or die (see chooseJackpot)
+    const wheel = (d.jackpot || []).filter((id) => this.get(id)?.alive);
+    this.jackpot = wheel.length ? { ids: wheel, picks: {}, until: null } : null;
     // the Citadel: a Shield is spent whether or not anyone struck, and tonight's black envelope and gag
     for (const p of this.players) if (p.shield === d.night) p.shield = null;
     this.gagged = d.gag ? { id: d.gag } : null; // the Blackmailer's gag lasts through today
@@ -1365,6 +1519,21 @@ class Game {
       this.revive(back);
       revived.push(back.id);
     }
+    // the Fire Eater spits one back out
+    const spat = d.spit && this.get(d.spit);
+    if (spat && !spat.alive) {
+      this.revive(spat, '🔥 A roar of flame, a cough... and you are spat back out, singed but ALIVE!');
+      revived.push(spat.id);
+    }
+    // the Husk gets back up, once
+    const husk = this.huskRise && d.night >= this.huskRise.at && this.get(this.huskRise.id);
+    if (husk && !husk.alive) {
+      this.huskRise = null;
+      this.huskRisen = true;
+      this.revive(husk, '🧟 Your eyes snap open. You get back up. Nothing will put you down a second time... or will it?');
+      this.ev({ k: 'husk-rise', id: husk.id });
+      revived.push(husk.id);
+    }
 
     this.chapter.deaths = deaths;
     this.scoreDeathGuesses(deaths, d.parasiteId);
@@ -1404,23 +1573,44 @@ class Game {
   // ---------------------------------------------------------------------------
 
   // The Magician's trick: someone who died comes back to life (and keeps their role).
-  revive(p) {
+  revive(p, text = 'A top-hatted figure waved a wand... and you are BACK from the dead!') {
     p.alive = true;
     p.ghostVote = false;
     delete this.predictions[p.id];
     this.ev({ k: 'revived', id: p.id });
     this.logEvent({ k: 'revive', id: p.id });
-    this.tell(p, 'A top-hatted figure waved a wand... and you are BACK from the dead!', { kind: 'magician' });
+    this.tell(p, text, { kind: 'magician' });
   }
 
   kill(p, cause) {
     if (!p.alive) return;
+    // the Leech cannot die while its host lives
+    if (cause !== 'starpass' && this.leechHeld(p)) {
+      this.ev({ k: 'leech-hold', id: p.id, cause });
+      return;
+    }
     const aliveBefore = this.aliveCount();
     p.alive = false;
     p.ghostVote = true;
     this.ev({ k: 'death', id: p.id, cause });
     this.ready.delete(p.id);
     if (this.block?.id === p.id) this.block = null; // whoever was heading for the airlock died another way first
+    if (this.phase !== 'night') this.lastDayDeath = this.day; // (the Husk only feeds after a day with no death)
+
+    // the Leech's host dies: the Leech shrivels with it
+    if (this.leech && p.id === this.leech.host) {
+      const leech = this.get(this.leech.id);
+      if (leech?.alive && leech.role === 'leech') {
+        this.announce(`🩸 As ${p.name} dies, ${leech.name} screams and shrivels up. ${leech.name} was the Leech, and ${p.name} was its host!`, 'death');
+        this.logEvent({ k: 'leech', id: leech.id, host: p.id });
+        this.kill(leech, 'leech');
+      }
+    }
+    // the Husk: the first death does not stick (it gets back up at the next dawn, and nobody takes over meanwhile)
+    if (p.role === 'husk' && cause !== 'starpass' && !this.huskRisen && !this.huskRise) {
+      this.huskRise = { id: p.id, at: this.night + 1 };
+      return;
+    }
 
     // The Clown's last act: a pie in someone's face (if it lands on a villain, the crew loses).
     if (p.role === 'clown' && !this.broken(p) && !this.winner) {
@@ -1523,6 +1713,48 @@ class Game {
     return true;
   }
 
+  // ---- the Jackpot's wheel: each player on it chooses to LIVE or DIE ----
+
+  chooseJackpot(pid, live, now = Date.now()) {
+    const j = this.jackpot;
+    if (!j || !j.ids.includes(pid)) throw new Error('You are not on the wheel.');
+    if (pid in j.picks) throw new Error('You already chose.');
+    j.picks[pid] = !!live;
+    if (j.ids.every((id) => id in j.picks || !this.get(id)?.alive)) this.resolveJackpot(now);
+  }
+
+  // Anyone who never chooses is counted as choosing to live.
+  tickJackpot(now) {
+    const j = this.jackpot;
+    if (!j || this.winner || this.phase === 'ended' || this.pausedRemaining != null) return false;
+    if (j.until == null) {
+      j.until = now + this.dur('jackpot');
+      return true;
+    }
+    if (now < j.until) return false;
+    this.resolveJackpot(now);
+    return true;
+  }
+
+  resolveJackpot(now) {
+    const j = this.jackpot;
+    this.jackpot = null;
+    const ids = j.ids.filter((id) => this.get(id)?.alive);
+    if (!ids.length) return;
+    const live = (id) => j.picks[id] !== false;
+    const allLive = ids.every(live);
+    const dying = allLive ? ids : ids.filter((id) => !live(id));
+    const names = (list) => list.map((id) => this.name(id)).join(' and ');
+    for (const id of dying) this.kill(this.get(id), 'jackpot');
+    const story = allLive
+      ? `🎰 The wheel stops... three skulls. ${names(ids)} all chose to LIVE, so the house takes them ALL.`
+      : `🎰 The wheel stops. ${names(dying)} chose to DIE${ids.length > dying.length ? `, and ${names(ids.filter(live))} walk${ids.filter(live).length === 1 ? 's' : ''} away` : ''}.`;
+    this.ev({ k: 'jackpot', ids, dying, allLive, story });
+    this.logEvent({ k: 'jackpot', ids, dying });
+    this.announce(story, 'death');
+    if (this.checkWin() && this.phase !== 'night') this.end(now);
+  }
+
   // A Clown who never picks gets a random pie after a while.
   tickWish(now) {
     const w = this.wish;
@@ -1545,6 +1777,7 @@ class Game {
     if (this.winner) return true;
     this.wish = null;
     this.offer = null;
+    this.jackpot = null;
     if (this.mech().prizePot && this.pot) {
       const winners = this.alive().filter((p) => (teamOf(p.role) === 'infiltrators') === (winner === 'infiltrators')).length;
       if (winners) reason += ` The Prize Pot of ${this.pot.toLocaleString('en-US')} star-gold is split between the surviving ${winner === 'crew' ? 'Faithful' : 'Traitors'}: ${Math.floor(this.pot / winners).toLocaleString('en-US')} each.`;
@@ -1708,7 +1941,7 @@ class Game {
       return false;
     }
     const alive = this.alive();
-    const demonDead = !alive.some((p) => this.isDemon(p));
+    const demonDead = !alive.some((p) => this.isDemon(p)) && !this.huskRise;
     // a living Mastermind turns the Parasite's airlocking into one more day (see execute)
     const mastermindHolds = !!this.mastermind && !!this.get(this.mastermind.id)?.alive;
     if (demonDead && !mastermindHolds && !this.twinsAlive()) {
@@ -1960,6 +2193,10 @@ class Game {
       this.announce(`${a.name} fires at ${t.name}! ...The plasma fizzles. Nothing happens.`, 'shot');
       return { hit };
     }
+    if (this.leechHeld(t)) {
+      this.announce(`${a.name} fires at ${t.name}! The bolt burns a hole straight through... and the hole closes up again. Something is keeping ${t.name} alive.`, 'shot');
+      return { hit };
+    }
     this.announce(`${a.name} fires at ${t.name}! ${t.name} is vaporised!`, 'death');
     this.kill(t, 'shot');
     this.checkWin();
@@ -2033,6 +2270,18 @@ class Game {
       this.announce(`${p.name} is airlocked... but the hatch jams! ${p.name} was a good player, and is still alive!`, 'vote');
       this.logEvent({ k: 'jam', id: p.id, votes: this.block?.votes || 0 });
       this.dusk = { id: p.id, cause: 'jam', anim: null, survived: true, story: jammed };
+      if (mmWinner) this.finish(mmWinner, mmReason);
+      this.setPhase('dusk', this.dur('dusk'), now);
+      return;
+    }
+    // The Leech cannot die while its host lives: out of the airlock, and back in through the vent.
+    if (this.leechHeld(p)) {
+      const crawled = `${p.name} is thrown out of the airlock... and crawls straight back in through the air vent, grinning. Something aboard is keeping ${p.name} alive.`;
+      this.ev({ k: 'leech-hold', id: p.id, votes: this.block?.votes || 0, story: crawled });
+      this.executedToday = p.id;
+      this.announce(`${p.name} is airlocked... and crawls back in through the vent! ${p.name} cannot die while something else keeps it alive.`, 'vote');
+      this.logEvent({ k: 'leech-hold', id: p.id, votes: this.block?.votes || 0 });
+      this.dusk = { id: p.id, cause: 'leech', anim: null, survived: true, story: crawled };
       if (mmWinner) this.finish(mmWinner, mmReason);
       this.setPhase('dusk', this.dur('dusk'), now);
       return;
@@ -2743,7 +2992,8 @@ class Game {
     this.lastHostAway = away;
     const wished = this.tickWish(now);
     const offered = this.tickOffer(now);
-    return this.tickPhase(now) || cluesChanged || afk || awayChanged || wished || offered;
+    const spun = this.tickJackpot(now);
+    return this.tickPhase(now) || cluesChanged || afk || awayChanged || wished || offered || spun;
   }
 
   tickPhase(now) {
@@ -2917,6 +3167,7 @@ class Game {
       history: this.phase === 'ended' ? this.history : null,
       evilChatOpen: this.evilInfoShared(),
       pot: this.mech().prizePot ? this.pot : null,
+      wheel: this.jackpot ? { ids: this.jackpot.ids, until: this.jackpot.until, chosen: Object.keys(this.jackpot.picks) } : null,
     };
   }
 
@@ -2952,6 +3203,7 @@ class Game {
       bluffs: ROLES[p.believed]?.type === 'parasite' && this.evilInfoShared() ? this.bluffs : null,
       wish: this.wish && this.wish.id === pid ? { role: this.wish.role, until: this.wish.until } : null,
       offer: this.offer && this.offer.id === pid ? { until: this.offer.until } : null,
+      jackpot: this.jackpot && this.jackpot.ids.includes(pid) ? { until: this.jackpot.until, chosen: pid in this.jackpot.picks } : null,
       gagged: !!(this.gagged && this.gagged.id === pid && p.alive),
       silenced: this.isSilent(pid), // the Mime: no talking by day
       infected: p.alive && p.infected != null ? { since: p.infected, bursts: p.infected + 1 } : null,

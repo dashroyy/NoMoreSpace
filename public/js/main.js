@@ -35,6 +35,7 @@ import { initSession, renderSession } from './ui/session.js';
 import { initCaptions } from './ui/captions.js';
 import { initWish } from './ui/wish.js';
 import { initOffer } from './ui/offer.js';
+import { initJackpot } from './ui/jackpot.js';
 import { initDoors } from './ui/doors.js';
 import { openProfile } from './ui/profile.js';
 import { openPublicShips } from './ui/publicships.js';
@@ -131,6 +132,7 @@ async function boot() {
   initCaptions();
   initWish();
   initOffer();
+  initJackpot();
   initDoors(world);
   $('lobby-profile').addEventListener('click', () => openProfile());
   for (const id of ['lobby-wiki', 'btn-wiki']) $(id).addEventListener('click', () => openWiki());
@@ -403,7 +405,7 @@ function onPhaseChange(state, prev, world, reveal) {
       if (dusk?.survived) {
         // the Acrobat's safety net: airlocked, and bounced right back
         sfx('fanfare');
-        showStory(dusk.story, [dusk.cause === 'jam' ? '🤝 The hatch jams!' : '🤸 The net holds!'], 9000);
+        showStory(dusk.story, [dusk.cause === 'jam' ? '🤝 The hatch jams!' : dusk.cause === 'leech' ? '🩸 It crawls back in!' : '🤸 The net holds!'], 9000);
       } else if (dusk?.id) {
         sfx('airlock');
         world.playDeaths([{ id: dusk.id, anim: dusk.anim || 'airlock' }]);
@@ -411,7 +413,7 @@ function onPhaseChange(state, prev, world, reveal) {
       } else {
         showStory(dusk?.story || `Nobody is ${themeInfo(state.script).banishedVerb} today.`, [], 5000);
       }
-      phaseBanner(dusk?.survived ? (dusk.cause === 'jam' ? '🤝 The hatch jams!' : '🤸 The net holds!') : '🌇 Dusk', dusk?.survived ? `${player(dusk.id)?.name} survives ${themeInfo(state.script).banishPlace}` : dusk?.id ? `${player(dusk.id)?.name} is ${themeInfo(state.script).banishedVerb}` : `Nobody is ${themeInfo(state.script).banishedVerb}`);
+      phaseBanner(dusk?.survived ? (dusk.cause === 'jam' ? '🤝 The hatch jams!' : dusk.cause === 'leech' ? '🩸 It crawls back in!' : '🤸 The net holds!') : '🌇 Dusk', dusk?.survived ? `${player(dusk.id)?.name} survives ${themeInfo(state.script).banishPlace}` : dusk?.id ? `${player(dusk.id)?.name} is ${themeInfo(state.script).banishedVerb}` : `Nobody is ${themeInfo(state.script).banishedVerb}`);
       break;
     }
     case 'ended': {

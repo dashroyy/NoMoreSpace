@@ -4,6 +4,14 @@ import { store, send, role, suitHex, serverNow } from '../store.js';
 import { sfx } from '../audio.js';
 
 const INSTRUCTIONS = {
+  singularity: (prompt) => (prompt?.charged ? '🌀 Fully charged: choose 3 victims!' : 'Choose a victim. Or choose YOURSELF to charge up: nobody dies tonight, then 3 tomorrow.'),
+  leech: () => (store.state?.night === 1 ? 'Choose your host. Their ability breaks, and you cannot die while they live.' : 'Choose a victim. (Not your host!)'),
+  fireeater: () => 'Choose 2 victims to burn.',
+  jackpot: () => 'Choose 3 players for the wheel. At dawn each picks LIVE or DIE.',
+  mould: () => 'Choose a victim. Your spores already break your nearest Crew neighbours.',
+  husk: () => 'Nobody died today, so you feed: choose a victim.',
+  count: () => 'Choose a guest. Your first bite turns a Faithful into a Traitor.',
+  poisoner: () => 'Choose a guest to poison. They drop dead at the end of tomorrow.',
   hacker: (n) => `Choose a player to glitch. Their ability malfunctions tonight and tomorrow.`,
   jester: () => 'Choose a player to prank. All tomorrow they will see things that are not there: fake crewmates, a space whale, whispers from nobody… and a fake clue.',
   medic: () => 'Choose a player (not yourself) to shield from the Parasite tonight.',
@@ -91,6 +99,7 @@ export function flushDrawing() {
 
 function nightNote(r, state) {
   if (!r) return 'Sleep tight.';
+  if (r.type === 'parasite' && !state.you.prompt && state.night > 1 && state.you.role === 'husk') return '🧟 Somebody died today, so you go hungry tonight.';
   if (r.type === 'parasite' && !state.you.prompt) return 'The Parasite does not hunt on the first night. Plan your cover story: check your role card (R) for safe bluffs if you have them.';
   if (r.night?.other && !r.night.first && state.night === 1) return 'You wake from tomorrow night onwards. For now: sleep, plan, and maybe paint.';
   if (r.night?.first || r.night?.other) return 'If your role learns something, it will appear at dawn (and in your role card, R).';
@@ -132,7 +141,7 @@ export function renderNight(state) {
     clear(box, el('div', { className: 'role-line' }, el('span', { className: 'ico' }, r.icon), el('div', {}, el('h3', {}, r.name), el('div', { className: 'hint' }, names ? `You chose ${names}. Now wait for dawn…` : 'You are saving it for another night. Now wait for dawn…'))));
     return;
   }
-  renderPicker(box, state, { icon: r.icon, title: r.name, text: INSTRUCTIONS[prompt.role]?.() || 'Choose.', choose: prompt.choose, target: prompt.target, notSelf: prompt.notSelf, once: prompt.once });
+  renderPicker(box, state, { icon: r.icon, title: r.name, text: INSTRUCTIONS[prompt.role]?.(prompt) || 'Choose.', choose: prompt.choose, target: prompt.target, notSelf: prompt.notSelf, once: prompt.once });
 }
 
 function renderPicker(box, state, { icon, title, text, choose, target, notSelf, once }) {

@@ -64,17 +64,17 @@ const notesOf = (p) => p.notes.map((n) => n.text);
 // every event of a kind from the whole game (the night's chapter is closed once dawn arrives)
 const eventsOf = (g, k) => g.history.flatMap((h) => h.events || []).filter((e) => e.k === k);
 
-test('Outbreak deals valid casts for every player count: always the Carrier, only its own roles', () => {
+test('Outbreak deals valid casts for every player count: always one of its Demons, only its own roles', () => {
   assert.ok(SCRIPTS.outbreak.roles.every((r) => ROLES[r]), 'every role exists');
-  assert.deepStrictEqual(SCRIPTS.outbreak.demons, ['carrier']);
+  assert.deepStrictEqual(SCRIPTS.outbreak.demons, ['carrier', 'mould', 'husk']);
   const outbreakOnly = Object.keys(ROLES).filter((r) => inScript(r, 'outbreak') && !inScript(r, 'classic') && !inScript(r, 'carnival'));
-  assert.strictEqual(outbreakOnly.length, 14);
+  assert.strictEqual(outbreakOnly.length, 16);
   for (let n = SCRIPTS.outbreak.minPlayers; n <= 15; n++) {
     for (let seed = 1; seed <= 20; seed++) {
       const roles = st.pickRoles(n, seeded(seed), 'outbreak');
       assert.strictEqual(roles.length, n);
       assert.ok(roles.every((r) => inScript(r, 'outbreak')), `${n} players, seed ${seed}`);
-      assert.ok(roles.includes('carrier'));
+      assert.strictEqual(roles.filter((r) => SCRIPTS.outbreak.demons.includes(r)).length, 1);
       assert.strictEqual(st.validateRoles(roles, n, 'outbreak'), null);
     }
   }
