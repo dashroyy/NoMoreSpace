@@ -142,6 +142,14 @@ test("Heartthrob: when it dies, someone's ability is broken for the rest of the 
   assert.ok(g.log.some((l) => /a heart breaks/.test(l.text)));
 });
 
+test('only evil left alive: evil wins (a heartbroken Demon cannot stall the game)', () => {
+  const { g, role } = ship('carnival', ['parasite', 'hexer', 'heartthrob', 'liontamer', 'acrobat', 'palmreader', 'tickettaker', 'stagehand']);
+  g.heartbroken = role('parasite').id;
+  for (const r of ['heartthrob', 'liontamer', 'acrobat', 'palmreader', 'tickettaker', 'stagehand']) g.kill(role(r), 'test');
+  assert.ok(g.checkWin());
+  assert.strictEqual(g.winner, 'infiltrators');
+});
+
 test('Showboat: claim it, get airlocked the same day, and evil wins', () => {
   const deal = ['parasite', 'showboat', 'liontamer', 'acrobat', 'palmreader', 'tickettaker', 'stagehand'];
   let { g, role } = ship('carnival', deal);

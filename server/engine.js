@@ -2107,6 +2107,10 @@ class Game {
     if (demonDead && !mastermindHolds && !this.twinsAlive()) {
       return this.finish('crew', themeOf(this.script).crewReason);
     }
+    // nobody good is left alive (a Demon broken for good, say by the Heartthrob, could otherwise stall forever)
+    if (!demonDead && !alive.some((p) => teamOf(p.role) !== 'infiltrators')) {
+      return this.finish('infiltrators', themeOf(this.script).evilReason);
+    }
     if (alive.length <= 2) {
       return this.finish('infiltrators', demonDead
         ? 'Only two remain. The Parasite is gone, but the Stage Double and their twin are still on stage, and the show goes on without the crew.'
