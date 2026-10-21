@@ -6,7 +6,7 @@ import { World, blackHoleProgress } from './world/world.js';
 import { initChat, addChat, updateChatVisibility, clearChat, systemLine } from './ui/chat.js';
 import { openShareCard } from './ui/sharecard.js';
 import { initModal, openRoleCard, refreshRoleCard } from './ui/rolecard.js';
-import { initHud, renderHud, setUsePrompt, phaseBanner } from './ui/hud.js';
+import { initHud, renderHud, setUsePrompt, phaseBanner, titleCard } from './ui/hud.js';
 import { initLobby, renderLobby, resetLobbyPicks } from './ui/lobby.js';
 import { initDrawing, renderNight, flushDrawing } from './ui/night.js';
 import { openTask } from './ui/tasks.js';
@@ -382,28 +382,28 @@ function onPhaseChange(state, prev, world, reveal) {
         const r = role(state.you?.role);
         if (r) toast(`You are ${r.type === 'parasite' ? '' : 'the '}${r.name} ${r.icon}. Press R for your role card and tips.`, store.data.types[r.type].team === 'crew' ? 'info' : 'evil', 9000);
       }
-      phaseBanner(`☀️ Day ${state.day}`, dawn?.deaths.length ? `${dawn.deaths.length} crew member${dawn.deaths.length > 1 ? 's' : ''} did not wake up` : 'Everyone survived the night');
+      titleCard(`☀️ Day ${state.day}`, dawn?.deaths.length ? `${dawn.deaths.length} did not wake up` : 'Everyone made it through the night', { accent: dawn?.deaths.length ? '#ff6b81' : '#ffd27a' });
       break;
     }
     case 'roam':
       hideStory(); // (the dawn story is still up if everyone was ready early)
       sfx('chime');
-      phaseBanner('🔦 Explore the ship', 'M: teleport · only your room hears you', 5000);
+      titleCard('🔦 Explore', 'Tasks, whispers, alibis', { accent: '#6cf0ff', ms: 2200 });
       break;
     case 'lastwords': {
       sfx('drumroll');
       const who = player(state.lastWords?.id);
-      phaseBanner(`🎤 Last words: ${who?.name || '…'}`, `15 seconds in the spotlight, then ${themeInfo(state.script).banishPlace}.`, 5000);
+      titleCard(`🎤 ${who?.name || '…'}`, 'Last words', { accent: '#ff7ad9', ms: 2400 });
       if (state.lastWords?.id === state.you?.id) toast('🎤 You have 15 seconds for your last words. Type in the chat: everyone will see it in a big bubble.', 'evil', 9000);
       break;
     }
     case 'meeting':
       sfx('alarm');
-      phaseBanner('🚨 Emergency meeting', 'Everyone to the bridge. Share what you know.');
+      titleCard('🚨 Emergency meeting', 'Everyone to the bridge', { accent: '#ff4d6d' });
       break;
     case 'nominations':
       sfx('gavel');
-      phaseBanner('☝️ Nominations are open', `Click a player on the table to nominate. ${state.threshold} votes needed.`);
+      titleCard('☝️ Nominations', `${state.threshold} votes to airlock`, { accent: '#ffb347' });
       break;
     case 'dusk': {
       const dusk = state.dusk;
@@ -418,7 +418,7 @@ function onPhaseChange(state, prev, world, reveal) {
       } else {
         showStory(dusk?.story || `Nobody is ${themeInfo(state.script).banishedVerb} today.`, [], 5000);
       }
-      phaseBanner(dusk?.survived ? (dusk.cause === 'jam' ? '🤝 The hatch jams!' : dusk.cause === 'leech' ? '🩸 It crawls back in!' : dusk.cause === 'tech' ? '🔧 The hatch is rigged!' : '🤸 The net holds!') : '🌇 Dusk', dusk?.survived ? `${player(dusk.id)?.name} survives ${themeInfo(state.script).banishPlace}` : dusk?.id ? `${player(dusk.id)?.name} is ${themeInfo(state.script).banishedVerb}` : `Nobody is ${themeInfo(state.script).banishedVerb}`);
+      titleCard(dusk?.survived ? (dusk.cause === 'jam' ? '🤝 The hatch jams!' : dusk.cause === 'leech' ? '🩸 It crawls back in!' : dusk.cause === 'tech' ? '🔧 The hatch is rigged!' : '🤸 The net holds!') : '🌇 Dusk', dusk?.survived ? `${player(dusk.id)?.name} survives ${themeInfo(state.script).banishPlace}` : dusk?.id ? `${player(dusk.id)?.name} is ${themeInfo(state.script).banishedVerb}` : `Nobody is ${themeInfo(state.script).banishedVerb}`, { accent: dusk?.id && !dusk.survived ? '#ff8a3a' : '#c9a0ff', ms: 3000 });
       break;
     }
     case 'ended': {

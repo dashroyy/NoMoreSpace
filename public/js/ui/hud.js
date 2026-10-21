@@ -465,6 +465,34 @@ export function setUsePrompt(taskName) {
   if (taskName) p.textContent = `🛠️ ${taskName} — press E`;
 }
 
+// The big title card for each new part of the day: black bars slide in, the title sweeps open across the middle
+// of the screen in the part of the day's colour, then it all slides away.
+export function titleCard(title, subtitle = '', { accent = '#6cf0ff', ms = 2600 } = {}) {
+  const c = $('title-card');
+  if (!c) return phaseBanner(title, subtitle, ms);
+  clear(c,
+    el('div', { className: 'tc-bar top' }),
+    el('div', { className: 'tc-bar bottom' }),
+    el('div', { className: 'tc-band' },
+      el('div', { className: 'tc-line' }),
+      el('div', { className: 'tc-title' }, title),
+      subtitle ? el('div', { className: 'tc-sub' }, subtitle) : null,
+      el('div', { className: 'tc-line' })));
+  c.style.setProperty('--accent', accent);
+  $('phase-banner').hidden = true;
+  c.hidden = false;
+  c.classList.remove('on', 'out');
+  void c.offsetWidth;
+  c.classList.add('on');
+  clearTimeout(titleCard.out);
+  clearTimeout(titleCard.gone);
+  titleCard.out = setTimeout(() => c.classList.add('out'), ms);
+  titleCard.gone = setTimeout(() => {
+    c.hidden = true;
+    c.classList.remove('on', 'out');
+  }, ms + 500);
+}
+
 export function phaseBanner(title, subtitle = '', ms = 3500) {
   const b = $('phase-banner');
   clear(b, title, subtitle ? el('small', {}, subtitle) : null);

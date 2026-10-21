@@ -89,3 +89,14 @@ test('every hat and pet the server offers has a model and a name in the picker',
   for (const id of ['wizard', 'pirate', 'viking', 'discoball']) assert.ok(HATS.includes(id), id);
   for (const id of ['robot', 'ghost', 'starbuddy']) assert.ok(PETS.includes(id), id);
 });
+
+test('the finishing pass can load: the page maps three/addons, and every grade the world asks for exists', () => {
+  const html = read('public/nms.html');
+  assert.ok(html.includes('"three/addons/": "/vendor/three-addons/"'), 'nms.html maps three/addons (postfx.js needs it)');
+  const world = read('public/js/world/world.js');
+  const post = read('public/js/world/postfx.js');
+  const asked = [...world.slice(world.indexOf('gradeFor() {')).split('\n  }')[0].matchAll(/return '(\w+)'/g)].map((m) => m[1]);
+  assert.ok(asked.length >= 8);
+  for (const g of asked) assert.ok(new RegExp(`\n  ${g}: \{`).test(post), `grade ${g}`);
+  assert.ok(read('public/js/ui/reveal.js').includes('post.render('), 'the reveal goes through the finishing pass too');
+});

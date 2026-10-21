@@ -19,13 +19,14 @@
     <link rel="stylesheet" href="/css/typography.css" />
     <link rel="stylesheet" href="/css/nms-menu.css" />
     <script type="importmap">
-      { "imports": { "three": "/vendor/three/three.module.min.js" } }
+      { "imports": { "three": "/vendor/three/three.module.min.js", "three/addons/": "/vendor/three-addons/" } }
     </script>
   </head>
   <body>
     <!-- The 3D ship renders here, behind everything else -->
     <div id="world"></div>
     <div id="vignette" aria-hidden="true"></div>
+    <div id="title-card" class="title-card" aria-live="polite" hidden></div>
     <div id="doom-glow" aria-hidden="true"></div>
     <div id="doom-flash" aria-hidden="true"></div>
     <div id="nm-warp" class="nm-warp" aria-hidden="true"></div>

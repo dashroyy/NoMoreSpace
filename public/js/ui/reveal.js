@@ -590,10 +590,12 @@ export class Reveal {
     if (step.focus) {
       const c = this.cast.get(step.focus);
       if (c) {
-        // everyone faces the middle, so film them from the centre of the stage
-        const inward = c.pos.clone().multiplyScalar(0.4);
-        this.camWantPos = new THREE.Vector3(inward.x, 2.6, inward.z);
-        this.camWantLook = c.pos.clone().setY(1.1);
+        // everyone faces the middle, so film them from the middle of the stage: a medium shot, never so close that
+        // the camera ends up inside a big character (or one flying out of the airlock)
+        const inward = c.pos.clone().setY(0).negate().normalize();
+        if (!Number.isFinite(inward.x)) inward.set(0, 0, 1);
+        this.camWantPos = c.pos.clone().setY(0).addScaledVector(inward, 5.2).setY(3.0);
+        this.camWantLook = c.pos.clone().setY(1.2);
         this.key.target.position.copy(c.pos);
       }
     } else if (step.overview) {
@@ -712,7 +714,9 @@ export class Reveal {
     }
     this.fx = this.fx.filter((f) => !f.dead);
 
-    this.world.renderer.render(this.scene, this.camera);
+    this.world.post.setGrade('ended');
+    this.world.post.update(1 / 60, this.time || 0);
+    this.world.post.render(this.scene, this.camera);
   }
 }
 

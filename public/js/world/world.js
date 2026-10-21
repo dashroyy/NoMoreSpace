@@ -7,6 +7,8 @@ import { Flyby } from './flyby.js';
 import { Hallucinations } from './hallucinate.js';
 import { PartyFx } from './party-fx.js';
 import { ArrayBeacon } from './array-beacon.js';
+import { PostFx } from './postfx.js';
+import { Dust } from './dust.js';
 import { buildAmbience } from './ambience.js';
 import { Soundscape } from './soundscape.js';
 import { CarnivalDecor } from './carnival.js';
@@ -23,6 +25,17 @@ import { DoomFx } from './doomfx.js';
 import { moveWithCollision, roomAt, roomById, walkable, seatPosition, TASK_STATIONS, SPAWN, DRAWING_SLOTS } from './layout.js';
 
 const SEATED = ['dawn', 'meeting', 'nominations', 'lastwords', 'dusk'];
+// Each new part of the day opens with a camera move, like a cut in a film: the camera starts swung round (angle,
+// radians) and higher up (lift), and glides into place over a few seconds.
+const SWEEPS = {
+  dawn: { angle: -0.8, lift: 16, dur: 3.2 },
+  roam: { angle: 0, lift: 9, dur: 2 },
+  meeting: { angle: 1.0, lift: 7, dur: 2.8 },
+  nominations: { angle: -0.45, lift: 4, dur: 2.2 },
+  lastwords: { angle: 0.35, lift: -4, dur: 2.2 },
+  dusk: { angle: 0.7, lift: 6, dur: 2.6 },
+};
+const UP = new THREE.Vector3(0, 1, 0);
 export const CAMERA_ZOOM = { close: 0.72, normal: 1, far: 1.3 };
 // The ship's lighting mood for each phase: a colour to tint the room lights toward, and how much.
 const MOODS = {
@@ -70,6 +83,9 @@ export class World {
     this.scene.background = new THREE.Color(0x020208);
     this.scene.fog = new THREE.Fog(0x05060f, 40, 120);
     this.camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 1500);
+    // bloom, colour grading and a little film grain (skipped with low graphics)
+    this.post = new PostFx(this.renderer, this.scene, this.camera, { lowFx: this.lowFx });
+    this.post.setSize(window.innerWidth, window.innerHeight, this.ratio);
     this.camera.position.set(0, 30, 30);
     this.camTarget = new THREE.Vector3();
     this.camPos = new THREE.Vector3(0, 30, 30);
@@ -148,6 +164,7 @@ export class World {
     this.clock = new THREE.Clock();
     this.fx = new PartyFx(this);
     // the Observation Array's beacon floats over the telescope console
+    this.dust = new Dust(this.scene, { lowFx: this.lowFx });
     this.beacon = new ArrayBeacon();
     this.ship.stations.telescope?.group.add(this.beacon.group);
     this.alarmUntil = 0;
@@ -175,6 +192,7 @@ export class World {
     this.camera.aspect = window.innerWidth / window.innerHeight;
     this.camera.updateProjectionMatrix();
     this.renderer.setSize(window.innerWidth, window.innerHeight);
+    this.post.setSize(window.innerWidth, window.innerHeight, this.ratio);
   }
 
   // ---------------------------------------------------------------------------
@@ -235,6 +253,7 @@ export class World {
   setPhase(phase, state) {
     const prev = this.phase;
     this.phase = phase;
+    if (prev !== phase && prev !== 'home' && SWEEPS[phase] && !matchMedia('(prefers-reduced-motion: reduce)').matches) this.sweep = { ...SWEEPS[phase], t: 0 };
     this.setNight(phase === 'night');
     if (phase === 'meeting' && prev !== 'meeting') this.alarmUntil = this.clock.elapsedTime + ALARM_SECONDS;
     if (SEATED.includes(phase) && !SEATED.includes(prev)) this.seatEveryone();
@@ -333,6 +352,8 @@ export class World {
       if (!a) continue;
       a.setGhost(false);
       a.pendingDeath = true;
+      // the camera goes to them (not while you are exploring: you keep control of your own walk)
+      if (this.phase !== 'roam' && this.phase !== 'lobby' && !this.focus) this.focus = { id, t: 0, dur: 4.6 };
       setTimeout(() => {
         a.die(anim || 'fainted', () => (a.pendingDeath = false));
         this.gaspNear(a.root.position, id);
@@ -476,6 +497,7 @@ export class World {
     this.updateBeams(dt);
     this.fx.update(dt, t);
     this.beacon.update(dt, t);
+    this.dust.update(dt, t, this.camTarget, !['home', 'night'].includes(this.phase));
     this.updateShipEvent(dt, t);
     this.flyby?.update(this.serverNow(), t);
     this.hallucinations?.update(dt, t);
@@ -484,7 +506,23 @@ export class World {
     this.space.update(t);
     this.backdrop.update(t, dt, this.camera);
     this.doomFx.update(t, dt);
-    this.renderer.render(this.scene, this.camera);
+    this.post.setGrade(this.gradeFor());
+    this.post.update(dt, t);
+    this.post.render(this.scene, this.camera);
+  }
+
+  // Which colour grade the picture should drift towards (see postfx.js).
+  gradeFor() {
+    const p = this.phase;
+    if (p === 'home') return 'home';
+    if (p === 'lobby') return 'lobby';
+    if (p === 'night') return 'night';
+    if (p === 'ended') return 'ended';
+    if (this.progress > 0.72) return 'doom'; // the disaster is nearly upon the ship
+    if (p === 'dawn') return 'dawn';
+    if (p === 'meeting') return 'meeting';
+    if (p === 'nominations' || p === 'lastwords' || p === 'dusk') return 'tense';
+    return 'day';
   }
 
   // Every 2 seconds, compare the frame rate with the target and nudge the resolution.
@@ -515,6 +553,7 @@ export class World {
       this.ratio = next;
       this.renderer.setPixelRatio(next);
       this.renderer.setSize(window.innerWidth, window.innerHeight);
+      this.post.setSize(window.innerWidth, window.innerHeight, next);
     }
   }
 
@@ -672,6 +711,30 @@ export class World {
     } else {
       target.set(this.local.x, 0, this.local.z - 0.8);
       offset.set(0, 11.5 * z, 8.8 * z);
+    }
+    // the kill cam: close in on whoever is dying, slowly circling them
+    const f = this.focus;
+    const who = f && this.avatars.get(f.id);
+    if (f) {
+      f.t += dt;
+      if (!who || f.t > f.dur) this.focus = null;
+      else {
+        this.sweep = null;
+        const p = who.root.position;
+        const a = 0.5 + f.t * 0.12;
+        target.set(p.x, 0.9, p.z);
+        offset.set(Math.sin(a) * 5.5, 4.2, Math.cos(a) * 5.5);
+      }
+    }
+    // the opening camera move of a new part of the day
+    if (this.sweep) {
+      const s = this.sweep;
+      s.t += dt;
+      const e = Math.max(0, 1 - s.t / s.dur);
+      const ease = e * e * (3 - 2 * e);
+      offset.applyAxisAngle(UP, s.angle * ease);
+      offset.y += s.lift * ease;
+      if (s.t >= s.dur) this.sweep = null;
     }
     const k = 1 - Math.exp(-dt * 4);
     this.camTarget.lerp(target, k);

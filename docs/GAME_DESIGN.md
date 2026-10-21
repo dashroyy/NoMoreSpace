@@ -482,6 +482,16 @@ What the newer games (Star Bonanza's cartoon gags and comic pops, Ruler's per-ev
 
 Tests: `test/animations.test.js` (every emote has an animation, a tile, a sound and a duration; the first nine keep their keys; the animation files hold every clip the poses ask for).
 
+## 9d. The finished look
+
+- **A finishing pass** (`public/js/world/postfx.js`): bloom on everything that really glows (lamps, screens, neon trim, holograms, the black hole), only above a high brightness so lit walls and suits stay crisp; a **colour grade** for each part of the day that the picture drifts into (crisp and warm by day, cold blue at night, gold at dawn, a red edge during the meeting and the votes, red when the disaster is close); and a whisper of film grain and lens fringing at the very edges. The end-of-game reveal goes through it too. **Low graphics** in Settings skips all of it.
+- **Rim-lit suits**: every spacesuit catches a thin bright edge in its own colour and glows faintly, so the crew stands out from the darkest room (`addRim` in `avatar.js`). The eyes and chest buttons glow a little less, so they do not bloom into blobs.
+- **Title cards**: each new part of the day opens like a scene in a film: black bars slide in, the title sweeps open across the middle in that part's colour, then it all slides away (`titleCard` in `hud.js`; the night screen keeps its own heading).
+- **Camera moves**: every part of the day starts with the camera swung round and up, gliding into place; and a **kill cam** closes in on whoever dies at dawn or in the airlock and slowly circles them (never while you are exploring: you keep your walk).
+- **Dust in the air** (`dust.js`): a few hundred specks drifting in the light wherever the camera looks.
+- **Panels arrive** instead of popping in: the modal, the vote panel and the emote picker (tiles pop in one after another).
+- **The reveal's close-ups** keep a medium distance, so the camera is never inside a big character.
+
 ## 9b. Behind the scenes
 - **Phones:** when a phone wakes up after the screen was off, the game reconnects straight away and shows "Reconnecting…" until it's back.
 - **Play stats:** every finished game adds one line (no names) to `data/stats.jsonl` on the server. See the summary at **/stats** (win rates by player count, average length, how often each role is dealt and survives).

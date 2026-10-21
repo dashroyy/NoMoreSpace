@@ -49,6 +49,46 @@ body {
 body.phase-night #vignette { background: radial-gradient(ellipse at center, rgba(0, 0, 10, 0.4) 0%, rgba(0, 0, 0, 0.92) 70%); }
 body.horizon-close #vignette { box-shadow: inset 0 0 160px rgba(160, 0, 40, 0.35); }
 
+/* ---------- Title cards: each part of the day opens like a scene in a film ---------- */
+.title-card { position: fixed; inset: 0; z-index: 30; pointer-events: none; --accent: #6cf0ff; }
+.title-card .tc-bar { position: absolute; left: 0; right: 0; height: 0; background: #000; transition: height 0.45s cubic-bezier(0.2, 0.8, 0.2, 1); }
+.title-card .tc-bar.top { top: 0; }
+.title-card .tc-bar.bottom { bottom: 0; }
+.title-card.on .tc-bar { height: 7vh; }
+.title-card .tc-band {
+  position: absolute; left: 0; right: 0; top: 40%; transform: translateY(-50%); padding: 16px 12px 14px; text-align: center; overflow: hidden;
+  background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--accent) 20%, rgba(2, 4, 14, 0.82)) 16%, color-mix(in srgb, var(--accent) 20%, rgba(2, 4, 14, 0.82)) 84%, transparent);
+  clip-path: inset(0 50% 0 50%); opacity: 0; transition: clip-path 0.55s cubic-bezier(0.2, 0.8, 0.2, 1) 0.08s, opacity 0.25s 0.08s, transform 0.4s;
+}
+.title-card.on .tc-band { clip-path: inset(0 0 0 0); opacity: 1; }
+.title-card .tc-band::after { content: ''; position: absolute; top: 0; bottom: 0; left: -40%; width: 30%; background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.22), transparent); transform: skewX(-20deg); }
+.title-card.on .tc-band::after { animation: tc-sweep 1.3s ease-in-out 0.35s both; }
+@keyframes tc-sweep { from { left: -40%; } to { left: 120%; } }
+.title-card .tc-title { font-family: var(--font-title); font-size: clamp(1.7rem, 5vw, 3.3rem); line-height: 1.15; letter-spacing: 0.16em; text-transform: uppercase; color: #fff; text-shadow: 0 0 22px var(--accent), 0 0 3px rgba(255, 255, 255, 0.8); }
+.title-card.on .tc-title { animation: tc-in 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) 0.12s both; }
+@keyframes tc-in { from { letter-spacing: 0.55em; filter: blur(8px); opacity: 0; } }
+.title-card .tc-sub { margin-top: 6px; font-size: clamp(1rem, 2.2vw, 1.3rem); color: color-mix(in srgb, var(--accent) 45%, #ffffff); }
+.title-card.on .tc-sub { animation: tc-rise 0.6s ease-out 0.42s both; }
+@keyframes tc-rise { from { transform: translateY(10px); opacity: 0; } }
+.title-card .tc-line { height: 2px; width: 0; margin: 6px auto; background: linear-gradient(90deg, transparent, var(--accent), transparent); transition: width 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) 0.2s; }
+.title-card.on .tc-line { width: min(72vw, 760px); }
+.title-card.out .tc-band { opacity: 0; transform: translateY(calc(-50% - 18px)); transition: opacity 0.45s, transform 0.45s; }
+.title-card.out .tc-bar { height: 0; }
+@media (prefers-reduced-motion: reduce) { .title-card *, .title-card *::after { animation: none !important; transition: none !important; } }
+
+/* ---------- Motion: panels arrive instead of popping in (each plays when the panel is shown) ---------- */
+.modal-box { animation: panel-in 0.28s cubic-bezier(0.2, 0.8, 0.2, 1); }
+.vote-panel { animation: panel-drop 0.38s cubic-bezier(0.2, 0.8, 0.2, 1); }
+.emote-menu { animation: panel-rise 0.24s cubic-bezier(0.2, 0.8, 0.2, 1); }
+.emote-menu .emote-tile { animation: tile-pop 0.3s cubic-bezier(0.3, 1.6, 0.5, 1) both; }
+.emote-menu .eg .emote-tile:nth-child(3n + 2) { animation-delay: 0.03s; }
+.emote-menu .eg .emote-tile:nth-child(3n) { animation-delay: 0.06s; }
+@keyframes panel-in { from { opacity: 0; transform: scale(0.94) translateY(10px); } }
+@keyframes panel-drop { from { opacity: 0; transform: translate(-50%, -16px); } }
+@keyframes panel-rise { from { opacity: 0; transform: translate(-50%, 14px); } }
+@keyframes tile-pop { from { opacity: 0; transform: scale(0.7); } }
+@media (prefers-reduced-motion: reduce) { .modal-box, .vote-panel, .emote-menu, .emote-menu .emote-tile { animation: none; } }
+
 /* ---------- Generic controls ---------- */
 .card {
   background: var(--panel);

@@ -312,6 +312,8 @@ test('robot-only games always finish, every probe is accounted for, and the scor
 // ---------------------------------------------------------------------------
 // A live game over the socket
 // ---------------------------------------------------------------------------
+process.env.PORT = '0'; // a free port (port 3000 may be busy with a dev server)
+process.env.NMS_DATA_DIR = fs.mkdtempSync(path.join(require('os').tmpdir(), 'sch-test-')); // never touch the real saved games
 const { server } = require('../server/index');
 const { io } = require('socket.io-client');
 

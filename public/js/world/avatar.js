@@ -61,6 +61,24 @@ function mat(color, extra = {}) {
   return new THREE.MeshStandardMaterial({ color, roughness: 0.55, metalness: 0.05, ...extra });
 }
 
+// A rim light: the edges of the suit facing away from the camera catch a bright line, the way characters in a
+// finished game stand out from the room behind them. (A few lines added to the standard material's shader.)
+export function addRim(material, color, strength = 0.35, power = 2.8) {
+  const uniforms = { rimColor: { value: color }, rimStrength: { value: strength }, rimPower: { value: power } };
+  material.userData.rim = uniforms;
+  material.onBeforeCompile = (shader) => {
+    Object.assign(shader.uniforms, uniforms);
+    shader.fragmentShader = `uniform vec3 rimColor;\nuniform float rimStrength;\nuniform float rimPower;\n${shader.fragmentShader}`.replace(
+      '#include <emissivemap_fragment>',
+      `#include <emissivemap_fragment>
+      float rimLight = pow(1.0 - saturate(dot(normalize(normal), normalize(vViewPosition))), rimPower);
+      totalEmissiveRadiance += rimColor * rimLight * rimStrength;`,
+    );
+  };
+  material.customProgramCacheKey = () => 'rim';
+  return material;
+}
+
 function mesh(geometry, material, x = 0, y = 0, z = 0) {
   const m = new THREE.Mesh(geometry, material);
   m.position.set(x, y, z);
@@ -628,11 +646,15 @@ export class Avatar {
     this.visorMat = new THREE.MeshStandardMaterial({ color: 0xffffff, metalness: 0.3, roughness: 0.05, transparent: true, opacity: 0.26, emissive: 0x000000, depthWrite: false });
     this.visorMat.userData.wasTransparent = true;
     this.headMat = mat(0x151a36, { roughness: 0.8 });
-    this.eyeMat = new THREE.MeshStandardMaterial({ color: 0xe6fbff, emissive: 0xaff0ff, emissiveIntensity: 3.2 });
+    this.eyeMat = new THREE.MeshStandardMaterial({ color: 0xe6fbff, emissive: 0xaff0ff, emissiveIntensity: 1.7 });
     this.glintMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.75, depthWrite: false });
     this.glintMat.userData.wasTransparent = true;
     this.lampMat = new THREE.MeshStandardMaterial({ color: 0xfff3c4, emissive: 0xfff3c4, emissiveIntensity: 2 });
-    this.buttonMats = [0xff3b5c, 0xffc23b, 0x5bff8f].map((c) => new THREE.MeshStandardMaterial({ color: c, emissive: c, emissiveIntensity: 1.6 }));
+    this.buttonMats = [0xff3b5c, 0xffc23b, 0x5bff8f].map((c) => new THREE.MeshStandardMaterial({ color: c, emissive: c, emissiveIntensity: 1.15 }));
+    this.rimColor = new THREE.Color(0xffffff);
+    addRim(this.suitMat, this.rimColor, 0.35);
+    addRim(this.darkMat, this.rimColor, 0.28);
+    addRim(this.trimMat, new THREE.Color(0xbfe8ff), 0.22);
     this.suitMaterials = [this.suitMat, this.darkMat, this.trimMat, this.metalMat, this.bootMat, this.visorMat, this.headMat, this.eyeMat, this.glintMat, this.lampMat, ...this.buttonMats];
     this.materials = [...this.suitMaterials];
 
@@ -762,6 +784,9 @@ export class Avatar {
     const suit = new THREE.Color(this.suits[look.suit] || '#cccccc');
     this.suitMat.color.copy(suit);
     this.darkMat.color.copy(suit).multiplyScalar(0.72);
+    // the rim is the suit's own colour, lightened; and the suit glows faintly so it reads in the darkest room
+    this.rimColor.copy(suit).lerp(new THREE.Color(0xffffff), 0.55);
+    this.suitMat.emissive.copy(suit).multiplyScalar(0.1);
     const visor = new THREE.Color(this.visors[look.visor] || '#f2b84b');
     this.visorMat.color.copy(visor);
     this.visorMat.emissive.copy(visor).multiplyScalar(0.18);
