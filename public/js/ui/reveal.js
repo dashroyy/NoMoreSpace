@@ -196,7 +196,7 @@ export class Reveal {
         for (const d of ch.deaths || []) steps.push({ dur: 2.4, focus: d.id, caption: d.cause === 'burst' ? `🦠 ${name(d.id)} burst in a cloud of glowing spores.` : `💀 ${name(d.id)} did not wake up.`, enter: () => this.kill(d.id, d.anim) });
       }
       if (ch.k === 'day') {
-        const interesting = ch.events.filter((e) => ['nomination', 'execute', 'shot', 'sentinel', 'become-parasite', 'story', 'system', 'net', 'jam', 'mastermind', 'pie', 'hexed', 'spores', 'shield', 'recruited', 'jackpot', 'poisoned', 'leech-hold', 'star', 'rigged', 'fool', 'showboat', 'heartbreak'].includes(e.k) && !(e.k === 'nomination' && e.result === 'safe' && e.votes < 2));
+        const interesting = ch.events.filter((e) => ['nomination', 'execute', 'shot', 'sentinel', 'become-parasite', 'story', 'system', 'net', 'jam', 'mastermind', 'pie', 'hexed', 'spores', 'shield', 'recruited', 'jackpot', 'poisoned', 'leech-hold', 'star', 'rigged', 'fool', 'showboat', 'heartbreak', 'hero'].includes(e.k) && !(e.k === 'nomination' && e.result === 'safe' && e.votes < 2));
         if (!interesting.length) continue;
         steps.push({ dur: 2, chapter: `DAY ${ch.n}`, caption: '', overview: true, enter: () => { sfx('dawn'); this.lighting('day'); } });
         for (const e of interesting) {
@@ -367,6 +367,8 @@ export class Reveal {
         return { dur: 2.4, focus: e.id, caption: `🛡️ ${name(e.id)} won the day's Shield for their missions.`, enter: () => sfx('chime') };
       case 'recruited':
         return { dur: 3.2, focus: e.t, beam: [e.a, e.t, 0xd9a0ff], caption: e.accepted ? `🐍 ${name(e.t)} accepted the offer and became a Traitor!` : `✋ ${name(e.t)} refused the offer.`, enter: () => { sfx(e.accepted ? 'death' : 'chime'); if (e.accepted) this.transform(e.t, 'recruit'); } };
+      case 'hero':
+        return { dur: 3, focus: e.id, caption: `🏅 ${name(e.id)} did the most tasks today (${e.n}), and ARIA whispered a secret${e.t ? `: ${name(e.t)} is not the Demon` : ''}.`, enter: () => sfx('chime') };
       case 'star':
         return { dur: 3.2, focus: e.t, beam: [e.a, e.t, 0x9ad8ff], caption: `🌠 ${name(e.a)} the Stargazer pointed at ${name(e.t)}${e.good ? '... a good player, who fell down dead.' : '... evil! Nothing happened.'}`, enter: () => { sfx(e.good ? 'death' : 'chime'); if (e.good) this.kill(e.t); } };
       case 'rigged':

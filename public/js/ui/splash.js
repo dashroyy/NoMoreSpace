@@ -17,7 +17,7 @@ export function returning() {
 const TIPS = [
   'Only people in the same room can read your chat. Meet someone for a private talk.',
   'Press R for your role card, M to jump to any room, Tab for the station map.',
-  'Doing tasks charges the Observation Array: stand at the window tomorrow to see a clue.',
+  'Doing tasks charges the Observation Array: tomorrow you get a clue decoded, or watch the window for it.',
   'Not sure who to trust? Everyone lies a little. The Parasite lies the most.',
   'ARIA, the ship’s AI, tells the story. If you get eaten, she will work in your bio.',
   'No friends online? Practice with robots to learn every script.',

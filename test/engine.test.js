@@ -817,9 +817,10 @@ test('ship systems: blackout hides door logs, disguises expire, lockdowns stop e
 test('clues drift past at a set moment while exploring, and only task-doers get a warning', () => {
   const { g, p, role } = setup(['comms', 'engineer', 'medic', 'hacker', 'parasite']);
   playNight(g);
-  g.charge = 999; // the Observation Array is full, so a clue comes tomorrow
+  g.charge = g.chargeNeeded(); // the Observation Array is full, so a clue comes tomorrow
   g.applyDraft(2000);
   assert.ok(g.clue, 'a clue is ready');
+  assert.strictEqual(g.clue2, null, 'just the one');
   assert.strictEqual(g.viewFor(p[0].id).clue, null, 'nobody sees it before exploring');
   g.beginRoam(10_000);
   const { at, until } = g.clue;

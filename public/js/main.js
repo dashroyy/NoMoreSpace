@@ -46,6 +46,7 @@ import { initIcons, loadAtlas } from './icons.js';
 initIcons(); // emoji in the text become the arcade's own icons (see icons.js)
 
 const SEAT_KEY = 'nms-seat';
+let ghostTaskTip = false; // shown once per visit
 const MOODS = { lobby: 'calm', night: 'night', dawn: 'day', roam: 'day', meeting: 'day', nominations: 'tense', lastwords: 'tense', dusk: 'tense', ended: 'calm' };
 
 function loadSeat() {
@@ -141,9 +142,7 @@ async function boot() {
     onUse: () => {
       const taskId = world.nearTask;
       if (!taskId) return;
-      openTask(taskId, store.data.tasks[taskId].name, () => {
-        send('task', { task: taskId }).catch((e) => problem(e.message));
-      });
+      openTask(taskId, store.data.tasks[taskId].name, () => send('task', { task: taskId }).catch((e) => problem(e.message)));
     },
   });
   initPause({ onLeave: leave });
@@ -239,6 +238,12 @@ async function boot() {
     updateChatVisibility(state);
     refreshRoleCard();
     world.setDoneTasks(state.you?.tasksDone || []);
+    world.setArrayCharge(state.charge, state.chargeNeeded);
+    // a ghost's first day: they can still help
+    if (state.phase === 'roam' && prev?.phase !== 'roam' && state.you?.alive === false && !state.you.isCaptain && !ghostTaskTip) {
+      ghostTaskTip = true;
+      toast('👻 Ghosts can still do tasks: yours charge the Observation Array too!', 'info', 7000);
+    }
     world.setHallucination(state.you?.fx || null, state.phase, (m) => addChat(m));
     world.setShipEvent(state.shipEvent);
     world.setSpotlight(state.phase === 'lastwords' ? state.lastWords?.id : null);

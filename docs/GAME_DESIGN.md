@@ -277,6 +277,13 @@ There are 11 rooms, each with a task console and a quick minigame:
 | Crew Quarters | Feed the Ship Cat (it dodges) |
 
 - Each task (once per player per day, ghosts too) charges the **Observation Array**. When it reaches 1.5 × the number of living players, a **clue** comes the next day.
+- **Tasks are worth doing (the Array, round two):**
+  - **A meter everyone can see.** The top bar has two halves: the first charges the clue (a mark shows where it is full), the second a **bonus clue**. Everyone hears ARIA at *half charged*, *charged* and *overcharged*. In the ship a hologram over the Observation Deck's telescope console fills up too: three rings light one by one, the orb turns gold when it is charged, and a big gold halo appears when it is overcharged (`array-beacon.js`).
+  - **The clue is decoded for whoever helped.** Everyone whose tasks charged the Array (alive or ghost) gets the clue written out in plain words in their notebook at dawn ("Three comets: Ada, Bo, Cy. One of them carries spores"), so they need not be at the window at the right 20 seconds. Everybody else still can watch for it.
+  - **Overcharge it** (twice the clue amount) and a **second clue**, of a different kind, drifts past later the same day. Charge left over carries on to the next cycle.
+  - **The top technician.** Whoever did the most tasks in a day (two or more) is announced as the day's top technician, and ARIA whispers one small true secret to them: a player who is **not the Demon**. (The Citadel keeps its own reward: the daily Shield.)
+  - **A finished task shows what it did**: the Array bar fills on the task-complete card, with how many more are needed.
+  - Ghosts can still do tasks, and theirs count. Tests: `test/tasks.test.js`.
 - **Clues are real 3D objects that drift past outside the ship**, beyond the Observation Deck's big window, for just **20 seconds** at a random moment while everyone is exploring. Stand in the Observation Deck and the camera tilts up to watch them go by; whoever is there gets the clue's caption. Blink and you miss it, so whoever saw it has to convince everyone else.
 - **Players who did a task that day get a 20-second warning** ("📡 Your task sensors ping…"), so tasks pay off. Everyone else has to notice the crowd heading for the window.
 - **Clues help whichever team is losing.** ARIA compares how close the ship is to the black hole (good losing) against how many evil players are dead or under suspicion (evil losing).

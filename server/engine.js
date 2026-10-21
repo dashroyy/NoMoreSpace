@@ -135,6 +135,8 @@ class Game {
     this.winReason = null;
     this.charge = 0;
     this.clue = null;
+    this.clue2 = null; // the bonus clue, when the Array was overcharged
+    this.contributors = new Set(); // who did tasks since the Array last fired (they get the clue decoded)
     this.hallucination = null; // the Holo-Jester's victim for today: { id, seed, clue }
     this.claims = {}; // public role claims: pid -> { role, text, at }
     this.dayLog = []; // public record of the game: votes, deaths, clues, claims
@@ -611,6 +613,7 @@ class Game {
   // The show's daily Shield: whoever did the most missions (tasks) today cannot be murdered tonight.
   awardShield() {
     for (const p of this.players) p.shield = null;
+    this.awardHero();
     if (!this.mech().dailyShield) return;
     const counts = this.alive().map((p) => [p, (this.tasksDone[p.id] || []).length]).filter(([, n]) => n > 0);
     if (!counts.length) return;
@@ -1684,11 +1687,21 @@ class Game {
     this.tasksDone = {};
     this.drawings.forEach((dr) => (dr.published = true));
     const needed = this.chargeNeeded();
-    if (this.charge >= needed) {
+    const batches = Math.min(2, Math.floor(this.charge / needed));
+    this.clue = null;
+    this.clue2 = null;
+    if (batches) {
       this.clue = st.makeClue(this, this.random);
-      this.charge = 0;
-    } else {
-      this.clue = null;
+      if (batches > 1) this.clue2 = st.makeClue(this, this.random, { team: this.clue.team, avoid: this.clue.kind });
+      this.charge -= batches * needed; // whatever is left over counts towards the next one
+      // everybody whose tasks charged the Array gets the clue decoded now, so they need not be at the window
+      for (const id of this.contributors) {
+        const who = this.get(id);
+        if (!who) continue;
+        const lines = [this.clue, this.clue2].filter(Boolean).map((c) => this.describeClue(c));
+        this.tell(who, `📡 Your tasks charged the Observation Array. Decoded: ${lines.join(' BONUS: ')}`, { kind: 'array' });
+      }
+      this.contributors.clear();
     }
 
     this.newChapter('day', this.day);
@@ -2144,8 +2157,12 @@ class Game {
     this.afk.clear();
     this.visits = {};
     // clues drift past at a random moment while everyone is exploring
-    const when = () => now + Math.round(this.dur('roam') * (0.3 + this.random() * 0.35));
-    if (this.clue) this.scheduleClue(this.clue, when());
+    const dur = this.dur('roam');
+    const when = (from = 0.3, span = 0.35) => now + Math.round(dur * (from + this.random() * span));
+    if (this.clue2) {
+      this.scheduleClue(this.clue, when(0.12, 0.22)); // two clues: one early, one late
+      this.scheduleClue(this.clue2, when(0.55, 0.25));
+    } else if (this.clue) this.scheduleClue(this.clue, when());
     if (this.hallucination) this.scheduleClue(this.hallucination.clue, this.clue?.at ?? when());
     this.announce(`Day ${this.day}. Explore the ship, do tasks and whisper with crewmates.`, 'day');
   }
@@ -3001,9 +3018,56 @@ class Game {
     if (done.includes(taskId)) throw new Error('You already did that task today.');
     done.push(taskId);
     this.pot += this.mech().prizePot || 0;
+    const before = this.charge;
+    const needed = this.chargeNeeded();
     this.charge += 1;
+    this.contributors.add(pid);
     this.bump('tasks', pid);
-    return { charge: this.charge, needed: this.chargeNeeded() };
+    this.arrayMilestones(before, this.charge, needed);
+    return { charge: this.charge, needed, today: done.length, contributors: this.contributors.size };
+  }
+
+  // The Observation Array has three milestones, and the whole ship hears about each one:
+  // half charged, charged (a clue tomorrow) and overcharged (a second, bonus clue as well).
+  arrayMilestones(before, after, needed) {
+    const half = Math.ceil(needed / 2);
+    if (before < half && after >= half && after < needed) this.announce('📡 The Observation Array is half charged. Keep doing tasks!', 'system');
+    if (before < needed && after >= needed) this.announce('📡 The Observation Array is CHARGED! A clue drifts past the Observation Deck tomorrow, and everyone who helped gets it decoded.', 'system');
+    if (before < needed * 2 && after >= needed * 2) this.announce('📡 OVERCHARGED! Tomorrow brings a BONUS clue too.', 'system');
+  }
+
+  // What a clue means, in plain words (for the players whose tasks charged the Array).
+  describeClue(clue) {
+    if (!clue) return null;
+    const R = (id) => `${ROLES[id].icon} ${ROLES[id].name}`;
+    const demon = ROLES[this.demonRole()].name.replace(/^The /, '');
+    const names = (ids = []) => ids.map((id) => this.name(id)).join(', ');
+    switch (clue.kind) {
+      case 'dead-constellation': return `A DEAD constellation, shaped like the ${R(clue.role)}. That role is not aboard.`;
+      case 'living-constellation': return `A LIVING constellation, shaped like the ${R(clue.role)}. That role is aboard.`;
+      case 'comets': return `Three comets: ${names(clue.players)}. One of them carries spores (is evil).`;
+      case 'probe': return `A probe blinks ${names(clue.players)}'s colour. They are not the ${demon}.`;
+      case 'drift-count': return `${clue.count} Drifter${clue.count === 1 ? '' : 's'} aboard.`;
+      case 'role-comets': return `Three comets cross the ${R(clue.role)} constellation: ${names(clue.players)}. One of them is the ${ROLES[clue.role].name}.`;
+      default: return clue.caption;
+    }
+  }
+
+  // The player who did the most tasks today (at least two) is the day's top technician: ARIA whispers a small, true
+  // secret to them. (The Citadel has its own reward for missions: the Shield.)
+  awardHero() {
+    if (this.mech().dailyShield) return;
+    const counts = this.players.map((p) => [p, (this.tasksDone[p.id] || []).length]).filter(([, n]) => n >= 2);
+    if (!counts.length) return;
+    const top = Math.max(...counts.map(([, n]) => n));
+    const hero = st.pick(counts.filter(([, n]) => n === top).map(([p]) => p), this.random);
+    const demon = this.players.find((o) => o.alive && this.isDemon(o));
+    const others = this.players.filter((o) => o.alive && o !== hero && o !== demon);
+    const pick = others.length ? st.pick(others, this.random) : null;
+    const secret = pick && demon ? ` ARIA whispers: ${pick.name} is NOT the ${ROLES[demon.role].name.replace(/^The /, '')}.` : '';
+    this.tell(hero, `🏅 You did the most tasks today (${top}): top technician!${secret}`, { kind: 'array' });
+    this.announce(`🏅 ${hero.name} was today's top technician (${top} tasks).`, 'system');
+    this.ev({ k: 'hero', id: hero.id, n: top, t: pick?.id });
   }
 
   submitDrawing(pid, data, signed, now = Date.now()) {
@@ -3115,6 +3179,7 @@ class Game {
     if (this.phase === 'lobby' || this.phase === 'ended') throw new Error('No game running.');
     const team = ['dead-constellation', 'comets', 'probe'].includes(kind) ? 'crew' : ['living-constellation', 'drift-count', 'role-comets'].includes(kind) ? 'infiltrators' : null;
     this.clue = st.makeClue(this, this.random, team ? { team, kind } : null);
+    this.clue2 = null;
     // while exploring it arrives in 20 seconds; otherwise during the next exploring phase
     if (this.phase === 'roam') this.scheduleClue(this.clue, now + CLUE_WARN_MS);
   }
@@ -3135,9 +3200,15 @@ class Game {
     return { kind, players, role, count, caption, at, until };
   }
 
+  // The clue that is on show right now (or about to be): the first one, or the bonus one.
+  activeClue(now = Date.now()) {
+    return [this.clue, this.clue2].find((c) => this.clueView(c, now)) || null;
+  }
+
   // A key that changes whenever a clue appears or disappears for anyone (so the server re-sends state).
   clueKey(now = Date.now()) {
-    return `${!!this.clueView(this.clue, now)}|${!!this.clueView(this.hallucination?.clue, now)}`;
+    const live = this.activeClue(now);
+    return `${live ? (live === this.clue2 ? 2 : 1) : false}|${!!this.clueView(this.hallucination?.clue, now)}`;
   }
 
   say(byId, text, now = Date.now()) {
@@ -3170,9 +3241,11 @@ class Game {
   tick(now = Date.now()) {
     const clues = this.clueKey(now);
     const cluesChanged = clues !== (this.lastClueKey ?? 'false|false');
-    if (this.clue?.at && now >= this.clue.at && !this.clue.logged) {
-      this.clue.logged = true;
-      this.logEvent({ k: 'clue', caption: this.clue.caption });
+    for (const c of [this.clue, this.clue2]) {
+      if (c?.at && now >= c.at && !c.logged) {
+        c.logged = true;
+        this.logEvent({ k: 'clue', caption: c.caption });
+      }
     }
     this.lastClueKey = clues;
     const afk = this.updateAfk(now);
@@ -3346,7 +3419,7 @@ class Game {
       dawn: this.dawn,
       dusk: this.dusk,
       bubble: this.bubble,
-      clue: this.clueView(this.clue),
+      clue: this.clueView(this.activeClue()),
       charge: this.charge,
       chargeNeeded: this.chargeNeeded(),
       drawings: this.drawings.filter((d) => d.published).map((d) => ({ id: d.id, signedBy: d.signed ? this.name(d.author) : null })),
@@ -3366,7 +3439,8 @@ class Game {
     if (this.captain && this.captain.id === pid) {
       view.you = { id: pid, name: this.captain.name, isCaptain: true, isController: this.isController(pid) };
       view.grimoire = this.grimoire();
-      view.clue = this.clue && { ...this.clue, live: !!this.clueView(this.clue) };
+      const shown = this.activeClue() || this.clue;
+      view.clue = shown && { ...shown, live: !!this.clueView(shown) };
       return view;
     }
     const watcher = this.getSpectator(pid);

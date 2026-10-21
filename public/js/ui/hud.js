@@ -158,10 +158,26 @@ export function renderHud(state) {
     $('hud-horizon').append(el('span', { className: 'infected-badge', style: { color: '#7dff3a', fontWeight: 'bold' }, title: `You are infected! You burst when night ${sick.bursts} ends unless a Vaccinator cures you. Your abilities malfunction until then.` }, ' · 🤒 INFECTED'));
   }
   document.body.classList.toggle('horizon-close', state.phase !== 'lobby' && alive <= 4);
-  const pct = Math.min(100, Math.round((state.charge / state.chargeNeeded) * 100));
-  $('hud-charge').querySelector('span').style.width = `${pct}%`;
-  $('hud-charge').classList.toggle('full', pct >= 100);
-  $('hud-charge').title = pct >= 100 ? 'Observation Array charged! A clue will appear in the Observation Deck windows tomorrow morning.' : `Observation Array ${pct}%: do tasks so a clue appears in the windows tomorrow.`;
+  // the Observation Array: the first half of the bar is the clue, the second half a bonus clue
+  const charge = state.charge || 0;
+  const needed = state.chargeNeeded || 1;
+  const box = $('hud-charge');
+  box.querySelector('span').style.width = `${Math.min(1, charge / needed) * 50}%`;
+  box.querySelector('em').style.width = `${Math.min(1, Math.max(0, charge - needed) / needed) * 50}%`;
+  box.querySelector('i').textContent = `${charge}/${needed}`;
+  box.classList.toggle('full', charge >= needed);
+  box.classList.toggle('over', charge >= needed * 2);
+  if (box.dataset.charge !== undefined && Number(box.dataset.charge) < charge) {
+    box.classList.remove('pulse');
+    void box.offsetWidth;
+    box.classList.add('pulse');
+  }
+  box.dataset.charge = charge;
+  box.title = charge >= needed * 2
+    ? 'Observation Array OVERCHARGED: a clue AND a bonus clue tomorrow. Everyone who did tasks gets them decoded.'
+    : charge >= needed
+      ? `Observation Array charged: a clue drifts past the Observation Deck tomorrow, and everyone who did tasks gets it decoded. ${needed * 2 - charge} more tasks add a bonus clue.`
+      : `Observation Array ${charge}/${needed}: ${needed - charge} more tasks and a clue appears tomorrow. Ghosts' tasks count too. The day's top technician gets a secret from ARIA.`;
 
   const you = state.you || {};
   const nom = state.nomination;

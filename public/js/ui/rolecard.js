@@ -181,7 +181,7 @@ export function howToPlay() {
     el('h3', {}, '🤥 Lies & glitches'),
     el('p', {}, 'Evil players lie about their roles. The Hacker can glitch a player, and the Space Drunk does not know they are drunk. Glitched or drunk players get FALSE information, so not every honest player is right!'),
     el('h3', {}, '🔭 Tasks & clues'),
-    el('p', {}, 'Tasks in each room charge the Observation Array. When it is full, a small cryptic clue appears outside the Observation Deck window the next morning. Clues tend to help whichever team is losing.'),
+    el('p', {}, 'Tasks in each room charge the Observation Array (ghosts too). When it is full, a clue drifts past the Observation Deck window the next day, and everyone whose tasks charged it gets it decoded in their notebook. Overcharge it and a bonus clue follows. The day\'s top technician (two tasks or more) gets a secret from ARIA. Clues tend to help whichever team is losing.'),
     el('h3', {}, '👥 Roles per player count'),
     el('table', { className: 'dist-table' },
       el('tr', {}, el('th', {}, 'Players'), el('th', {}, 'Crew'), el('th', {}, 'Drifters'), el('th', {}, 'Saboteurs'), el('th', {}, 'Parasite')),

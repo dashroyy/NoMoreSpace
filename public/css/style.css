@@ -211,10 +211,18 @@ kbd {
 @keyframes pulse { 50% { opacity: 0.55; } }
 .horizon { font-size: 0.75rem; color: var(--muted); letter-spacing: 0.05em; }
 .horizon b { color: var(--danger); }
-.charge { position: relative; width: 110px; height: 26px; border-radius: 999px; background: var(--panel); border: 1px solid var(--line); overflow: hidden; display: flex; align-items: center; justify-content: flex-end; padding-right: 8px; }
-.charge span { position: absolute; left: 0; top: 0; bottom: 0; background: linear-gradient(90deg, rgba(108, 240, 255, 0.25), rgba(108, 240, 255, 0.6)); transition: width 0.6s; }
-.charge b { position: relative; }
+/* The Observation Array: the first half of the bar charges a clue, the second half a bonus clue */
+.charge { position: relative; width: 150px; height: 28px; border-radius: 999px; background: var(--panel); border: 1px solid var(--line); overflow: hidden; display: flex; align-items: center; justify-content: space-between; padding: 0 8px; }
+.charge span, .charge em { position: absolute; top: 0; bottom: 0; transition: width 0.6s; }
+.charge span { left: 0; background: linear-gradient(90deg, rgba(108, 240, 255, 0.25), rgba(108, 240, 255, 0.65)); }
+.charge em { left: 50%; background: linear-gradient(90deg, rgba(255, 210, 63, 0.3), rgba(255, 210, 63, 0.75)); }
+.charge::after { content: ''; position: absolute; left: 50%; top: 3px; bottom: 3px; width: 2px; background: rgba(255, 255, 255, 0.45); } /* the clue mark */
+.charge i { position: relative; z-index: 1; font-style: normal; font-size: 0.8rem; letter-spacing: 0.05em; text-shadow: 0 1px 2px #000; }
+.charge b { position: relative; z-index: 1; }
 .charge.full { box-shadow: 0 0 14px rgba(108, 240, 255, 0.7); }
+.charge.over { box-shadow: 0 0 16px rgba(255, 210, 63, 0.85); }
+.charge.pulse { animation: charge-pulse 0.7s ease-out; }
+@keyframes charge-pulse { 30% { transform: scale(1.18); } }
 
 .phase-banner {
   position: absolute; top: 90px; left: 50%; transform: translateX(-50%); padding: 10px 22px; border-radius: 12px;
@@ -410,7 +418,18 @@ body.screen-home .toasts { display: none; }
 .task-grid { display: grid; gap: 8px; }
 .task-btn { min-width: 64px; min-height: 64px; font-size: 1.6rem; display: grid; place-items: center; }
 .task-btn.lit { background: rgba(255, 255, 255, 0.85); color: #000; box-shadow: 0 0 20px white; }
-.task-done { color: var(--ok); font-family: var(--font-title); font-size: 1.3rem; text-align: center; }
+.task-done { color: var(--ok); font-family: var(--font-title); font-size: 1.3rem; text-align: center; animation: task-pop 0.45s ease-out; }
+@keyframes task-pop { 0% { transform: scale(0.6); opacity: 0; } 60% { transform: scale(1.15); } }
+/* what a finished task did for the Observation Array */
+.task-reward { display: grid; gap: 8px; justify-items: center; margin-top: 8px; }
+.task-array { position: relative; width: min(320px, 90%); height: 30px; border-radius: 999px; background: rgba(255, 255, 255, 0.08); border: 1px solid var(--line); overflow: hidden; }
+.task-array span, .task-array em { position: absolute; top: 0; bottom: 0; transition: width 0.9s ease-out; }
+.task-array span { left: 0; background: linear-gradient(90deg, rgba(108, 240, 255, 0.35), rgba(108, 240, 255, 0.9)); }
+.task-array em { left: 50%; background: linear-gradient(90deg, rgba(255, 210, 63, 0.4), rgba(255, 210, 63, 0.95)); }
+.task-array::after { content: '📡'; position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); font-size: 1.1rem; }
+.task-array b { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); font-size: 0.95rem; text-shadow: 0 1px 2px #000; }
+.task-reward .big-line { font-size: 1.25rem; }
+.task-reward .gold { color: #ffd23f; }
 
 /* Reveal */
 .reveal { position: fixed; inset: 0; z-index: 15; pointer-events: none; }
@@ -518,7 +537,7 @@ body.blackout .minimap { opacity: 0.35; }
   .chat { width: calc(100% - 252px); min-width: 160px; max-height: 30vh; bottom: 70px; left: 6px; }
   .minimap { display: none; }
   .timer { font-size: 1.3rem; }
-  .charge { width: 64px; }
+  .charge { width: 96px; }
   .tb-left .code { display: none; }
   .actionbar { bottom: 8px; gap: 5px; }
   .action { padding: 7px 9px; font-size: 0.8rem; }

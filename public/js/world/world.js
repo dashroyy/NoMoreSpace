@@ -6,6 +6,7 @@ import { SpaceCanvases, buildBackdrop } from './sky.js';
 import { Flyby } from './flyby.js';
 import { Hallucinations } from './hallucinate.js';
 import { PartyFx } from './party-fx.js';
+import { ArrayBeacon } from './array-beacon.js';
 import { buildAmbience } from './ambience.js';
 import { Soundscape } from './soundscape.js';
 import { CarnivalDecor } from './carnival.js';
@@ -146,6 +147,9 @@ export class World {
     this.doneTasks = new Set();
     this.clock = new THREE.Clock();
     this.fx = new PartyFx(this);
+    // the Observation Array's beacon floats over the telescope console
+    this.beacon = new ArrayBeacon();
+    this.ship.stations.telescope?.group.add(this.beacon.group);
     this.alarmUntil = 0;
     this.moodColor = new THREE.Color();
     this._tint = new THREE.Color();
@@ -387,6 +391,11 @@ export class World {
     });
   }
 
+  // How charged the Observation Array is (the beacon over the telescope shows it).
+  setArrayCharge(charge, needed) {
+    this.beacon.set(charge || 0, needed || 1);
+  }
+
   setDoneTasks(list) {
     this.doneTasks = new Set(list);
     for (const [taskId, st] of Object.entries(this.ship.stations)) {
@@ -466,6 +475,7 @@ export class World {
     this.ship.exterior.update(t);
     this.updateBeams(dt);
     this.fx.update(dt, t);
+    this.beacon.update(dt, t);
     this.updateShipEvent(dt, t);
     this.flyby?.update(this.serverNow(), t);
     this.hallucinations?.update(dt, t);

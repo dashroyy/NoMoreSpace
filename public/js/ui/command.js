@@ -264,7 +264,7 @@ function clues(s) {
   return el('div', {},
     el('section', {},
       el('h3', {}, '🔭 Window clues'),
-      el('div', { className: 'hint' }, `Observation Array: ${s.charge}/${s.chargeNeeded}. When full at dawn, a clue that helps the losing team drifts past outside the Observation Deck for 20 seconds at a random moment while everyone explores. Players who did a task that day get a 20-second warning.`),
+      el('div', { className: 'hint' }, `Observation Array: ${s.charge}/${s.chargeNeeded}. When full at dawn, a clue that helps the losing team drifts past outside the Observation Deck for 20 seconds at a random moment while everyone explores (a second, bonus clue at double). Everyone whose tasks charged it gets the clue decoded at dawn; players who did a task that day also get a 20-second warning. The day's top technician gets a small secret.`),
       s.clue ? el('div', {}, `Today's clue: ${s.clue.kind} — “${s.clue.caption}”${s.clue.at ? (s.clue.live ? ' · drifting past now!' : ` · arrives ${new Date(s.clue.at).toLocaleTimeString()}`) : ' · arrives during exploring'}`) : el('div', { className: 'hint' }, 'No clue today.'),
       el('div', { className: 'hint' }, 'Show a clue right now:'),
       el('div', { className: 'grid-buttons' }, ...kinds.map(([k, label, team]) => el('button', { title: `Helps the ${team}`, onclick: () => act('clue', { kind: k }, 'A clue will drift past the Observation Deck in 20 seconds (or during the next exploring phase).') }, label))),

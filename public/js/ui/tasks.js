@@ -14,11 +14,29 @@ export function openTask(taskId, name, onDone) {
     if (finished) return;
     finished = true;
     sfx('task');
-    clear(area, el('div', { className: 'task-done' }, '✅ Task complete!'), el('div', { className: 'hint' }, 'The Observation Array hums a little louder.'));
-    onDone();
+    const reward = el('div', { className: 'task-reward' });
+    clear(area, el('div', { className: 'task-done' }, '✅ Task complete!'), reward);
+    // what it did for the Observation Array (the server tells us how full it is now)
+    Promise.resolve(onDone()).then((r) => {
+      if (!r?.needed || !area.isConnected) return;
+      const first = Math.min(1, r.charge / r.needed) * 50;
+      const bonus = Math.min(1, Math.max(0, r.charge - r.needed) / r.needed) * 50;
+      const bar = el('div', { className: 'task-array' }, el('span'), el('em'), el('b', {}, `${r.charge}/${r.needed}`));
+      const line = r.charge >= r.needed * 2
+        ? el('div', { className: 'big-line gold' }, '✨ OVERCHARGED! Clue and bonus clue tomorrow')
+        : r.charge >= r.needed
+          ? el('div', { className: 'big-line' }, '📡 CHARGED! A clue tomorrow, decoded for you')
+          : el('div', { className: 'big-line' }, `📡 ${r.needed - r.charge} more for tomorrow's clue`);
+      clear(reward, bar, line, r.today >= 2 ? el('div', { className: 'hint' }, `🏅 ${r.today} tasks today: the most gets a secret from ARIA tonight`) : null);
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        bar.querySelector('span').style.width = `${first}%`;
+        bar.querySelector('em').style.width = `${bonus}%`;
+      }));
+      if (r.charge >= r.needed) setTimeout(() => sfx('chime'), 500);
+    }).catch(() => {});
     setTimeout(() => {
       if (area.isConnected) closeModal();
-    }, 1400);
+    }, 2800);
   };
   const fail = (msg) => {
     sfx('buzz');

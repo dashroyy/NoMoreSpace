@@ -404,7 +404,7 @@ function makeClue(game, random = Math.random, forced = null) {
   const living = game.players.filter((p) => p.alive);
 
   const kinds = team === 'crew' ? ['dead-constellation', 'comets', 'probe'] : ['living-constellation', 'drift-count', 'role-comets'];
-  const kind = forced?.kind && kinds.includes(forced.kind) ? forced.kind : pick(kinds, random);
+  const kind = forced?.kind && kinds.includes(forced.kind) ? forced.kind : pick(kinds.filter((k) => k !== forced?.avoid), random); // (a bonus clue is never the same kind as the first)
 
   if (kind === 'dead-constellation') {
     // A good role that is NOT aboard. Prefer one of the Parasite's bluffs.
