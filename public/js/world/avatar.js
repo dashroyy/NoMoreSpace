@@ -45,7 +45,7 @@ export function disposeTree(obj) {
     if (o.geometry && !SHARED_GEOMETRY.has(o.geometry)) o.geometry.dispose();
     for (const m of [o.material].flat()) {
       if (!m || m.userData.shared) continue;
-      m.map?.dispose();
+      if (m.map && !m.map.userData.shared) m.map.dispose();
       m.dispose();
     }
   });
@@ -66,6 +66,51 @@ function mesh(geometry, material, x = 0, y = 0, z = 0) {
   m.position.set(x, y, z);
   return m;
 }
+
+// ---------------------------------------------------------------------------
+// Little extras every avatar shares: a soft blob shadow (so they sit on the floor instead of floating over it),
+// a heart for the heart emote, and which emotes are dances (dancers get a pulsing spotlight on the floor)
+// ---------------------------------------------------------------------------
+
+const softTexture = (() => {
+  if (typeof document === 'undefined') return null;
+  const c = document.createElement('canvas');
+  c.width = c.height = 64;
+  const g = c.getContext('2d');
+  const grad = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+  grad.addColorStop(0, 'rgba(255,255,255,1)');
+  grad.addColorStop(0.5, 'rgba(255,255,255,0.55)');
+  grad.addColorStop(1, 'rgba(255,255,255,0)');
+  g.fillStyle = grad;
+  g.fillRect(0, 0, 64, 64);
+  return new THREE.CanvasTexture(c);
+})();
+
+const shadowGeometry = new THREE.PlaneGeometry(1.5, 1.5);
+const glowGeometry = new THREE.PlaneGeometry(2.8, 2.8);
+const heartGeometry = (() => {
+  const h = new THREE.Shape();
+  h.moveTo(0, -0.55);
+  h.bezierCurveTo(-0.9, 0, -0.55, 0.65, 0, 0.2);
+  h.bezierCurveTo(0.55, 0.65, 0.9, 0, 0, -0.55);
+  const g = new THREE.ExtrudeGeometry(h, { depth: 0.2, bevelEnabled: true, bevelSize: 0.06, bevelThickness: 0.06, bevelSegments: 2, curveSegments: 10 });
+  g.center();
+  g.scale(0.2, 0.2, 0.2);
+  return g;
+})();
+
+SHARED_GEOMETRY.add(shadowGeometry);
+SHARED_GEOMETRY.add(glowGeometry);
+SHARED_GEOMETRY.add(heartGeometry);
+if (softTexture) softTexture.userData.shared = true;
+
+// how long each emote lasts, in seconds (the dances are long enough to enjoy)
+const EMOTE_SECONDS = {
+  faint: 3.5, levitate: 3, moonwalk: 2.6, grow: 2.5, shrink: 2.5, dance: 3, chicken: 2.6, scooby: 3.4, scuba: 3.6,
+  floss: 4.5, robot: 4, disco: 4.5, breakdance: 4, twist: 4, cheer: 2.6, clap: 3, bow: 2.4, flex: 3, facepalm: 2.4,
+  salute: 2.2, heart: 3.4, sleep: 4.5, gasp: 1.2, jump: 1.2,
+};
+export const DANCE_EMOTES = new Set(['dance', 'scooby', 'scuba', 'floss', 'robot', 'disco', 'breakdance', 'twist', 'moonwalk']);
 
 // ---------------------------------------------------------------------------
 // Text sprites (name labels, speech bubbles)
@@ -144,8 +189,9 @@ export const HAT_LABELS = {
   chef: '👨‍🍳 Chef', flower: '🌼 Flower', headphones: '🎧 Headphones', propeller: '🚁 Propeller', horns: '🤘 Horns', bow: '🎀 Bow',
   cone: '🚧 Cone', beanie: '🧢 Beanie', cowboy: '🤠 Cowboy',
   laurel: '🏆 Laurels', tentacles: '🦑 Tentacles', jester: '🤡 Jester cap', saucer: '🛸 Mini UFO', crystal: '🔮 Crystal ball',
+  wizard: '🧙 Wizard', pirate: '🏴‍☠️ Pirate', viking: '⚔️ Viking', discoball: '🪩 Disco ball',
 };
-export const PET_LABELS = { none: 'None', cat: '🐈 Cat', duck: '🦆 Duck', drone: '🛸 Drone', alien: '👽 Alien', hamster: '🐹 Hamster', jelly: '🪼 Jelly', whale: '🐋 Space whale', rubberduck: '🐤 Rubber duck' };
+export const PET_LABELS = { none: 'None', cat: '🐈 Cat', duck: '🦆 Duck', drone: '🛸 Drone', alien: '👽 Alien', hamster: '🐹 Hamster', jelly: '🪼 Jelly', whale: '🐋 Space whale', rubberduck: '🐤 Rubber duck', robot: '🤖 Robot', ghost: '👻 Ghost', starbuddy: '⭐ Star buddy' };
 
 function buildHat(id) {
   const g = new THREE.Group();
@@ -301,6 +347,43 @@ function buildHat(id) {
       ball.userData.bob = true;
       break;
     }
+    case 'wizard': {
+      // a tall, floppy, starry pointed hat
+      add(new THREE.CylinderGeometry(0.34, 0.34, 0.03, 20), 0x3b2a8a, 0, 0, 0);
+      add(new THREE.ConeGeometry(0.24, 0.62, 18), 0x4b36b0, 0, 0.32, 0);
+      const tip = add(new THREE.ConeGeometry(0.09, 0.28, 12), 0x4b36b0, 0.1, 0.68, 0);
+      tip.rotation.z = -0.9;
+      add(new THREE.TorusGeometry(0.235, 0.025, 6, 20), 0xffd23f, 0, 0.05, 0).rotation.x = Math.PI / 2;
+      for (const [x, y, z, r] of [[0.1, 0.26, 0.2, 0.04], [-0.12, 0.4, 0.12, 0.03], [0.04, 0.18, -0.22, 0.035]]) add(new THREE.OctahedronGeometry(r), 0xffe14f, x, y, z, { emissive: 0xffd23f, emissiveIntensity: 1.6 });
+      break;
+    }
+    case 'pirate': {
+      // a black tricorn with a skull on the front
+      add(new THREE.CylinderGeometry(0.3, 0.3, 0.2, 3), 0x1a1a22, 0, 0.1, 0).rotation.y = Math.PI / 6;
+      add(new THREE.CylinderGeometry(0.36, 0.36, 0.03, 3), 0x2a2a34, 0, 0.0, 0).rotation.y = Math.PI / 6;
+      add(new THREE.SphereGeometry(0.06, 8, 6), 0xf0ead8, 0, 0.12, 0.3);
+      for (const s2 of [-1, 1]) add(new THREE.BoxGeometry(0.17, 0.025, 0.02), 0xf0ead8, 0, 0.05, 0.31).rotation.z = s2 * 0.5;
+      break;
+    }
+    case 'viking': {
+      // an iron helmet with two big curved horns
+      add(new THREE.SphereGeometry(0.3, 16, 10, 0, Math.PI * 2, 0, Math.PI / 2), 0x9aa4b8, 0, 0, 0, { metalness: 0.7, roughness: 0.35 });
+      add(new THREE.TorusGeometry(0.3, 0.03, 6, 20), 0x6a7488, 0, 0.02, 0, { metalness: 0.7 }).rotation.x = Math.PI / 2;
+      for (const s2 of [-1, 1]) {
+        const horn = add(new THREE.ConeGeometry(0.07, 0.34, 8), 0xf0e6c8, s2 * 0.32, 0.17, 0);
+        horn.rotation.z = -s2 * 0.75;
+        add(new THREE.SphereGeometry(0.075, 8, 6), 0xf0e6c8, s2 * 0.3, 0.06, 0);
+      }
+      break;
+    }
+    case 'discoball': {
+      // a mirror ball on a short stalk, turning and twinkling
+      add(new THREE.CylinderGeometry(0.02, 0.02, 0.14, 6), 0x9aa4b8, 0, 0.05, 0);
+      const ball = add(new THREE.IcosahedronGeometry(0.19, 1), 0xe8ecff, 0, 0.3, 0, { metalness: 0.25, roughness: 0.2, flatShading: true, emissive: 0x6a7090, emissiveIntensity: 0.9 });
+      ball.userData.spin = true;
+      for (let i = 0; i < 4; i++) add(new THREE.OctahedronGeometry(0.03), 0xffffff, Math.cos(i * 1.6) * 0.26, 0.3 + Math.sin(i * 2.3) * 0.1, Math.sin(i * 1.6) * 0.26, { emissive: 0xffffff, emissiveIntensity: 2 }).userData.bob = true;
+      break;
+    }
     case 'cowboy': {
       const brim = add(new THREE.CylinderGeometry(0.45, 0.45, 0.03, 24), 0x8b5a2b, 0, 0, 0);
       brim.scale.z = 0.8;
@@ -383,6 +466,53 @@ function buildPet(id) {
         t.userData.wag = true;
       }
       g.userData.hover = 0.9;
+      break;
+    }
+    case 'robot': {
+      // a tiny wheeled robot with a bleeping antenna
+      add(new THREE.BoxGeometry(0.2, 0.16, 0.18), 0x9aa4b8, 0, 0.17, 0, { metalness: 0.6, roughness: 0.3 });
+      add(new THREE.BoxGeometry(0.15, 0.12, 0.14), 0xc4ccdc, 0, 0.3, 0, { metalness: 0.6, roughness: 0.3 });
+      for (const s2 of [-1, 1]) {
+        add(new THREE.SphereGeometry(0.028, 8, 6), 0x6cf0ff, s2 * 0.04, 0.31, 0.07, { emissive: 0x6cf0ff, emissiveIntensity: 2 });
+        add(new THREE.CylinderGeometry(0.045, 0.045, 0.04, 10), 0x2b2f3a, s2 * 0.12, 0.05, 0).rotation.z = Math.PI / 2;
+      }
+      add(new THREE.CylinderGeometry(0.008, 0.008, 0.12, 4), 0x9aa4b8, 0, 0.42, 0);
+      add(new THREE.SphereGeometry(0.025, 6, 5), 0xff3b5c, 0, 0.49, 0, { emissive: 0xff3b5c, emissiveIntensity: 2 }).userData.wag = true;
+      break;
+    }
+    case 'ghost': {
+      // a friendly floating ghost
+      const body = add(new THREE.SphereGeometry(0.17, 14, 10), 0xf4f6ff, 0, 0.2, 0, { transparent: true, opacity: 0.85, emissive: 0x9aa4ff, emissiveIntensity: 0.35 });
+      body.scale.set(1, 1.15, 1);
+      for (let i = 0; i < 4; i++) {
+        const a = (i / 4) * Math.PI * 2 + 0.4;
+        const w = add(new THREE.ConeGeometry(0.05, 0.12, 6), 0xf4f6ff, Math.cos(a) * 0.1, 0.04, Math.sin(a) * 0.1, { transparent: true, opacity: 0.85 });
+        w.rotation.x = Math.PI;
+        w.userData.wag = true;
+      }
+      for (const s2 of [-1, 1]) add(new THREE.SphereGeometry(0.025, 6, 5), 0x14141c, s2 * 0.06, 0.25, 0.15);
+      add(new THREE.SphereGeometry(0.03, 8, 6), 0x14141c, 0, 0.17, 0.16).scale.set(1, 1.3, 0.6);
+      g.userData.hover = 0.9;
+      break;
+    }
+    case 'starbuddy': {
+      // one of Star Bonanza's chubby star buddies: a golden star with a big grin
+      const star = new THREE.Shape();
+      for (let i = 0; i < 10; i++) {
+        const a = (i / 10) * Math.PI * 2 + Math.PI / 2;
+        const r = i % 2 ? 0.1 : 0.2;
+        i ? star.lineTo(Math.cos(a) * r, Math.sin(a) * r) : star.moveTo(Math.cos(a) * r, Math.sin(a) * r);
+      }
+      const geom = new THREE.ExtrudeGeometry(star, { depth: 0.1, bevelEnabled: true, bevelSize: 0.035, bevelThickness: 0.04, bevelSegments: 2 });
+      geom.center();
+      const body = add(geom, 0xffd23f, 0, 0.26, 0, { emissive: 0xff9a1a, emissiveIntensity: 0.35, roughness: 0.4 });
+      body.userData.wag = true;
+      for (const s2 of [-1, 1]) {
+        add(new THREE.SphereGeometry(0.03, 8, 6), 0xffffff, s2 * 0.05, 0.3, 0.1);
+        add(new THREE.SphereGeometry(0.015, 6, 5), 0x14141c, s2 * 0.05, 0.3, 0.13);
+      }
+      add(new THREE.TorusGeometry(0.04, 0.01, 5, 10, Math.PI), 0x7a2a1a, 0, 0.23, 0.11, undefined).rotation.z = Math.PI;
+      g.userData.hover = 0.7;
       break;
     }
     case 'whale': {
@@ -469,6 +599,20 @@ export class Avatar {
     this.target = null; // remote players: where we're heading
     this.extras = new THREE.Group();
     this.root.add(this.extras);
+    this.pops = []; // comic words floating up ("BEEP BOOP!", "FLEX!")
+    this.squash = 0; // landing squash: springs back to nothing
+    this.sleeping = false;
+    this.shadow = new THREE.Mesh(shadowGeometry, new THREE.MeshBasicMaterial({ map: softTexture, color: 0x000000, transparent: true, opacity: 0.4, depthWrite: false }));
+    this.shadow.rotation.x = -Math.PI / 2;
+    this.shadow.position.y = 0.03;
+    this.shadow.renderOrder = -1;
+    this.root.add(this.shadow);
+    this.floorGlow = new THREE.Mesh(glowGeometry, new THREE.MeshBasicMaterial({ map: softTexture, color: 0xff5ab4, transparent: true, opacity: 0.5, depthWrite: false, blending: THREE.AdditiveBlending }));
+    this.floorGlow.rotation.x = -Math.PI / 2;
+    this.floorGlow.position.y = 0.04;
+    this.floorGlow.renderOrder = -1;
+    this.floorGlow.visible = false;
+    this.root.add(this.floorGlow);
     this.buildSuit();
     this.setLook(look);
     this.setName(name);
@@ -696,8 +840,47 @@ export class Avatar {
 
   // ---------- animation ----------
 
+  // take away whatever the last emote left behind (a disco ball, the floor glow, flickering visor lights)
+  endEmote() {
+    for (const o of [...this.extras.children]) if (o.userData.emoteProp) disposeTree(o);
+    this.floorGlow.visible = false;
+    this.sleeping = false;
+    this.visorMat.emissiveIntensity = 1;
+    this.visorMat.emissive.setHex(0x000000);
+  }
+
+  // A comic word pops up over the head and floats away.
+  pop(text, color = '#ffe14f', size = 46) {
+    while (this.pops.length >= 2) disposeTree(this.pops.shift().sprite);
+    const sprite = makeTextSprite(text, { color, size, scale: 0.0105 });
+    sprite.position.set(0, 2.9, 0);
+    this.root.add(sprite);
+    this.pops.push({ sprite, base: sprite.scale.clone(), t: 0, life: 1.6, sway: Math.random() * 6 });
+  }
+
   emote(name) {
-    this.emoteState = { name, t: 0, dur: { faint: 3.5, levitate: 3, moonwalk: 2.6, grow: 2.5, shrink: 2.5, dance: 3, chicken: 2.6, scooby: 3.4, scuba: 3.6 }[name] || 2 };
+    this.endEmote();
+    this.emoteState = { name, t: 0, dur: EMOTE_SECONDS[name] || 2, next: 0 };
+    if (name === 'disco') {
+      const ball = mesh(new THREE.IcosahedronGeometry(0.28, 1), mat(0xe8ecff, { metalness: 0.25, roughness: 0.2, flatShading: true, emissive: 0x6a7090, emissiveIntensity: 0.9 }), 0, 3.0, 0);
+      ball.userData.discoBall = true;
+      ball.userData.emoteProp = true;
+      this.extras.add(ball);
+      this.pop('DISCO!', '#ff7ad9');
+    }
+    if (name === 'robot') this.pop('BEEP BOOP', '#7dffd8');
+    if (name === 'floss') this.pop('FLOSS!', '#7ad8ff');
+    if (name === 'breakdance') this.pop('BREAK!', '#ffb347');
+    if (name === 'twist') this.pop('TWIST!', '#c9a0ff');
+    if (name === 'cheer') {
+      this.burst(34, null, 3.5, 1.8);
+      this.pop('YAY!', '#ffe14f');
+    }
+    if (name === 'flex') this.pop('FLEX!', '#ff8a5c');
+    if (name === 'facepalm') this.pop('UGH...', '#b8c4e8');
+    if (name === 'salute') this.pop('SIR!', '#a8e6ff');
+    if (name === 'gasp') this.pop('!', '#ff6b81', 70);
+    if (name === 'sleep') this.sleeping = true;
     if (name === 'confetti') this.burst(40, null, 3);
     if (name === 'cry') this.burst(14, 0x6cc8ff, 1);
     if (name === 'scuba') [0, 700, 1400, 2100].forEach((ms) => setTimeout(() => this.burst(6, 0xbfefff, 0.6, 1.9), ms)); // bubbles
@@ -706,10 +889,11 @@ export class Avatar {
     if (name === 'zap') this.burst(16, 0x9fdcff, 3);
   }
 
-  burst(count, color, speed = 2, y = 1) {
+  burst(count, color, speed = 2, y = 1, heart = false) {
     for (let i = 0; i < count; i++) {
       const c = color ?? new THREE.Color().setHSL(Math.random(), 0.9, 0.6);
-      const p = mesh(geo.particle, new THREE.MeshBasicMaterial({ color: c, transparent: true }), 0, y, 0);
+      const p = mesh(heart ? heartGeometry : geo.particle, new THREE.MeshBasicMaterial({ color: c, transparent: true }), 0, y, 0);
+      if (heart) p.rotation.y = Math.random() * 6;
       p.userData.v = new THREE.Vector3((Math.random() - 0.5) * speed, Math.random() * speed + 1, (Math.random() - 0.5) * speed);
       p.userData.life = 1.4 + Math.random();
       this.extras.add(p);
@@ -718,6 +902,7 @@ export class Avatar {
   }
 
   die(anim, onDone) {
+    this.endEmote();
     this.emoteState = null;
     this.deathState = { anim, t: 0, dur: anim === 'confetti' ? 1.5 : 3.2, onDone, home: this.root.position.clone() };
     const extras = this.extras;
@@ -768,7 +953,7 @@ export class Avatar {
       extras.add(flame);
     }
     if (anim === 'disco') {
-      const ball = mesh(new THREE.IcosahedronGeometry(0.35, 1), mat(0xdddddd, { metalness: 1, roughness: 0.15, flatShading: true }), 0, 3.4, 0);
+      const ball = mesh(new THREE.IcosahedronGeometry(0.35, 1), mat(0xe8ecff, { metalness: 0.25, roughness: 0.2, flatShading: true, emissive: 0x6a7090, emissiveIntensity: 0.9 }), 0, 3.4, 0);
       ball.userData.discoBall = true;
       extras.add(ball);
     }
@@ -782,11 +967,15 @@ export class Avatar {
     const b = this.body;
     // reset per-frame pose
     b.position.set(0, 0, 0);
+    b.rotation.order = 'XYZ';
     b.rotation.set(0, 0, 0);
     let s = 1;
+    let squashNow = 0; // squash and stretch this frame (positive squashes, negative stretches)
     // arms rest slightly away from the body so they're visible (out = negative z on the left, positive on the right)
     this.armL.rotation.set(0, 0, -0.22);
     this.armR.rotation.set(0, 0, 0.22);
+    this.armL.scale.set(1, 1, 1);
+    this.armR.scale.set(1, 1, 1);
 
     // walking: a low-gravity "moon lope" like the Apollo astronauts. Slow,
     // bounding hops that hang at the top, a lean into each stride, arms held
@@ -800,6 +989,7 @@ export class Avatar {
       const s = Math.sin(ph);
       const hop = Math.pow(Math.abs(s), 0.6); // flat-topped arc: floaty at the top, quick landing
       b.position.y = hop * 0.24 * w;
+      squashNow -= hop * 0.05 * w; // stretch a little at the top of each hop
       b.rotation.x = 0.14 * w; // lean forward into the stride
       b.rotation.z = Math.sin(ph * 0.5) * 0.05 * w; // gentle side-to-side rock
       // legs reach forward and back, both tucking a little while airborne
@@ -816,6 +1006,7 @@ export class Avatar {
       this.lastStride = s;
       if (landed) {
         this.stepped = true;
+        this.squash = Math.max(this.squash, 0.11); // squash on touchdown
         if (this.root.visible) this.burst(3, 0x9aa4b8, 0.5, 0.06); // moon dust
       }
     }
@@ -823,6 +1014,7 @@ export class Avatar {
       this.legL.rotation.x *= 0.85;
       this.legR.rotation.x *= 0.85;
       b.position.y = Math.max(b.position.y, 0) + Math.sin(time * 2 + this.walkPhase) * 0.015 * (1 - w);
+      squashNow -= Math.sin(time * 2.2 + this.walkPhase) * 0.012 * (1 - w); // breathing
     }
     if (this.ghost) {
       b.position.y = 0.35 + Math.sin(time * 1.7 + this.walkPhase) * 0.12;
@@ -835,10 +1027,30 @@ export class Avatar {
       e.t += dt;
       const p = Math.min(1, e.t / e.dur);
       const wave = Math.sin(e.t * 12);
+      // everyone dancing in the ship moves to the same beat (two a second), so a crowd looks like a crowd
+      const half = Math.sin(time * Math.PI * 2); // one sway a second
+      const bounce = Math.abs(half); // a bounce on every beat
+      const easeIn = Math.min(1, e.t / 0.25, (e.dur - e.t) / 0.25); // for poses that drop in and climb out
       switch (e.name) {
         case 'wave': this.armR.rotation.z = -2.6 + wave * 0.35; break;
         case 'dance': b.rotation.y = Math.sin(e.t * 6) * 0.6; b.position.y += Math.abs(Math.sin(e.t * 8)) * 0.25; this.armL.rotation.z = 2 + wave * 0.4; this.armR.rotation.z = -2 - wave * 0.4; break;
-        case 'jump': b.position.y += Math.sin(Math.PI * Math.min(1, e.t / 0.8)) * 1.3; break;
+        case 'jump': {
+          // crouch, launch (stretching), hang, land (squashing)
+          if (e.t < 0.16) squashNow += (e.t / 0.16) * 0.22;
+          else {
+            const air = Math.min(1, (e.t - 0.16) / 0.8);
+            b.position.y += Math.sin(Math.PI * air) * 1.3;
+            squashNow -= Math.sin(Math.PI * air) * 0.1;
+            this.armL.rotation.z = -1.4 - Math.sin(Math.PI * air) * 0.8;
+            this.armR.rotation.z = 1.4 + Math.sin(Math.PI * air) * 0.8;
+            if (air >= 1 && !e.landed) {
+              e.landed = true;
+              this.squash = 0.24;
+              this.burst(6, 0x9aa4b8, 0.8, 0.06);
+            }
+          }
+          break;
+        }
         case 'spin': b.rotation.y = p * Math.PI * 4; break;
         case 'shrug': this.armL.rotation.z = 1.2; this.armR.rotation.z = -1.2; b.scale.y = 1; break;
         case 'point': this.armR.rotation.x = -1.6; break;
@@ -889,11 +1101,191 @@ export class Avatar {
         }
         case 'levitate': b.position.y += Math.sin(Math.PI * p) * 1.8; b.rotation.y = p * Math.PI * 2; this.armL.rotation.z = 1.4; this.armR.rotation.z = -1.4; break;
         case 'zap': b.position.x = (Math.random() - 0.5) * 0.15; this.visorMat.emissiveIntensity = 3 * (1 - p); break;
+
+        // ---- the dances (all on the shared beat) ----
+        case 'floss': {
+          // hips one way, straight arms swinging across the other way, knees bouncing
+          b.position.x = -half * 0.2;
+          b.rotation.z = half * 0.1;
+          b.rotation.y = -half * 0.2;
+          b.position.y += bounce * 0.07;
+          this.armL.rotation.set(0.55, 0, half * 0.95);
+          this.armR.rotation.set(0.55, 0, half * 0.95);
+          this.legL.rotation.x = bounce * 0.25;
+          this.legR.rotation.x = bounce * 0.25;
+          break;
+        }
+        case 'robot': {
+          // snaps between stiff poses four times a second, like a stuck animation
+          const POSES = [
+            [[0, -1.57], [0, 1.57], 0], [[-1.57, -0.3], [-1.57, 0.3], 0.7], [[-1.57, -2.9], [0, 0.22], 0.7], [[0, -0.22], [-1.57, 2.9], -0.7],
+            [[-1.2, -1.3], [-1.2, 1.3], -0.7], [[0, -2.9], [0, 2.9], 0], [[-1.57, -1.57], [0, 0.22], 0.7], [[0, -0.22], [-1.57, 1.57], -0.7],
+          ];
+          const step = Math.floor(time * 4) % POSES.length;
+          const [l, r, yaw] = POSES[step];
+          this.armL.rotation.set(l[0], 0, l[1]);
+          this.armR.rotation.set(r[0], 0, r[1]);
+          b.rotation.y = yaw;
+          this.visorMat.emissive.setHex(step % 2 ? 0x3affb0 : 0xff3b5c);
+          this.visorMat.emissiveIntensity = 1.4;
+          if (step !== e.lastStep) {
+            e.lastStep = step;
+            if (step % 4 === 0) this.burst(4, 0x9fdcff, 1.2, 1.3);
+          }
+          break;
+        }
+        case 'disco': {
+          // Saturday Night Fever: one arm points to the sky while the other points at the floor, then they swap
+          this.armR.rotation.set(-0.25, 0, 1.8 + half * 0.95);
+          this.armL.rotation.set(-0.25, 0, -1.8 + half * 0.95);
+          b.rotation.z = -half * 0.12;
+          b.rotation.y = half * 0.3;
+          b.position.y += bounce * 0.08;
+          this.legL.rotation.x = Math.max(0, half) * -0.4;
+          this.legR.rotation.x = Math.max(0, -half) * -0.4;
+          for (const o of this.extras.children) if (o.userData.discoBall) o.rotation.y = e.t * 4;
+          break;
+        }
+        case 'breakdance': {
+          // down on the back and spinning like a windmill, legs kicking
+          const spin = e.t * 7;
+          const down = easeIn;
+          b.rotation.order = 'YXZ';
+          b.rotation.set(-1.45 * down, spin, 0);
+          b.position.set(0.95 * Math.sin(spin) * down, 0.3 * down, 0.95 * Math.cos(spin) * down);
+          this.legL.rotation.x = -1.2 + Math.sin(e.t * 9) * 0.9 * down;
+          this.legR.rotation.x = -1.2 - Math.sin(e.t * 9) * 0.9 * down;
+          this.armL.rotation.z = -1.3 * down - 0.22;
+          this.armR.rotation.z = 1.3 * down + 0.22;
+          break;
+        }
+        case 'twist': {
+          // low and fast: knees bent, hips whipping round, arms swinging the other way
+          const tw = Math.sin(time * Math.PI * 4);
+          b.rotation.y = tw * 0.75;
+          b.rotation.x = 0.12;
+          b.position.y -= 0.1;
+          this.armL.rotation.set(-0.5, 0, -0.8 + tw * 0.55);
+          this.armR.rotation.set(-0.5, 0, 0.8 + tw * 0.55);
+          this.legL.rotation.x = -0.25;
+          this.legR.rotation.x = -0.25;
+          squashNow += 0.05;
+          break;
+        }
+
+        // ---- the reactions ----
+        case 'cheer': {
+          const pump = Math.abs(Math.sin(e.t * 9));
+          b.position.y += pump * 0.3;
+          squashNow -= pump * 0.06;
+          this.armL.rotation.z = -2.7 - pump * 0.25;
+          this.armR.rotation.z = 2.7 + pump * 0.25;
+          this.legL.rotation.x = -pump * 0.3;
+          this.legR.rotation.x = pump * 0.3;
+          break;
+        }
+        case 'clap': {
+          // hands out in front, meeting in the middle with a spark each time
+          const c = Math.abs(Math.sin(e.t * 11));
+          this.armL.rotation.set(-1.25, 0, -0.5 + c * 1.2);
+          this.armR.rotation.set(-1.25, 0, 0.5 - c * 1.2);
+          b.rotation.x = 0.05;
+          if (c > 0.93 && !e.hit) {
+            e.hit = true;
+            this.burst(2, 0xffe14f, 0.8, 1.0);
+          } else if (c < 0.6) e.hit = false;
+          break;
+        }
+        case 'bow': {
+          const lean = p < 0.25 ? p / 0.25 : p < 0.7 ? 1 : (1 - p) / 0.3;
+          const k = lean * lean * (3 - 2 * lean);
+          b.rotation.x = k * 1.0;
+          this.armR.rotation.set(-1.3 * k, 0, -0.22 - 0.9 * k); // a hand across the chest
+          this.armL.rotation.z = -0.22 - 0.6 * k;
+          if (p > 0.72 && !e.sparkled) {
+            e.sparkled = true;
+            this.burst(14, 0xffe14f, 2.5, 1.6);
+          }
+          break;
+        }
+        case 'flex': {
+          const f = Math.sin(e.t * 6);
+          this.armL.rotation.set(-0.4, 0, -1.25 - Math.max(0, f) * 0.45);
+          this.armR.rotation.set(-0.4, 0, 1.25 + Math.max(0, -f) * 0.45);
+          this.armL.scale.set(1.5, 1.1, 1.5);
+          this.armR.scale.set(1.5, 1.1, 1.5);
+          s = 1 + 0.06 * Math.abs(f);
+          this.legL.rotation.z = -0.12;
+          this.legR.rotation.z = 0.12;
+          if (e.t > e.next) {
+            e.next = e.t + 0.55;
+            this.burst(5, 0xffe14f, 1.6, 1.7);
+          }
+          break;
+        }
+        case 'facepalm': {
+          const shake = Math.sin(e.t * 6) * 0.16 * (1 - p);
+          // (a longer arm than usual: these stubby suits cannot otherwise reach their own faces)
+          this.armR.rotation.set(0.8, 0, -2.65);
+          this.armR.scale.set(1, 1.3, 1);
+          b.rotation.x = 0.22;
+          b.rotation.y = shake;
+          break;
+        }
+        case 'salute': {
+          const snap = Math.min(1, e.t / 0.12) * Math.min(1, (e.dur - e.t) / 0.15);
+          this.armR.rotation.set(0.55 * snap, 0, -0.22 - 2.63 * snap);
+          this.armR.scale.set(1, 1 + 0.3 * snap, 1);
+          b.rotation.x = -0.05 * snap;
+          this.legL.rotation.z = 0.08 * snap;
+          this.legR.rotation.z = -0.08 * snap;
+          break;
+        }
+        case 'heart': {
+          // arms curved over the head, the whole suit beating, hearts floating up
+          const beat = Math.max(0, Math.sin(e.t * 9));
+          this.armL.rotation.z = 2.85;
+          this.armR.rotation.z = -2.85;
+          s = 1 + beat * 0.06;
+          b.rotation.z = Math.sin(e.t * 3) * 0.05;
+          if (e.t > e.next) {
+            e.next = e.t + 0.32;
+            this.burst(1, 0xff5a8a, 1, 1.9, true);
+          }
+          break;
+        }
+        case 'sleep': {
+          b.rotation.x = 0.32 + Math.sin(time * 1.5) * 0.05;
+          b.position.y -= 0.04;
+          this.armL.rotation.z = -0.1;
+          this.armR.rotation.z = 0.1;
+          if (e.t > e.next) {
+            e.next = e.t + 1.0;
+            this.pop('Z', '#9ad8ff', 44 + Math.floor(Math.random() * 14));
+          }
+          break;
+        }
+        case 'gasp': {
+          const air = Math.sin(Math.PI * Math.min(1, e.t / 0.5));
+          b.position.y += air * 0.3;
+          b.position.z = -0.22 * Math.min(1, e.t * 5) * (1 - p);
+          b.rotation.x = -0.12 * air;
+          this.armL.rotation.z = -2.2 * Math.min(1, e.t * 6);
+          this.armR.rotation.z = 2.2 * Math.min(1, e.t * 6);
+          break;
+        }
         default: break;
+      }
+      // dancers get a spotlight on the floor that pulses on the beat and drifts through the colours
+      if (DANCE_EMOTES.has(e.name)) {
+        this.floorGlow.visible = true;
+        this.floorGlow.material.color.setHSL((time * 0.35) % 1, 0.9, 0.55);
+        this.floorGlow.material.opacity = 0.3 + bounce * 0.3;
+        this.floorGlow.scale.setScalar(0.9 + bounce * 0.2);
       }
       if (p >= 1) {
         this.emoteState = null;
-        this.visorMat.emissiveIntensity = 1;
+        this.endEmote();
       }
     }
 
@@ -964,12 +1356,35 @@ export class Avatar {
         done?.();
       }
     } else {
-      b.scale.setScalar(s);
+      this.squash *= Math.exp(-dt * 9);
+      const q = this.squash + squashNow;
+      b.scale.set(s * (1 + q * 0.7), s * (1 - q), s * (1 + q * 0.7));
     }
+
+    // the soft shadow follows the feet: smaller and fainter the higher they leave the floor
+    const lift = Math.max(0, b.position.y);
+    const k = 1 / (1 + lift * 0.8);
+    this.shadow.visible = !this.ghost && b.visible && !this.deathState;
+    this.shadow.scale.set(k, k, 1);
+    this.shadow.material.opacity = 0.4 * k;
+
+    // comic words floating up
+    for (const w of this.pops) {
+      w.t += dt;
+      const grow = Math.min(1, w.t / 0.18);
+      w.sprite.scale.copy(w.base).multiplyScalar(grow < 1 ? 1.4 * Math.sin((grow * Math.PI) / 2) : 1.4 - 0.4 * Math.min(1, (w.t - 0.18) / 0.15));
+      w.sprite.position.set(Math.sin(w.t * 3 + w.sway) * 0.1, 2.9 + w.t * 0.55, 0);
+      w.sprite.material.opacity = Math.min(1, (1 - w.t / w.life) * 3);
+    }
+    this.pops = this.pops.filter((w) => {
+      if (w.t < w.life) return true;
+      disposeTree(w.sprite);
+      return false;
+    });
 
     // blinking eyes, chest buttons and antenna light
     this.blinkAt -= dt;
-    const closed = this.blinkAt < 0;
+    const closed = this.blinkAt < 0 || this.sleeping;
     if (this.blinkAt < -0.13) this.blinkAt = 2 + Math.random() * 5;
     for (const e of this.eyes) e.scale.y = closed ? 0.15 : 1.4;
     this.buttons.forEach((btn, i) => (btn.visible = Math.sin(time * (2 + i) + this.walkPhase + i) > -0.3));

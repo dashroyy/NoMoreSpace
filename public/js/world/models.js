@@ -539,7 +539,11 @@ export const preloadCharacters = (roleIds = Object.keys(KAYKIT)) => {
 
 // put a hat on a character: on top of its head, at the right size, standing upright
 function crown(character, hat) {
-  character.updateMatrixWorld(true);
+  // bring every matrix up to date from the very top (a character that arrives from the cache can land before the
+  // first frame has been drawn, and a stale parent would put the hat in the wrong place)
+  let top0 = character;
+  while (top0.parent) top0 = top0.parent;
+  top0.updateMatrixWorld(true);
   const head = character.getObjectByName('head');
   if (!head) return;
   let skull = null;
@@ -557,6 +561,51 @@ function crown(character, hat) {
   head.add(hat);
 }
 
+// What each pose plays. The big characters (Rig_Large) have fewer clips: they flex to cheer or taunt.
+const POSE_CLIPS = {
+  medium: { idle: 'Idle_A', cheer: 'Cheering', taunt: 'Skeletons_Taunt', wave: 'Waving', die: 'Death_A', hit: 'Hit_B' },
+  large: { idle: 'Idle_A', cheer: 'Flexing', taunt: 'Flexing', wave: 'Idle_B', die: 'Death_A', hit: 'Hit_A' },
+};
+const POSES_ONCE = new Set(['die', 'hit']);
+
+function setupPoses(anim, character, file) {
+  const names = POSE_CLIPS[LARGE_RIG.has(file) ? 'large' : 'medium'];
+  const clips = clipsOf(animsFor(file));
+  anim.mixer = new THREE.AnimationMixer(character);
+  anim.actions = {};
+  for (const [pose, name] of Object.entries(names)) {
+    const clip = THREE.AnimationClip.findByName(clips, name);
+    if (clip) anim.actions[pose] = anim.mixer.clipAction(clip);
+  }
+  // a hit is a flinch: back to the idle loop afterwards
+  anim.mixer.addEventListener('finished', (e) => {
+    if (anim.pose === 'hit' && e.action === anim.actions.hit) anim.play('idle');
+  });
+  anim.play = (pose) => {
+    const next = anim.actions[pose];
+    if (!next) return false;
+    const prev = anim.pose && anim.actions[anim.pose];
+    next.reset();
+    next.setLoop(POSES_ONCE.has(pose) ? THREE.LoopOnce : THREE.LoopRepeat, Infinity);
+    next.clampWhenFinished = pose === 'die';
+    next.fadeIn(0.25).play();
+    if (prev && prev !== next) prev.fadeOut(0.25);
+    anim.pose = pose;
+    return true;
+  };
+}
+
+// Ask a revealed character to strike a pose: 'idle', 'cheer', 'taunt', 'wave', 'die' or 'hit'.
+// Returns true for the real animated characters (a character still loading plays the pose as soon as it arrives);
+// the characters built from shapes return false, and the caller makes them hop about instead.
+export function poseRole(model, pose) {
+  const anim = model?.userData?.anim;
+  if (!anim?.isCharacter) return false;
+  anim.wantPose = pose;
+  anim.play?.(pose);
+  return true;
+}
+
 function buildCharacter(roleId, accent) {
   const [file, height] = KAYKIT[roleId];
   const g = new THREE.Group();
@@ -565,7 +614,7 @@ function buildCharacter(roleId, accent) {
   ring.rotation.x = Math.PI / 2;
   ring.position.y = 0.05;
   g.add(ring);
-  const anim = {};
+  const anim = { isCharacter: true };
   g.userData.anim = anim;
   Promise.all([cloneSkinned(characterId(file)), loadModels([animsFor(file)])]).then(([character]) => {
     if (!character) return;
@@ -584,13 +633,9 @@ function buildCharacter(roleId, accent) {
       hand.add(prop);
     }
     if (ROLE_HEADS[roleId]) crown(character, ROLE_HEADS[roleId]());
-    const idle = THREE.AnimationClip.findByName(clipsOf(animsFor(file)), 'Idle_A');
-    if (idle) {
-      anim.mixer = new THREE.AnimationMixer(character);
-      const action = anim.mixer.clipAction(idle);
-      action.time = Math.random() * idle.duration; // not all in step
-      action.play();
-    }
+    setupPoses(anim, character, file);
+    anim.play(anim.wantPose || 'idle');
+    if (!anim.wantPose && anim.actions.idle) anim.actions.idle.time = Math.random() * anim.actions.idle.getClip().duration; // not all in step
   });
   return g;
 }

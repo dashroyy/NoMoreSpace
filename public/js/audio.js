@@ -1183,6 +1183,15 @@ const SOUNDS = {
   sob: () => tone({ freq: 440, slide: 300, dur: 0.7, vol: 0.07, type: 'triangle' }),
   swish: () => noise({ dur: 0.25, vol: 0.08, freq: 1200, slide: 3000, q: 1 }),
   huh: () => tone({ freq: 300, slide: 420, dur: 0.22, vol: 0.08, type: 'triangle' }),
+  // a robot's dance: two stiff little bleeps
+  beep: () => [0, 0.14, 0.4, 0.54].forEach((d, i) => tone({ freq: i % 2 ? 880 : 660, type: 'square', dur: 0.08, vol: 0.05, delay: d, filter: { freq: 2400 } })),
+  // a few quick claps
+  clap: () => [0, 0.13, 0.26, 0.39].forEach((d) => noise({ dur: 0.05, vol: 0.14, freq: 1800, q: 1.2, delay: d })),
+  // a crowd-pleasing whoop: a rising run of notes and a whoosh
+  cheer: () => {
+    [523, 659, 784, 1047].forEach((f, i) => tone({ freq: f, type: 'triangle', dur: 0.14, vol: 0.07, delay: i * 0.07 }));
+    noise({ dur: 0.5, vol: 0.06, freq: 2000, slide: 5000, q: 0.8, delay: 0.1 });
+  },
 };
 
 

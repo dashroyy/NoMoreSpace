@@ -5,7 +5,7 @@ import { $, el, clear, toast } from '../util.js';
 import { store, send, themeInfo } from '../store.js';
 import { sfx, setAmbient } from '../audio.js';
 import { Avatar, makeTextSprite } from '../world/avatar.js';
-import { buildRoleModel, animateRoleModel } from '../world/models.js';
+import { buildRoleModel, animateRoleModel, poseRole } from '../world/models.js';
 import { paintDoom } from '../world/sky.js';
 import { seasonTable } from './party.js';
 import { openShareCard } from './sharecard.js';
@@ -435,6 +435,10 @@ export class Reveal {
     c.model.scale.setScalar(0.01);
     c.popT = 0;
     c.halo.material.opacity = 0.85;
+    // the unmasked character greets everyone: crew wave, evil taunt, then back to the idle loop
+    if (!this.finaleMode && poseRole(c.model, c.team === 'crew' ? 'wave' : 'taunt')) {
+      c.poseTimer = setTimeout(() => poseRole(c.model, 'idle'), 2400);
+    }
     const r = store.data.roles[c.startRole];
     const label = makeTextSprite(`${r.icon} ${c.p.name}`, { color: c.team === 'crew' ? '#bff8ff' : '#ffb3c1', size: 30, scale: 0.012 });
     label.position.copy(c.pos).setY(2.9);
@@ -476,6 +480,10 @@ export class Reveal {
     if (!c || !c.dead) return;
     c.dead = false;
     c.deathAnim = null;
+    if (c.diePosed) {
+      c.diePosed = false;
+      poseRole(c.model, 'idle'); // back on their feet
+    }
     const obj = c.revealed ? c.model : c.avatar.body;
     obj.position.copy(c.pos);
     obj.rotation.x = 0;
@@ -513,6 +521,14 @@ export class Reveal {
     setAmbient(crewWon ? 'victory' : 'doom');
     for (const c of this.cast.values()) if (!c.revealed) this.unmask(c.p.id);
     if (crewWon) for (const c of this.cast.values()) c.avatar.burst(25, null, 4, 2);
+    // the winners celebrate in their own way (cheering, flexing, taunting); the losers who are still standing fall down
+    for (const c of this.cast.values()) {
+      clearTimeout(c.poseTimer);
+      if (c.dead || !c.p.alive) continue;
+      const won = (c.team === 'crew') === crewWon;
+      const pose = won ? (crewWon ? 'cheer' : 'taunt') : 'die';
+      setTimeout(() => poseRole(c.model, pose), Math.random() * (won ? 600 : 1800));
+    }
   }
 
   showSummary() {
@@ -640,16 +656,25 @@ export class Reveal {
         c.deathT += sdt;
         const p = Math.min(1, c.deathT / 1.6);
         const obj = c.revealed ? c.model : c.avatar.body;
+        // an animated character falls down with its own death clip and stays lying there (the ghost look is just see-through)
+        const lies = c.revealed && c.deathAnim !== 'airlock' && c.model.userData.anim?.isCharacter;
+        if (lies && !c.diePosed) {
+          c.diePosed = true;
+          clearTimeout(c.poseTimer);
+          poseRole(c.model, 'die');
+        }
         if (c.deathAnim === 'airlock') {
           obj.position.copy(c.pos).add(new THREE.Vector3(0, p * 2, -p * 6));
           obj.rotation.x = p * 6;
           if (p >= 1) c.deathAnim = 'ghost';
-        } else {
+        } else if (!lies) {
           obj.position.y = -p * 0.3;
         }
         if (p >= 1 || c.deathAnim === 'ghost') {
-          obj.position.copy(c.pos).setY(0.4 + Math.sin(this.time * 2) * 0.1);
-          obj.rotation.x = 0;
+          if (!lies) {
+            obj.position.copy(c.pos).setY(0.4 + Math.sin(this.time * 2) * 0.1);
+            obj.rotation.x = 0;
+          }
           obj.traverse((o) => {
             if (o.material && !o.material.userData.ghosted) {
               o.material = o.material.clone();
@@ -660,7 +685,7 @@ export class Reveal {
           });
         }
       }
-      if (this.finaleMode === 'crew' && c.team === 'crew' && c.revealed) c.model.position.y = Math.abs(Math.sin(this.time * 5 + c.pos.x)) * 0.8;
+      if (this.finaleMode === 'crew' && c.team === 'crew' && c.revealed && !c.model.userData.anim?.isCharacter) c.model.position.y = Math.abs(Math.sin(this.time * 5 + c.pos.x)) * 0.8;
       if (this.finaleMode === 'evil' && c.finalRole === 'parasite' && c.revealed) c.model.scale.setScalar(Math.min(2.6, 1 + (this.stepTime || 0) * 0.3));
     }
 
@@ -672,7 +697,9 @@ export class Reveal {
       f.tube.material.opacity = Math.max(0, 0.9 - Math.max(0, f.t - f.dur) * 0.6);
       if (p >= 1 && !f.hit) {
         f.hit = true;
-        this.cast.get(f.toId)?.avatar.burst(16, f.color, 2.5);
+        const target = this.cast.get(f.toId);
+        target?.avatar.burst(16, f.color, 2.5);
+        if (target?.revealed && !target.dead && poseRole(target.model, 'hit')) setTimeout(() => !target.dead && poseRole(target.model, 'idle'), 1300);
         f.orb.visible = false;
       }
       if (f.t > f.dur + 1.6) {

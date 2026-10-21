@@ -93,9 +93,32 @@ export function initHud(w, { onRoleCard, onUse, onPuppetPick }) {
 
 export const hud = { onPuppetPick: null };
 
+// The emote picker: big picture tiles in two groups (dances and reactions), a short name under each.
+const EMOTE_TILES = {
+  dance: ['💃', 'Dance'], scooby: ['🐶', 'Scooby'], scuba: ['🤿', 'Scuba'], floss: ['🧵', 'Floss'], robot: ['🤖', 'Robot'], disco: ['🕺', 'Disco'],
+  breakdance: ['🤸', 'Break'], twist: ['🌪️', 'Twist'], moonwalk: ['🌙', 'Moonwalk'],
+  wave: ['👋', 'Wave'], jump: ['🦘', 'Jump'], spin: ['🌀', 'Spin'], shrug: ['🤷', 'Shrug'], point: ['👉', 'Point'], cry: ['😭', 'Cry'], laugh: ['🤣', 'Laugh'],
+  cheer: ['🎉', 'Cheer'], clap: ['👏', 'Clap'], bow: ['🙇', 'Bow'], flex: ['💪', 'Flex'], facepalm: ['🤦', 'Facepalm'], salute: ['🎖️', 'Salute'], heart: ['💖', 'Love'], sleep: ['😴', 'Sleep'],
+};
+const EMOTE_GROUPS = [
+  ['💃 Dances', ['dance', 'scooby', 'scuba', 'floss', 'robot', 'disco', 'breakdance', 'twist', 'moonwalk']],
+  ['🙌 Reactions', ['wave', 'jump', 'spin', 'shrug', 'point', 'cry', 'laugh', 'cheer', 'clap', 'bow', 'flex', 'facepalm', 'salute', 'heart', 'sleep']],
+];
+
 function buildEmoteMenu() {
-  const labels = { wave: '👋 Wave', dance: '💃 Dance', scooby: '🐶 Scooby dance', scuba: '🤿 Scuba dance', jump: '🦘 Jump', spin: '🌀 Spin', shrug: '🤷 Shrug', point: '👉 Point', cry: '😭 Cry', laugh: '🤣 Laugh' };
-  clear($('emote-menu'), ...store.data.playerEmotes.map((e, i) => el('button', { className: 'small', title: i < 9 ? `Key ${i + 1}` : '', onclick: () => { send('emote', { emote: e }).catch(() => {}); $('emote-menu').hidden = true; } }, i < 9 ? el('kbd', {}, i + 1) : null, ' ', labels[e] || e)));
+  const all = store.data.playerEmotes;
+  const tile = (e) => {
+    const [icon, name] = EMOTE_TILES[e] || ['✨', e];
+    const key = all.indexOf(e);
+    return el('button', { className: 'emote-tile', title: name, onclick: () => { send('emote', { emote: e }).catch(() => {}); $('emote-menu').hidden = true; } },
+      key >= 0 && key < 9 ? el('kbd', {}, key + 1) : null,
+      el('span', { className: 'ico' }, icon),
+      el('span', { className: 'nm' }, name));
+  };
+  clear($('emote-menu'), ...EMOTE_GROUPS.flatMap(([title, list]) => [
+    el('div', { className: 'eg-head' }, title),
+    el('div', { className: 'eg' }, ...list.filter((e) => all.includes(e)).map(tile)),
+  ]));
 }
 
 function toggleEmotes() {

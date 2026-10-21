@@ -551,7 +551,13 @@ function runBots(room, now, api, dt = 0.25) {
       const target = g.wish.role === 'stargazer' ? mostSuspicious(g, p, b, living)?.[0] || pick(living) : pick(living);
       if (living.length) act(() => g.chooseWish(p.id, target.id, now));
     }
-    if (g.phase === 'lobby' && Math.random() < 0.002) api.emote(p.id, pick(['dance', 'wave', 'scooby', 'scuba', 'jump']));
+    // robots dance in the lobby, and react to the news at dawn
+    if (g.phase === 'lobby' && Math.random() < 0.003) api.emote(p.id, pick(['dance', 'wave', 'scooby', 'scuba', 'jump', 'floss', 'robot', 'disco', 'breakdance', 'twist', 'moonwalk', 'cheer', 'flex', 'heart']));
+    if (g.phase === 'dawn' && p.alive && !b.reacted?.[g.night] && now > b.readyAt + 1500 && Math.random() < 0.04) {
+      (b.reacted ||= {})[g.night] = true;
+      const grim = g.dawn?.deaths.length;
+      api.emote(p.id, pick(grim ? ['cry', 'facepalm', 'shrug', 'bow'] : ['cheer', 'clap', 'flex', 'heart', 'jump']));
+    }
 
     if (g.phase === 'night') {
       if (g.blackbox?.id === p.id && !g.blackbox.target && now > b.actAt) {

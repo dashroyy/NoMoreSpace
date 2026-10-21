@@ -31,9 +31,14 @@ const THREE_ADDONS_DIR = path.join(ROOT, 'node_modules', 'three', 'examples', 'j
 const MAX_ROOMS = 150;
 const NEAR_RADIUS = 7; // proximity chat distance (players in the same room always hear each other)
 const ROOM_IDS = ['bridge', 'observation', 'navigation', 'comms', 'medbay', 'galley', 'reactor', 'engine', 'hydroponics', 'airlock', 'quarters', 'cargo', 'corridor'];
-const PLAYER_EMOTES = ['wave', 'dance', 'scooby', 'scuba', 'jump', 'spin', 'shrug', 'point', 'cry', 'laugh'];
+// (the first nine are the number keys 1-9, so their order never changes; new ones go on the end)
+const PLAYER_EMOTES = [
+  'wave', 'dance', 'scooby', 'scuba', 'jump', 'spin', 'shrug', 'point', 'cry', 'laugh',
+  'floss', 'robot', 'disco', 'breakdance', 'twist', 'moonwalk',
+  'cheer', 'clap', 'bow', 'flex', 'facepalm', 'salute', 'heart', 'sleep',
+];
 const STINGERS = ['trombone', 'drumroll', 'airhorn', 'crickets', 'kazoo', 'gasp'];
-const CAPTAIN_EMOTES = [...PLAYER_EMOTES, 'faint', 'shiver', 'flail', 'grow', 'shrink', 'chicken', 'sneeze', 'moonwalk', 'levitate', 'confetti', 'zap'];
+const CAPTAIN_EMOTES = [...PLAYER_EMOTES, 'faint', 'shiver', 'flail', 'grow', 'shrink', 'chicken', 'sneeze', 'levitate', 'confetti', 'zap'];
 
 // Voice chat needs STUN (free, public) and optionally a TURN relay for strict networks.
 const ICE_SERVERS = [{ urls: 'stun:stun.l.google.com:19302' }];

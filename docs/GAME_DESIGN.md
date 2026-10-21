@@ -459,6 +459,22 @@ One panel (⚙️ in the top bar, or on the title screen) for sound, music, read
 ### 🔄 Restarts
 Updating the game no longer ends games in progress: players get a 20-second "ship systems rebooting" warning, the server saves every game, and everyone is reconnected to the same seat when it comes back (see the hosting guide).
 
+## 9c. Dances, reactions and life (the animation round)
+
+What the newer games (Star Bonanza's cartoon gags and comic pops, Ruler's per-event effects, Star Charters' soft shadows) taught the crew's astronauts. All of it is in `public/js/world/avatar.js` unless it says otherwise.
+
+- **24 emotes in a picture picker** (press **Q**, or the Emote button): big tiles in two groups, **💃 Dances** (Dance, Scooby, Scuba, Floss, Robot, Disco, Break dance, Twist, Moonwalk) and **🙌 Reactions** (Wave, Jump, Spin, Shrug, Point, Cry, Laugh, Cheer, Clap, Bow, Flex, Facepalm, Salute, Love, Sleep). Keys **1 to 9** still play the first nine, in the same order as before. The list is `PLAYER_EMOTES` in `server/index.js` (new ones go on the end).
+- **Everybody dances in time.** The dances run on one shared beat (two a second), so a crowd of dancers moves together instead of every suit doing its own thing.
+- **Dancers get a spotlight**: a soft disc on the floor that pulses on the beat and drifts through the colours. The Disco hangs a mirror ball over the dancer, the Robot's visor flickers red and green in stiff snaps, the Break dance goes down on the back and spins like a windmill.
+- **Comic words** float up over the head ("DISCO!", "BEEP BOOP", "FLEX!", "YAY!", "UGH...", a snore of Zs for Sleep), and the Love emote sends hearts floating up. The Facepalm and Salute give the suit a slightly longer arm (the stubby suits could not otherwise reach their own faces).
+- **Squash and stretch.** Suits squash when they land and stretch at the top of a hop; the Jump emote crouches, launches and lands with a puff of dust; an idle suit breathes. **Soft shadows** sit under every suit (smaller and fainter the higher it goes), so nobody floats over the floor.
+- **The crowd reacts** (this screen only, never interrupting a dance): everyone near a death **gasps** and hops back, an accused player **gasps** while the accuser **points**, and when the vote is counted the player voted on **cheers** (safe), **cries** (on the block) or shrugs (a tie). Robots dance in the lobby and cheer, clap or facepalm at dawn.
+- **New hats and pets**: 🧙 Wizard, 🏴‍☠️ Pirate, ⚔️ Viking, 🪩 Disco ball (a hat that spins and twinkles); 🤖 Robot, 👻 Ghost and ⭐ **Star buddy** (one of Star Bonanza's chubby stars, as a pet).
+- **The end-of-game cast is alive.** The real animated characters (KayKit) now do more than stand in an idle loop: they **wave** (crew) or **taunt** (evil) when unmasked, **flinch** when a beam hits them, **fall down** and stay lying where they fell when they die (with the ghost see-through look), and in the finale the winners **cheer** (or **flex**, for the big ones; evil winners taunt) while the losers who were still standing fall. `poseRole(model, pose)` in `models.js` is the one call (`idle`, `cheer`, `taunt`, `wave`, `die`, `hit`); the characters built from shapes (the Demons, the Parasite) keep their own hops. The clips come from KayKit's Character Animations pack, cut down with `tools/pack-animations.mjs` (now able to take clips from several files).
+- **A hat bug fixed on the way**: a character that arrived from the cache before the first frame was drawn could get its hat placed in the wrong spot, because its parent's matrices were stale.
+
+Tests: `test/animations.test.js` (every emote has an animation, a tile, a sound and a duration; the first nine keep their keys; the animation files hold every clip the poses ask for).
+
 ## 9b. Behind the scenes
 - **Phones:** when a phone wakes up after the screen was off, the game reconnects straight away and shows "Reconnecting…" until it's back.
 - **Play stats:** every finished game adds one line (no names) to `data/stats.jsonl` on the server. See the summary at **/stats** (win rates by player count, average length, how often each role is dealt and survives).

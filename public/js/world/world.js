@@ -331,7 +331,24 @@ export class World {
       a.pendingDeath = true;
       setTimeout(() => {
         a.die(anim || 'fainted', () => (a.pendingDeath = false));
+        this.gaspNear(a.root.position, id);
       }, 1200);
+    }
+  }
+
+  // A reaction that only plays on this screen (the accuser points, the accused gasps...). Never interrupts a dance.
+  react(id, emote) {
+    const a = this.avatars.get(id);
+    if (!a || !a.root.visible || a.ghost || a.deathState || a.pendingDeath || a.emoteState) return;
+    a.emote(emote);
+  }
+
+  // Everyone close enough to see somebody go gasps and hops back (a few at a time, not in perfect step).
+  gaspNear(pos, exceptId) {
+    for (const [id, o] of this.avatars) {
+      if (id === exceptId || o.ghost || !o.root.visible || o.pendingDeath || o.deathState || o.emoteState) continue;
+      if (o.root.position.distanceTo(pos) > 9) continue;
+      setTimeout(() => !o.emoteState && !o.deathState && o.emote('gasp'), Math.random() * 400);
     }
   }
 

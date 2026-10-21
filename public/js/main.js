@@ -214,7 +214,7 @@ async function boot() {
     world.emote(id, emote);
     if (byCaptain) sfx(emote === 'zap' ? 'zap' : 'pop');
     // every emote has a little sound (only nearby avatars, so the whole ship isn't noisy)
-    else if (world.avatars.get(id)?.root.visible) sfx({ scooby: 'groove', scuba: 'bubbles', dance: 'groove', jump: 'boing', spin: 'whirl', laugh: 'giggle', cry: 'sob', wave: 'swish', shrug: 'huh', point: 'tap' }[emote] || 'pop');
+    else if (world.avatars.get(id)?.root.visible) sfx({ scooby: 'groove', scuba: 'bubbles', dance: 'groove', floss: 'groove', disco: 'groove', twist: 'groove', moonwalk: 'groove', breakdance: 'groove', robot: 'beep', jump: 'boing', spin: 'whirl', laugh: 'giggle', cry: 'sob', wave: 'swish', shrug: 'huh', facepalm: 'huh', point: 'tap', salute: 'tap', clap: 'clap', cheer: 'cheer', flex: 'cheer', bow: 'swish', heart: 'chime', sleep: 'huh' }[emote] || 'pop');
   });
   socket.on('bubble', (b) => showStory(b.text, [], 9000));
   socket.on('drawing', ({ id, data }) => world.addDrawingImage(id, data));
@@ -479,7 +479,17 @@ function announceChanges(state, prev, world) {
   // vote clock ticks
   const nom = state.nomination;
   const pnom = prev.nomination;
-  if (nom && !pnom) sfx('gavel');
+  if (nom && !pnom) {
+    sfx('gavel');
+    // somebody is accused: the accuser points, the accused gasps
+    world.react(nom.nominator, 'point');
+    world.react(nom.nominee, 'gasp');
+  }
+  // how the vote turned out: the player who was voted on cheers, or slumps on the block
+  if (prev.dayLog && state.dayLog) {
+    const seen = prev.dayLog.at(-1)?.at || 0;
+    for (const e of state.dayLog) if (e.k === 'vote' && e.at > seen) world.react(e.t, e.result === 'block' ? 'cry' : e.result === 'safe' ? 'cheer' : 'shrug');
+  }
   if (nom && pnom && nom.index !== pnom.index && nom.index >= 0) sfx(nom.hands[nom.order[nom.index - 1]] ? 'lock' : 'vote');
   // deaths in the middle of the day (Gunner, Captain)
   if (state.phase === prev.phase && ['roam', 'meeting', 'nominations'].includes(state.phase)) {

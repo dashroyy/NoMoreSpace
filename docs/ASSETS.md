@@ -43,6 +43,8 @@ The Parasite is not a model: `public/js/world/parasite.js` builds it from code (
 The source packs are not in this repository (only the models the game uses). To add a model:
 
 ```bash
+# several files at once (General has the deaths and hits, Simulation the cheering and waving, Special the taunt):
+node tools/pack-animations.mjs public/assets/models/characters/anims.glb --from "<pack>/Animations/gltf/Rig_Medium/Rig_Medium_General.glb" Idle_A Idle_B Death_A Hit_B --from "<pack>/Animations/gltf/Rig_Medium/Rig_Medium_Simulation.glb" Cheering Waving --from "<pack>/Animations/gltf/Rig_Medium/Rig_Medium_Special.glb" Skeletons_Taunt
 node tools/pack-models.mjs "<pack>/Assets/gltf" "<pack>/textures/<texture>.png" public/assets/models/<pack-name> model_a model_b
 node tools/pack-animations.mjs "<pack>/Animations/gltf/Rig_Medium/Rig_Medium_General.glb" public/assets/models/characters/anims.glb Idle_A Idle_B
 ```
